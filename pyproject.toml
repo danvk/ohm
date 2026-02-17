@@ -1,0 +1,17 @@
+[project]
+name = "ohm"
+version = "0.1.0"
+description = "ohm — project scaffolded with uv"
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+dependencies = []
+
+[tool.ruff]
+line-length = 88
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.1",
+]
+
+# Keep Ruff configuration minimal here — you can extend rules or ignores later.
