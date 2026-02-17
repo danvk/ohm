@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "ohm — project scaffolded with uv"
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
-dependencies = []
+dependencies = [
+    "osmium>=4.3.0",
+]
 
 [tool.ruff]
 line-length = 88
