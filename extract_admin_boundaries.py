@@ -18,11 +18,12 @@ def tags_to_dict(tags) -> dict[str, str]:
 
 
 class AdminBoundaryHandler(osmium.SimpleHandler):
-    def __init__(self, max_features: int | None = None):
+    def __init__(self, out, max_features: int | None = None):
         super().__init__()
         self.geojson = osmium.geom.GeoJSONFactory()
-        self.features: list[dict] = []
+        self.out = out
         self.max_features = max_features
+        self.feature_count = 0
         # Track which original IDs we've already captured via the area callback
         # so we don't double-count.
         self._captured_ids: set[tuple[str, int]] = set()
@@ -33,7 +34,7 @@ class AdminBoundaryHandler(osmium.SimpleHandler):
         )
 
     def _done(self) -> bool:
-        return self.max_features is not None and len(self.features) >= self.max_features
+        return self.max_features is not None and self.feature_count >= self.max_features
 
     def area(self, a: Any) -> None:
         """Called for closed ways and relations that form areas."""
@@ -66,14 +67,16 @@ class AdminBoundaryHandler(osmium.SimpleHandler):
         props["@type"] = orig_type
         props["@id"] = orig_id
 
-        self.features.append(
-            {
-                "type": "Feature",
-                "id": f"{orig_type}/{orig_id}",
-                "geometry": geometry,
-                "properties": props,
-            }
-        )
+        feature = {
+            "type": "Feature",
+            "id": f"{orig_type}/{orig_id}",
+            "geometry": geometry,
+            "properties": props,
+        }
+        prefix = ",\n" if self.feature_count > 0 else ""
+        self.out.write(prefix + json.dumps(feature, ensure_ascii=False))
+        self.out.flush()
+        self.feature_count += 1
         print(
             f"  Captured {orig_type}/{orig_id} ({props.get('name', '<no name>')})",
             file=sys.stderr,
@@ -104,35 +107,32 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print(f"Reading {args.osm_file} ...", file=sys.stderr)
-    handler = AdminBoundaryHandler(max_features=args.max_features)
+    out = sys.stdout if args.output == "-" else open(args.output, "w", encoding="utf-8")
 
     try:
-        # locations=True is required so that way nodes have coordinates.
-        # The area callback requires a two-pass read (osmium handles this
-        # automatically when an area() method is present).
-        handler.apply_file(args.osm_file, locations=True)
-    except RuntimeError as e:
-        print(f"Error reading file: {e}", file=sys.stderr)
-        sys.exit(1)
+        out.write('{"type":"FeatureCollection","features":[\n')
 
-    feature_collection = {
-        "type": "FeatureCollection",
-        "features": handler.features,
-    }
+        print(f"Reading {args.osm_file} ...", file=sys.stderr)
+        handler = AdminBoundaryHandler(out, max_features=args.max_features)
 
-    output_str = json.dumps(feature_collection, ensure_ascii=False, indent=2)
+        try:
+            # locations=True is required so that way nodes have coordinates.
+            # The area callback requires a two-pass read (osmium handles this
+            # automatically when an area() method is present).
+            handler.apply_file(args.osm_file, locations=True)
+        except RuntimeError as e:
+            print(f"Error reading file: {e}", file=sys.stderr)
+            sys.exit(1)
 
-    if args.output == "-":
-        print(output_str)
-    else:
-        with open(args.output, "w", encoding="utf-8") as f:
-            f.write(output_str)
-        print(
-            f"Wrote {len(handler.features)} features to {args.output}", file=sys.stderr
-        )
+        out.write("\n]}\n")
+    finally:
+        if out is not sys.stdout:
+            out.close()
 
-    print(f"Done. {len(handler.features)} features extracted.", file=sys.stderr)
+    n = handler.feature_count
+    if args.output != "-":
+        print(f"Wrote {n} features to {args.output}", file=sys.stderr)
+    print(f"Done. {n} features extracted.", file=sys.stderr)
 
 
 if __name__ == "__main__":
