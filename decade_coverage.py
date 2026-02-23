@@ -8,6 +8,7 @@ every year ending in zero.
 
 import argparse
 import functools
+import heapq
 import json
 import sys
 import time
@@ -78,6 +79,10 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
         self._captured_ids: set[tuple[str, int]] = set()
         self.totals: dict[str, int] = {lvl: 0 for lvl in ADMIN_LEVELS}
         self.skipped_no_date = 0
+        # Track the earliest features per level: list of (start_year, label)
+        self.earliest: dict[str, list[tuple[int, str]]] = {
+            lvl: [] for lvl in ADMIN_LEVELS
+        }
 
     def _admin_level(self, tags) -> str | None:
         """Return the admin_level if this is a relevant boundary, else None."""
@@ -106,6 +111,11 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
         start_year = parse_year(a.tags.get("start_date", ""))
         end_year = parse_year(a.tags.get("end_date", ""))
 
+        # Require both dates; open-ended features are excluded.
+        if start_year is None or end_year is None:
+            self.skipped_no_date += 1
+            return
+
         years = decade_years(start_year, end_year)
         if not years:
             self.skipped_no_date += 1
@@ -117,6 +127,14 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
 
         for y in years:
             self.decade_geoms[lvl][y].append(geom)
+
+        # Record for earliest-feature reporting
+        name = a.tags.get("name") or f"{orig_type}/{orig_id}"
+        heap = self.earliest[lvl]
+        if len(heap) < 10:
+            heapq.heappush(heap, (-start_year, name))
+        elif start_year < -heap[0][0]:
+            heapq.heapreplace(heap, (-start_year, name))
 
         self.totals[lvl] += 1
         total = sum(self.totals.values())
@@ -157,43 +175,33 @@ def main() -> None:
         set().union(*[d.keys() for d in handler.decade_geoms.values()])
     )
 
-    # Compute union area for one (level, decade) bucket.
-    # If `deadline` is set and we exceed it, fall back to summing individual areas.
-    def compute_bucket(
-        lvl: str, decade: int, geoms: list, deadline: float | None
-    ) -> tuple[int, str, float, bool]:
-        """Returns (decade, lvl, km2, used_fallback)."""
-        if not geoms:
-            return decade, lvl, 0.0, False
-        if deadline is not None and time.monotonic() > deadline:
-            # Timeout already exceeded — skip union, sum individuals
-            km2 = sum(area_km2(g) for g in geoms)
-            return decade, lvl, km2, True
-        try:
-            union = unary_union(geoms)
-            km2 = area_km2(union)
-            return decade, lvl, km2, False
-        except Exception:
-            km2 = sum(area_km2(g) for g in geoms)
-            return decade, lvl, km2, True
+    # Report earliest 10 features per level (heap stores (-start_year, name))
+    for lvl in ADMIN_LEVELS:
+        top10 = sorted(
+            handler.earliest[lvl]
+        )  # ascending by -start_year → most-negative first
+        print(f"  Earliest admin_level={lvl} features:", file=sys.stderr)
+        for neg_yr, name in top10:
+            print(f"    {-neg_yr}: {name}", file=sys.stderr)
 
-    # Per-level timeout in seconds (20 minutes total budget for admin_level=4)
-    TIMEOUT_SECS = {"2": None, "4": 20 * 60}
+    # Compute union area for one (level, decade) bucket.
+    def compute_bucket(lvl: str, decade: int, geoms: list) -> tuple[int, str, float]:
+        """Returns (decade, lvl, km2) using unary_union."""
+        if not geoms:
+            return decade, lvl, 0.0
+        union = unary_union(geoms)
+        return decade, lvl, area_km2(union)
 
     # Results: decade → {lvl: km2}
     results: dict[int, dict[str, float]] = {d: {} for d in all_decades}
-    fallback_counts: dict[str, int] = {lvl: 0 for lvl in ADMIN_LEVELS}
 
     for lvl in ADMIN_LEVELS:
         lvl_geoms = handler.decade_geoms[lvl]
         buckets = [(decade, lvl_geoms.get(decade, [])) for decade in all_decades]
         n_buckets = sum(1 for _, g in buckets if g)
-        timeout = TIMEOUT_SECS[lvl]
-        deadline = time.monotonic() + timeout if timeout is not None else None
 
         print(
-            f"  admin_level={lvl}: computing {n_buckets} decade buckets "
-            f"({'timeout=' + str(timeout) + 's' if timeout else 'no timeout'})",
+            f"  admin_level={lvl}: computing {n_buckets} decade buckets...",
             file=sys.stderr,
         )
         t0 = time.monotonic()
@@ -201,43 +209,28 @@ def main() -> None:
 
         with ThreadPoolExecutor(max_workers=3) as pool:
             futures = {
-                pool.submit(compute_bucket, lvl, decade, geoms, deadline): decade
+                pool.submit(compute_bucket, lvl, decade, geoms): decade
                 for decade, geoms in buckets
             }
             for fut in as_completed(futures):
-                dec, _lvl, km2, fell_back = fut.result()
+                dec, _lvl, km2 = fut.result()
                 results[dec][lvl] = km2
-                if fell_back:
-                    fallback_counts[lvl] += 1
                 done += 1
                 if done % 50 == 0 or done == n_buckets:
                     elapsed = time.monotonic() - t0
-                    fb = fallback_counts[lvl]
                     print(
-                        f"    L{lvl}: {done}/{n_buckets} buckets done "
-                        f"in {elapsed:.0f}s (fallbacks: {fb})",
+                        f"    L{lvl}: {done}/{n_buckets} buckets done in {elapsed:.0f}s",
                         file=sys.stderr,
                     )
 
         elapsed = time.monotonic() - t0
-        fb = fallback_counts[lvl]
-        print(
-            f"  admin_level={lvl} done in {elapsed:.0f}s; "
-            f"{fb}/{n_buckets} buckets used area-sum fallback.",
-            file=sys.stderr,
-        )
+        print(f"  admin_level={lvl} done in {elapsed:.0f}s.", file=sys.stderr)
 
-    # Print table
-    header = f"{'Year':>6}  " + "  ".join(
-        f"{'admin' + l + ' km²':>18}" for l in ADMIN_LEVELS
-    )
-    print(header)
-    print("-" * len(header))
+    # Print tab-delimited table
+    print("\t".join(["year"] + [f"admin{l}_km2" for l in ADMIN_LEVELS]))
     for decade in all_decades:
-        vals = "  ".join(
-            f"{results[decade].get(lvl, 0.0):>18.0f}" for lvl in ADMIN_LEVELS
-        )
-        print(f"{decade:>6}  {vals}")
+        vals = "\t".join(f"{results[decade].get(lvl, 0.0):.0f}" for lvl in ADMIN_LEVELS)
+        print(f"{decade}\t{vals}")
 
 
 if __name__ == "__main__":
