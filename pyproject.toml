@@ -5,7 +5,9 @@ description = "ohm — project scaffolded with uv"
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
+    "geopandas>=1.1.2",
     "osmium>=4.3.0",
+    "shapely>=2.1.2",
 ]
 
 [tool.ruff]
