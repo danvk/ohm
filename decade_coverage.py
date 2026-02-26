@@ -13,7 +13,6 @@ import json
 import sys
 import time
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import osmium
@@ -111,8 +110,8 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
         start_year = parse_year(a.tags.get("start_date", ""))
         end_year = parse_year(a.tags.get("end_date", ""))
 
-        # Require both dates; open-ended features are excluded.
-        if start_year is None or end_year is None:
+        # Skip features with no date information at all.
+        if start_year is None and end_year is None:
             self.skipped_no_date += 1
             return
 
@@ -129,12 +128,13 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
             self.decade_geoms[lvl][y].append(geom)
 
         # Record for earliest-feature reporting
-        name = a.tags.get("name") or f"{orig_type}/{orig_id}"
-        heap = self.earliest[lvl]
-        if len(heap) < 10:
-            heapq.heappush(heap, (-start_year, name))
-        elif start_year < -heap[0][0]:
-            heapq.heapreplace(heap, (-start_year, name))
+        if start_year is not None:
+            name = a.tags.get("name") or f"{orig_type}/{orig_id}"
+            heap = self.earliest[lvl]
+            if len(heap) < 10:
+                heapq.heappush(heap, (-start_year, name))
+            elif start_year < -heap[0][0]:
+                heapq.heapreplace(heap, (-start_year, name))
 
         self.totals[lvl] += 1
         total = sum(self.totals.values())
@@ -207,14 +207,10 @@ def main() -> None:
         t0 = time.monotonic()
         done = 0
 
-        with ThreadPoolExecutor(max_workers=3) as pool:
-            futures = {
-                pool.submit(compute_bucket, lvl, decade, geoms): decade
-                for decade, geoms in buckets
-            }
-            for fut in as_completed(futures):
-                dec, _lvl, km2 = fut.result()
-                results[dec][lvl] = km2
+        for decade, geoms in buckets:
+            dec, _lvl, km2 = compute_bucket(lvl, decade, geoms)
+            results[dec][lvl] = km2
+            if geoms:
                 done += 1
                 if done % 50 == 0 or done == n_buckets:
                     elapsed = time.monotonic() - t0
