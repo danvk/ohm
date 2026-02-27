@@ -25,6 +25,7 @@ import argparse
 import json
 import sys
 import time
+from collections import Counter
 from typing import Any
 
 import osmium
@@ -86,16 +87,18 @@ class WayHandler(osmium.SimpleHandler):
         super().__init__()
         self._way_ids = way_ids
         # way_id (int) → {"nodes": [node_id, ...]}
-        self.ways: dict[int, dict[str, Any]] = {}
+        self.ways: dict[int, list[int]] = {}
         # set of node IDs referenced by collected ways
         self.node_ids: set[int] = set()
+        self.node_counts = Counter[int]()
 
     def way(self, w: Any) -> None:
         if w.id not in self._way_ids:
             return
         node_refs = [n.ref for n in w.nodes]
-        self.ways[w.id] = {"nodes": node_refs}
+        self.ways[w.id] = node_refs
         self.node_ids.update(node_refs)
+        self.node_counts.update(node_refs)
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +113,7 @@ class NodeHandler(osmium.SimpleHandler):
         super().__init__()
         self._node_ids = node_ids
         # node_id (int) → {"lon": float, "lat": float}
-        self.nodes: dict[int, dict[str, float]] = {}
+        self.nodes: dict[int, tuple[float, float]] = {}
 
     def node(self, n: Any) -> None:
         if n.id not in self._node_ids:
@@ -118,7 +121,7 @@ class NodeHandler(osmium.SimpleHandler):
         loc = n.location
         if not loc.valid():
             return
-        self.nodes[n.id] = {"lon": loc.lon, "lat": loc.lat}
+        self.nodes[n.id] = (loc.lon, loc.lat)
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +131,7 @@ class NodeHandler(osmium.SimpleHandler):
 
 def write_json(path: str, data: dict) -> None:
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
+        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
     _log(f"  Wrote {len(data):,} entries to {path}")
 
 
@@ -199,6 +202,14 @@ def main() -> None:
     )
     elapsed = time.monotonic() - t0
     _log(f"  Found {len(node_handler.nodes):,} nodes  ({elapsed:.1f}s)")
+    multi_nodes = sum(1 for _, count in way_handler.node_counts.items() if count > 1)
+    _log(f"  {multi_nodes} nodes appear >1 time.")
+    # Log frequency distribution of node counts
+    if way_handler.node_counts:
+        count_freq = Counter(way_handler.node_counts.values())
+        for count in sorted(count_freq.keys(), reverse=True):
+            freq = count_freq[count]
+            _log(f"  {freq} nodes appear {count} time(s)")
 
     nodes_out = {str(nid): data for nid, data in node_handler.nodes.items()}
     write_json(args.nodes_out, nodes_out)
