@@ -1,0 +1,65 @@
+# App
+
+A Hello World web app built with [Vite](https://vite.dev), [React](https://react.dev), and [TypeScript](https://www.typescriptlang.org/).
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18 or later recommended)
+- npm (bundled with Node.js)
+
+## Getting started
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+## Development
+
+Start the Vite dev server with hot module replacement:
+
+```bash
+npm run dev
+```
+
+The app will be available at `http://localhost:5173` (or the next available port).
+
+## Type checking
+
+Run the TypeScript type checker:
+
+```bash
+npx type-check
+```
+
+Or equivalently:
+
+```bash
+npm run type-check
+```
+
+This performs type checking only and does not emit any files.
+
+## Building for production
+
+Compile and bundle the app for production:
+
+```bash
+npm run build
+```
+
+Output is written to the `dist/` directory. The contents of `dist/` can be served by any static file server.
+
+To preview the production build locally:
+
+```bash
+npm run preview
+```
+
+## Deployment
+
+1. Run `npm run build` to generate the `dist/` folder.
+2. Upload the contents of `dist/` to your static hosting provider (e.g. GitHub Pages, Netlify, Vercel, an S3 bucket, or any nginx/Apache server).
+
+No server-side runtime is required — the built output is pure HTML, CSS, and JavaScript.
