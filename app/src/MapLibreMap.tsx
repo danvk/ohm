@@ -29,7 +29,6 @@ const MINIMAL_STYLE: maplibregl.StyleSpecification = {
       'source-layer': 'countries',
       paint: { 'fill-color': '#aaaaaa' },
     },
-
   ],
 };
 
