@@ -5,14 +5,29 @@ import { ZoomControl } from './ZoomControl';
 const DEFAULT_CENTER: [number, number] = [0, 20];
 
 export default function App() {
+  const [year, setYear] = React.useState(2020);
+
   return (
-    <MapLibreMap
-      containerId="map"
-      containerClassName="maplibregl-map"
-      center={DEFAULT_CENTER}
-      zoom={1.5}
-    >
-      <ZoomControl />
-    </MapLibreMap>
+    <>
+      <div id="time-slider">
+        {year}
+        <input
+          id="year"
+          type="range"
+          min={0}
+          max={2030}
+          value={year}
+          onChange={(e) => setYear(e.currentTarget.valueAsNumber)}
+        />
+      </div>
+      <MapLibreMap
+        containerId="map"
+        containerClassName="maplibregl-map"
+        center={DEFAULT_CENTER}
+        zoom={1.5}
+      >
+        <ZoomControl />
+      </MapLibreMap>
+    </>
   );
 }
