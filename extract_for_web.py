@@ -25,14 +25,9 @@ import argparse
 import json
 import sys
 import time
-from collections import Counter
 from typing import Any
 
 import osmium
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 
 def tags_to_dict(tags) -> dict[str, str]:
@@ -43,9 +38,10 @@ def _log(msg: str) -> None:
     print(msg, file=sys.stderr, flush=True)
 
 
-# ---------------------------------------------------------------------------
-# Pass 1 – Relations
-# ---------------------------------------------------------------------------
+def quantize(pt: tuple[float, float]) -> tuple[int, int]:
+    lng, lat = pt
+    return (round((lng + 180) / 360 * 4_000_000), round((lat + 90) / 180 * 2_000_000))
+
 
 ADMIN_LEVELS = {"2", "3", "4"}
 
@@ -75,11 +71,6 @@ class RelationHandler(osmium.SimpleHandler):
         self.way_ids.update(way_members)
 
 
-# ---------------------------------------------------------------------------
-# Pass 2 – Ways
-# ---------------------------------------------------------------------------
-
-
 class WayHandler(osmium.SimpleHandler):
     """Collect ways that appear in admin boundary relations."""
 
@@ -87,46 +78,13 @@ class WayHandler(osmium.SimpleHandler):
         super().__init__()
         self._way_ids = way_ids
         # way_id (int) → {"nodes": [node_id, ...]}
-        self.ways: dict[int, list[int]] = {}
-        # set of node IDs referenced by collected ways
-        self.node_ids: set[int] = set()
-        self.node_counts = Counter[int]()
+        self.ways: dict[int, list[tuple[int, int]]] = {}
 
     def way(self, w: Any) -> None:
         if w.id not in self._way_ids:
             return
-        node_refs = [n.ref for n in w.nodes]
+        node_refs = [quantize((n.lon, n.lat)) for n in w.nodes if n.location.valid()]
         self.ways[w.id] = node_refs
-        self.node_ids.update(node_refs)
-        self.node_counts.update(node_refs)
-
-
-# ---------------------------------------------------------------------------
-# Pass 3 – Nodes
-# ---------------------------------------------------------------------------
-
-
-class NodeHandler(osmium.SimpleHandler):
-    """Collect nodes that appear in admin boundary ways."""
-
-    def __init__(self, node_ids: set[int]) -> None:
-        super().__init__()
-        self._node_ids = node_ids
-        # node_id (int) → {"lon": float, "lat": float}
-        self.nodes: dict[int, tuple[float, float]] = {}
-
-    def node(self, n: Any) -> None:
-        if n.id not in self._node_ids:
-            return
-        loc = n.location
-        if not loc.valid():
-            return
-        self.nodes[n.id] = (loc.lon, loc.lat)
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 
 def write_json(path: str, data: dict) -> None:
@@ -153,11 +111,6 @@ def main() -> None:
         default="ways.json",
         help="Output path for ways JSON (default: ways.json)",
     )
-    parser.add_argument(
-        "--nodes-out",
-        default="nodes.json",
-        help="Output path for nodes JSON (default: nodes.json)",
-    )
     args = parser.parse_args()
 
     osm_file = args.osm_file
@@ -182,37 +135,13 @@ def main() -> None:
     t0 = time.monotonic()
     way_handler = WayHandler(rel_handler.way_ids)
     way_handler.apply_file(
-        osm_file, filters=[osmium.filter.IdFilter(rel_handler.way_ids)]
+        osm_file, filters=[osmium.filter.IdFilter(rel_handler.way_ids)], locations=True
     )
     elapsed = time.monotonic() - t0
-    _log(
-        f"  Found {len(way_handler.ways):,} ways, "
-        f"{len(way_handler.node_ids):,} unique nodes  ({elapsed:.1f}s)"
-    )
+    _log(f"  Found {len(way_handler.ways):,} ways in ({elapsed:.1f}s)")
 
     ways_out = {str(wid): data for wid, data in way_handler.ways.items()}
     write_json(args.ways_out, ways_out)
-
-    # --- Pass 3: Nodes ---
-    _log("Pass 3: scanning nodes …")
-    t0 = time.monotonic()
-    node_handler = NodeHandler(way_handler.node_ids)
-    node_handler.apply_file(
-        osm_file, filters=[osmium.filter.IdFilter(way_handler.node_ids)]
-    )
-    elapsed = time.monotonic() - t0
-    _log(f"  Found {len(node_handler.nodes):,} nodes  ({elapsed:.1f}s)")
-    multi_nodes = sum(1 for _, count in way_handler.node_counts.items() if count > 1)
-    _log(f"  {multi_nodes} nodes appear >1 time.")
-    # Log frequency distribution of node counts
-    if way_handler.node_counts:
-        count_freq = Counter(way_handler.node_counts.values())
-        for count in sorted(count_freq.keys(), reverse=True):
-            freq = count_freq[count]
-            _log(f"  {freq} nodes appear {count} time(s)")
-
-    nodes_out = {str(nid): data for nid, data in node_handler.nodes.items()}
-    write_json(args.nodes_out, nodes_out)
 
     _log("Done.")
 
