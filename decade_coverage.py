@@ -116,6 +116,10 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
             self.skipped_no_date += 1
             return
 
+        if start_year is None and end_year in (1871, 1872):
+            # Patch for, e.g., relation/2687358
+            start_year = 600
+
         years = decade_years(start_year, end_year)
         if not years:
             self.skipped_no_date += 1
@@ -128,12 +132,14 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
         for y in years:
             self.decade_geoms[admin_level][y].append(geom)
 
+        name = a.tags.get("name") or f"{orig_type}/{orig_id}"
         min_year = years[0]
         if min_year == -6000:
-            sys.stderr.write(f"-6000: {key} at level {admin_level}\n")
+            sys.stderr.write(
+                f"-6000: {orig_type}/{orig_id} at {admin_level=} {area_km2(geom):g} km^2 {name}\n"
+            )
 
         # Record for earliest-feature reporting
-        name = a.tags.get("name") or f"{orig_type}/{orig_id}"
         heap = self.earliest[admin_level]
         if len(heap) < 10:
             heapq.heappush(heap, (-min_year, name))
