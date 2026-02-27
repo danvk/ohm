@@ -1,12 +1,18 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite + React + TS</title>
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { overflow: hidden; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        overflow: hidden;
+      }
       #map {
         width: 100vw;
         height: 100vh;
@@ -15,6 +21,27 @@
   </head>
   <body>
     <div id="root"></div>
+    <script type="text/javascript">
+      (async () => {
+        const relationsR = fetch('/static/relations.json');
+        const waysR = fetch('/static/ways.json');
+
+        const [relations, ways] = await Promise.all([
+          (await relationsR).json(),
+          (await waysR).json(),
+        ]);
+
+        console.log(
+          'Loaded',
+          [...Object.keys(relations)].length,
+          'relations and',
+          [...Object.keys(ways)].length,
+          'ways',
+        );
+        window.relations = relations;
+        window.ways = ways;
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
