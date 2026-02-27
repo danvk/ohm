@@ -23,16 +23,7 @@ const MINIMAL_STYLE: StyleSpecification = {
       'source-layer': 'countries',
       paint: { 'fill-color': '#aaaaaa' },
     },
-    {
-      id: 'countries-boundary',
-      type: 'line',
-      source: 'maplibre',
-      'source-layer': 'countries',
-      paint: {
-        'line-color': '#ffffff',
-        'line-width': ['interpolate', ['linear'], ['zoom'], 0, 0.5, 6, 2],
-      },
-    },
+
   ],
 };
 
