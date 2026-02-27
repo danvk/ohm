@@ -78,19 +78,21 @@ class WayHandler(osmium.SimpleHandler):
         super().__init__()
         self._way_ids = way_ids
         # way_id (int) → {"nodes": [node_id, ...]}
-        self.ways: dict[int, list[tuple[int, int]]] = {}
+        self.ways: dict[int, list[int]] = {}
 
     def way(self, w: Any) -> None:
         if w.id not in self._way_ids:
             return
         locs = [quantize((n.lon, n.lat)) for n in w.nodes if n.location.valid()]
-        if not locs:
-            self.ways[w.id] = locs
-        else:
-            self.ways[w.id] = [
+        deltas = (
+            [
                 locs[0],
                 *[(nx - px, ny - py) for (px, py), (nx, ny) in zip(locs, locs[1:])],
             ]
+            if locs
+            else []
+        )
+        self.ways[w.id] = [coord for delta in deltas for coord in delta]
 
 
 def write_json(path: str, data: dict) -> None:
