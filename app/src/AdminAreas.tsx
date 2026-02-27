@@ -94,11 +94,11 @@ export function AdminAreas(props: AdminAreasProps) {
           // Close off any open ring accumulated so far.
           if (currentRing.length > 0) {
             currentRing.push(currentRing[0]!);
-            rings.push(ensureRightHandRule(currentRing));
+            rings.push(currentRing);
             currentRing = [];
           }
           // Add this self-contained closed ring.
-          rings.push(ensureRightHandRule(coords));
+          rings.push(coords);
         } else {
           // Open way — concatenate into the current ring.
           currentRing = currentRing.concat(coords);
@@ -108,14 +108,18 @@ export function AdminAreas(props: AdminAreasProps) {
       // Close off any remaining open ring.
       if (currentRing.length > 0) {
         currentRing.push(currentRing[0]!);
-        rings.push(ensureRightHandRule(currentRing));
+        rings.push(currentRing);
       }
 
       if (rings.length > 0) {
+        console.log(rings);
         features.push({
           type: 'Feature',
           id,
-          geometry: { type: 'Polygon', coordinates: rings },
+          geometry: {
+            type: 'MultiPolygon',
+            coordinates: rings.map((r) => [r]),
+          },
           properties: relation.tags,
         });
       }
@@ -123,6 +127,7 @@ export function AdminAreas(props: AdminAreasProps) {
     return { type: 'FeatureCollection', features };
   }, [admin2ForYear]);
 
+  console.log(geojson);
   const map = useMap();
 
   React.useEffect(() => {
