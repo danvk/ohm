@@ -1,4 +1,7 @@
 import React from 'react';
+import type { Feature, FeatureCollection, Polygon } from 'geojson';
+import maplibregl from 'maplibre-gl';
+import { useMap } from './MapLibreMap';
 
 export interface AdminAreasProps {
   year: number;
@@ -45,6 +48,63 @@ export function AdminAreas(props: AdminAreasProps) {
   //   relation. Together, these form a polygon.
   // The global "ways" variable contains a mapping from way ID -> coordinate string
   // The decodePositions function can be used to decode these to lng/lats.
+
+  const geojson = React.useMemo<FeatureCollection<Polygon>>(() => {
+    const features: Feature<Polygon>[] = [];
+    for (const [id, relation] of Object.entries(admin2ForYear)) {
+      let ring: number[][] = [];
+      for (const wayId of relation.ways) {
+        const encoded = ways[wayId];
+        if (encoded) {
+          ring = ring.concat(decodePositions(encoded));
+        }
+      }
+      if (ring.length > 0) {
+        ring.push(ring[0]);
+        features.push({
+          type: 'Feature',
+          id,
+          geometry: { type: 'Polygon', coordinates: [ring] },
+          properties: relation.tags,
+        });
+      }
+    }
+    return { type: 'FeatureCollection', features };
+  }, [admin2ForYear]);
+
+  const map = useMap();
+
+  React.useEffect(() => {
+    if (!map) return;
+
+    const SOURCE_ID = 'admin2';
+    const FILL_LAYER_ID = 'admin2-fill';
+    const LINE_LAYER_ID = 'admin2-line';
+
+    if (!map.getSource(SOURCE_ID)) {
+      map.addSource(SOURCE_ID, { type: 'geojson', data: geojson });
+      map.addLayer({
+        id: FILL_LAYER_ID,
+        type: 'fill',
+        source: SOURCE_ID,
+        paint: { 'fill-color': '#6080c0', 'fill-opacity': 0.5 },
+      });
+      map.addLayer({
+        id: LINE_LAYER_ID,
+        type: 'line',
+        source: SOURCE_ID,
+        paint: { 'line-color': '#3050a0', 'line-width': 1 },
+      });
+    } else {
+      (map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource).setData(geojson);
+    }
+
+    return () => {
+      if (map.getLayer(FILL_LAYER_ID)) map.removeLayer(FILL_LAYER_ID);
+      if (map.getLayer(LINE_LAYER_ID)) map.removeLayer(LINE_LAYER_ID);
+      if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
+    };
+  }, [map, geojson]);
 
   return null;
 }
