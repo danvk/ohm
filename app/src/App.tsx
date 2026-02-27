@@ -5,10 +5,14 @@ import { ZoomControl } from './ZoomControl';
 const DEFAULT_CENTER: [number, number] = [0, 20];
 
 export default function App() {
-  return (<MapLibreMap
+  return (
+    <MapLibreMap
       containerId="map"
       containerClassName="maplibregl-map"
-      center={DEFAULT_CENTER} zoom={1.5}>
-        <ZoomControl />
-        </MapLibreMap>);
+      center={DEFAULT_CENTER}
+      zoom={1.5}
+    >
+      <ZoomControl />
+    </MapLibreMap>
+  );
 }
