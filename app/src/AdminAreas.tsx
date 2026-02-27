@@ -9,6 +9,39 @@ export interface AdminAreasProps {
 
 // The first two entries are quantized [lng, lat].
 // The remaining entries are delta encoded.
+function lastEncodedPoint(pos: number[]): [number, number] {
+  let x = pos[0]!;
+  let y = pos[1]!;
+  for (let i = 2; i < pos.length; i += 2) {
+    x += pos[i]!;
+    y += pos[i + 1]!;
+  }
+  return [x, y];
+}
+
+function isWayClosed(pos: number[]): boolean {
+  if (pos.length < 4) return false;
+  const [lastX, lastY] = lastEncodedPoint(pos);
+  return lastX === pos[0] && lastY === pos[1];
+}
+
+/** Shoelace formula: positive area = counter-clockwise = right-hand rule. */
+function signedArea(ring: number[][]): number {
+  let area = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[i + 1];
+    area += x1 * y2 - x2 * y1;
+  }
+  return area;
+}
+
+function ensureRightHandRule(ring: number[][]): number[][] {
+  // Right-hand rule: exterior rings counter-clockwise (positive signed area).
+  const area = signedArea(ring);
+  return area > 0 ? ring : ring.slice().reverse();
+}
+
 function decodePositions(pos: number[]) {
   let x = pos[0];
   let y = pos[1];
@@ -31,6 +64,9 @@ export function AdminAreas(props: AdminAreasProps) {
     const yearStr = String(year).padStart(4, '0');
     const out: typeof relations = {};
     for (const [id, relation] of Object.entries(relations)) {
+      if (id != '2851762') {
+        continue; // Iceland
+      }
       const { tags } = relation;
       if (
         tags['admin_level'] != '2' ||
@@ -59,12 +95,8 @@ export function AdminAreas(props: AdminAreasProps) {
         const encoded = ways[wayId];
         if (!encoded) continue;
 
-        // Check if closed before decoding to avoid floating-point rounding issues.
-        // A way is closed when its first and last encoded points are identical.
-        const isClosed =
-          encoded.length >= 4 &&
-          encoded[0] === encoded[encoded.length - 2] &&
-          encoded[1] === encoded[encoded.length - 1];
+        // Check if closed in encoded space to avoid floating-point rounding issues.
+        const isClosed = isWayClosed(encoded);
 
         const coords = decodePositions(encoded);
 
@@ -72,11 +104,11 @@ export function AdminAreas(props: AdminAreasProps) {
           // Close off any open ring accumulated so far.
           if (currentRing.length > 0) {
             currentRing.push(currentRing[0]!);
-            rings.push(currentRing);
+            rings.push(ensureRightHandRule(currentRing));
             currentRing = [];
           }
-          // Add this self-contained closed ring (without modification).
-          rings.push(coords);
+          // Add this self-contained closed ring.
+          rings.push(ensureRightHandRule(coords));
         } else {
           // Open way — concatenate into the current ring.
           currentRing = currentRing.concat(coords);
@@ -86,7 +118,7 @@ export function AdminAreas(props: AdminAreasProps) {
       // Close off any remaining open ring.
       if (currentRing.length > 0) {
         currentRing.push(currentRing[0]!);
-        rings.push(currentRing);
+        rings.push(ensureRightHandRule(currentRing));
       }
 
       if (rings.length > 0) {
