@@ -10,3 +10,4 @@ interface Relation {
 let relations: Record<string, Relation>;
 
 let ways: Record<string, number[]>;
+let dataReady: Promise<void>;

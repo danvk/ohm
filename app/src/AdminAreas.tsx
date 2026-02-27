@@ -52,19 +52,48 @@ export function AdminAreas(props: AdminAreasProps) {
   const geojson = React.useMemo<FeatureCollection<Polygon>>(() => {
     const features: Feature<Polygon>[] = [];
     for (const [id, relation] of Object.entries(admin2ForYear)) {
-      let ring: number[][] = [];
+      const rings: number[][][] = [];
+      let currentRing: number[][] = [];
+
       for (const wayId of relation.ways) {
         const encoded = ways[wayId];
-        if (encoded) {
-          ring = ring.concat(decodePositions(encoded));
+        if (!encoded) continue;
+
+        // Check if closed before decoding to avoid floating-point rounding issues.
+        // A way is closed when its first and last encoded points are identical.
+        const isClosed =
+          encoded.length >= 4 &&
+          encoded[0] === encoded[encoded.length - 2] &&
+          encoded[1] === encoded[encoded.length - 1];
+
+        const coords = decodePositions(encoded);
+
+        if (isClosed) {
+          // Close off any open ring accumulated so far.
+          if (currentRing.length > 0) {
+            currentRing.push(currentRing[0]!);
+            rings.push(currentRing);
+            currentRing = [];
+          }
+          // Add this self-contained closed ring (without modification).
+          rings.push(coords);
+        } else {
+          // Open way — concatenate into the current ring.
+          currentRing = currentRing.concat(coords);
         }
       }
-      if (ring.length > 0) {
-        ring.push(ring[0]);
+
+      // Close off any remaining open ring.
+      if (currentRing.length > 0) {
+        currentRing.push(currentRing[0]!);
+        rings.push(currentRing);
+      }
+
+      if (rings.length > 0) {
         features.push({
           type: 'Feature',
           id,
-          geometry: { type: 'Polygon', coordinates: [ring] },
+          geometry: { type: 'Polygon', coordinates: rings },
           properties: relation.tags,
         });
       }

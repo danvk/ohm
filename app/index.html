@@ -27,7 +27,7 @@
   <body>
     <div id="root"></div>
     <script type="text/javascript">
-      (async () => {
+      window.dataReady = (async () => {
         const relationsR = fetch('/static/relations.json');
         const waysR = fetch('/static/ways.json');
 
