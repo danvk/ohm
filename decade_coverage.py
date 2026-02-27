@@ -13,6 +13,7 @@ import json
 import sys
 import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import osmium
@@ -91,8 +92,8 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
         return lvl if lvl in ADMIN_LEVELS else None
 
     def area(self, a: Any) -> None:
-        lvl = self._admin_level(a.tags)
-        if lvl is None:
+        admin_level = self._admin_level(a.tags)
+        if admin_level is None:
             return
 
         orig_type = "way" if a.from_way() else "relation"
@@ -125,18 +126,21 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
             geom = geom.buffer(0)
 
         for y in years:
-            self.decade_geoms[lvl][y].append(geom)
+            self.decade_geoms[admin_level][y].append(geom)
+
+        min_year = years[0]
+        if min_year == -6000:
+            sys.stderr.write(f"-6000: {key} at level {admin_level}\n")
 
         # Record for earliest-feature reporting
-        if start_year is not None:
-            name = a.tags.get("name") or f"{orig_type}/{orig_id}"
-            heap = self.earliest[lvl]
-            if len(heap) < 10:
-                heapq.heappush(heap, (-start_year, name))
-            elif start_year < -heap[0][0]:
-                heapq.heapreplace(heap, (-start_year, name))
+        name = a.tags.get("name") or f"{orig_type}/{orig_id}"
+        heap = self.earliest[admin_level]
+        if len(heap) < 10:
+            heapq.heappush(heap, (-min_year, name))
+        elif min_year < -heap[0][0]:
+            heapq.heapreplace(heap, (-min_year, name))
 
-        self.totals[lvl] += 1
+        self.totals[admin_level] += 1
         total = sum(self.totals.values())
         if total % 100 == 0:
             counts = ", ".join(f"L{l}={self.totals[l]}" for l in ADMIN_LEVELS)
@@ -207,10 +211,14 @@ def main() -> None:
         t0 = time.monotonic()
         done = 0
 
-        for decade, geoms in buckets:
-            dec, _lvl, km2 = compute_bucket(lvl, decade, geoms)
-            results[dec][lvl] = km2
-            if geoms:
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            futures = {
+                pool.submit(compute_bucket, lvl, decade, geoms): decade
+                for decade, geoms in buckets
+            }
+            for future in as_completed(futures):
+                decade, lvl, km2 = future.result()
+                results[decade][lvl] = km2
                 done += 1
                 if done % 50 == 0 or done == n_buckets:
                     elapsed = time.monotonic() - t0
