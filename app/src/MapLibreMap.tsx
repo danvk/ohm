@@ -13,7 +13,7 @@ const MINIMAL_STYLE: maplibregl.StyleSpecification = {
   sources: {
     maplibre: {
       type: 'vector',
-      url: 'https://demotiles.maplibre.org/tiles/tiles.json',
+      url: 'https://vector.openstreetmap.org/shortbread_v1/tilejson.json',
     },
   },
   layers: [

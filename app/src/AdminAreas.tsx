@@ -54,9 +54,6 @@ export function AdminAreas(props: AdminAreasProps) {
     const yearStr = String(year).padStart(4, '0');
     const out: typeof relations = {};
     for (const [id, relation] of Object.entries(relations)) {
-      if (id != '2851762') {
-        continue; // Iceland
-      }
       const { tags } = relation;
       if (
         tags['admin_level'] != '2' ||
@@ -112,13 +109,12 @@ export function AdminAreas(props: AdminAreasProps) {
       }
 
       if (rings.length > 0) {
-        console.log(rings);
         features.push({
           type: 'Feature',
           id,
           geometry: {
             type: 'MultiPolygon',
-            coordinates: rings.map((r) => [r]),
+            coordinates: rings.map((r) => [ensureRightHandRule(r)]),
           },
           properties: relation.tags,
         });
@@ -127,8 +123,17 @@ export function AdminAreas(props: AdminAreasProps) {
     return { type: 'FeatureCollection', features };
   }, [admin2ForYear]);
 
-  console.log(geojson);
   const map = useMap();
+
+  const handleOnClick = React.useCallback(
+    (e: maplibregl.MapLayerMouseEvent) => {
+      const features = map?.queryRenderedFeatures(e.point, {
+        layers: ['admin2-fill'],
+      });
+      console.log(features);
+    },
+    [],
+  );
 
   React.useEffect(() => {
     if (!map) return;
@@ -151,6 +156,8 @@ export function AdminAreas(props: AdminAreasProps) {
         source: SOURCE_ID,
         paint: { 'line-color': '#3050a0', 'line-width': 1 },
       });
+      map.on('click', FILL_LAYER_ID, handleOnClick);
+      map.on('click', LINE_LAYER_ID, handleOnClick);
     } else {
       (map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource).setData(geojson);
     }
@@ -159,6 +166,8 @@ export function AdminAreas(props: AdminAreasProps) {
       if (map.getLayer(FILL_LAYER_ID)) map.removeLayer(FILL_LAYER_ID);
       if (map.getLayer(LINE_LAYER_ID)) map.removeLayer(LINE_LAYER_ID);
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
+      map.off('click', FILL_LAYER_ID, handleOnClick);
+      map.off('click', LINE_LAYER_ID, handleOnClick);
     };
   }, [map, geojson]);
 

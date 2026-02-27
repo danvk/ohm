@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { MapLibreMap } from './MapLibreMap';
 import { ZoomControl } from './ZoomControl';
 import { AdminAreas } from './AdminAreas';
