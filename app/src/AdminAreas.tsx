@@ -2,6 +2,7 @@ import React from 'react';
 import type { Feature, FeatureCollection, Polygon } from 'geojson';
 import maplibregl from 'maplibre-gl';
 import { useMap } from './MapLibreMap';
+import { signedArea } from './geometry';
 
 export interface AdminAreasProps {
   year: number;
@@ -23,17 +24,6 @@ function isWayClosed(pos: number[]): boolean {
   if (pos.length < 4) return false;
   const [lastX, lastY] = lastEncodedPoint(pos);
   return lastX === pos[0] && lastY === pos[1];
-}
-
-/** Shoelace formula: positive area = counter-clockwise = right-hand rule. */
-function signedArea(ring: number[][]): number {
-  let area = 0;
-  for (let i = 0; i < ring.length - 1; i++) {
-    const [x1, y1] = ring[i];
-    const [x2, y2] = ring[i + 1];
-    area += x1 * y2 - x2 * y1;
-  }
-  return area;
 }
 
 function ensureRightHandRule(ring: number[][]): number[][] {
