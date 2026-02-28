@@ -5,7 +5,7 @@ declare module '*.css' {
 
 interface Relation {
   tags: Record<string, string>;
-  ways: number[];
+  ways: number[][];
 }
 let relations: Record<string, Relation>;
 

@@ -1,35 +1,16 @@
 import React from 'react';
-import type { Feature, FeatureCollection, Polygon } from 'geojson';
+import type {
+  Feature,
+  FeatureCollection,
+  MultiPolygon,
+  Polygon,
+  Position,
+} from 'geojson';
 import maplibregl from 'maplibre-gl';
 import { useMap } from './MapLibreMap';
-import { signedArea } from './geometry';
 
 export interface AdminAreasProps {
   year: number;
-}
-
-// The first two entries are quantized [lng, lat].
-// The remaining entries are delta encoded.
-function lastEncodedPoint(pos: number[]): [number, number] {
-  let x = pos[0]!;
-  let y = pos[1]!;
-  for (let i = 2; i < pos.length; i += 2) {
-    x += pos[i]!;
-    y += pos[i + 1]!;
-  }
-  return [x, y];
-}
-
-function isWayClosed(pos: number[]): boolean {
-  if (pos.length < 4) return false;
-  const [lastX, lastY] = lastEncodedPoint(pos);
-  return lastX === pos[0] && lastY === pos[1];
-}
-
-function ensureRightHandRule(ring: number[][]): number[][] {
-  // Right-hand rule: exterior rings counter-clockwise (positive signed area).
-  const area = signedArea(ring);
-  return area > 0 ? ring : ring.slice().reverse();
 }
 
 function decodePositions(pos: number[]) {
@@ -72,49 +53,34 @@ export function AdminAreas(props: AdminAreasProps) {
   // The global "ways" variable contains a mapping from way ID -> coordinate string
   // The decodePositions function can be used to decode these to lng/lats.
 
-  const geojson = React.useMemo<FeatureCollection<Polygon>>(() => {
-    const features: Feature<Polygon>[] = [];
+  const geojson = React.useMemo<FeatureCollection<MultiPolygon>>(() => {
+    const features: Feature<MultiPolygon>[] = [];
     for (const [id, relation] of Object.entries(admin2ForYear)) {
-      const rings: number[][][] = [];
-      let currentRing: number[][] = [];
+      const rings: Position[][] = [];
 
-      for (const wayId of relation.ways) {
-        const encoded = ways[wayId];
-        if (!encoded) continue;
-
-        // Check if closed in encoded space to avoid floating-point rounding issues.
-        const isClosed = isWayClosed(encoded);
-
-        const coords = decodePositions(encoded);
-
-        if (isClosed) {
-          // Close off any open ring accumulated so far.
-          if (currentRing.length > 0) {
-            currentRing.push(currentRing[0]!);
-            rings.push(currentRing);
-            currentRing = [];
+      for (const ring of relation.ways) {
+        let currentRing: Position[] = [];
+        for (const wayId of ring) {
+          const encoded = ways[Math.abs(wayId)];
+          if (!encoded) {
+            throw new Error(`Missing way ${wayId}`);
           }
-          // Add this self-contained closed ring.
-          rings.push(coords);
-        } else {
-          // Open way — concatenate into the current ring.
-          currentRing = currentRing.concat(coords);
+          const coords = decodePositions(encoded);
+          if (wayId < 0) {
+            currentRing = currentRing.concat(coords.reverse());
+          } else {
+            currentRing = currentRing.concat(coords);
+          }
         }
-      }
-
-      // Close off any remaining open ring.
-      if (currentRing.length > 0) {
-        currentRing.push(currentRing[0]!);
         rings.push(currentRing);
       }
-
       if (rings.length > 0) {
         features.push({
           type: 'Feature',
           id,
           geometry: {
             type: 'MultiPolygon',
-            coordinates: rings.map((r) => [ensureRightHandRule(r)]),
+            coordinates: rings.map((r) => [r]), // no holes
           },
           properties: relation.tags,
         });
