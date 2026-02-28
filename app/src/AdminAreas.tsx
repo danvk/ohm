@@ -13,6 +13,24 @@ export interface AdminAreasProps {
   year: number;
 }
 
+const SHOWN_TAGS = [
+  'name',
+  'name:en',
+  'start_date',
+  'end_date',
+  'admin_level',
+  'boundary',
+  'type',
+  'place',
+  'wikidata',
+  'wikipedia',
+] as const;
+
+interface FeatureInfo {
+  id: string | number;
+  tags: Record<string, string>;
+}
+
 function decodePositions(pos: number[]) {
   let x = pos[0];
   let y = pos[1];
@@ -91,14 +109,27 @@ export function AdminAreas(props: AdminAreasProps) {
 
   const map = useMap();
 
+  const [selectedFeatures, setSelectedFeatures] = React.useState<FeatureInfo[]>(
+    [],
+  );
+
   const handleOnClick = React.useCallback(
     (e: maplibregl.MapLayerMouseEvent) => {
       const features = map?.queryRenderedFeatures(e.point, {
         layers: ['admin2-fill'],
       });
-      console.log(features);
+      if (!features?.length) {
+        setSelectedFeatures([]);
+        return;
+      }
+      setSelectedFeatures(
+        features.map((f) => ({
+          id: f.id ?? '?',
+          tags: (f.properties ?? {}) as Record<string, string>,
+        })),
+      );
     },
-    [],
+    [map],
   );
 
   React.useEffect(() => {
@@ -137,5 +168,28 @@ export function AdminAreas(props: AdminAreasProps) {
     };
   }, [map, geojson]);
 
-  return null;
+  if (selectedFeatures.length === 0) return null;
+
+  return (
+    <div id="feature-panel">
+      <button id="feature-panel-close" onClick={() => setSelectedFeatures([])}>
+        ✕
+      </button>
+      {selectedFeatures.map((f) => (
+        <div key={f.id} className="feature-info">
+          <h3>OSM relation {f.id}</h3>
+          <table>
+            <tbody>
+              {SHOWN_TAGS.filter((tag) => tag in f.tags).map((tag) => (
+                <tr key={tag}>
+                  <th>{tag}</th>
+                  <td>{f.tags[tag]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  );
 }
