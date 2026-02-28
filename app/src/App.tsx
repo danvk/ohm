@@ -1,12 +1,16 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { MapLibreMap } from './MapLibreMap';
 import { ZoomControl } from './ZoomControl';
 import { AdminAreas } from './AdminAreas';
+import { FeaturePanel, type FeatureInfo } from './FeaturePanel';
 
 const DEFAULT_CENTER: [number, number] = [0, 20];
 
 export default function App() {
   const [year, setYear] = React.useState(1100);
+  const [selectedFeatures, setSelectedFeatures] = React.useState<FeatureInfo[]>(
+    [],
+  );
 
   return (
     <>
@@ -28,8 +32,12 @@ export default function App() {
         zoom={1.5}
       >
         <ZoomControl />
-        <AdminAreas year={year} />
+        <AdminAreas year={year} onClickFeature={setSelectedFeatures} />
       </MapLibreMap>
+      <FeaturePanel
+        features={selectedFeatures}
+        onClose={() => setSelectedFeatures([])}
+      />
     </>
   );
 }

@@ -3,32 +3,15 @@ import type {
   Feature,
   FeatureCollection,
   MultiPolygon,
-  Polygon,
   Position,
 } from 'geojson';
 import maplibregl from 'maplibre-gl';
 import { useMap } from './MapLibreMap';
+import type { FeatureInfo } from './FeaturePanel';
 
 export interface AdminAreasProps {
   year: number;
-}
-
-const SHOWN_TAGS = [
-  'name',
-  'name:en',
-  'start_date',
-  'end_date',
-  'admin_level',
-  'boundary',
-  'type',
-  'place',
-  'wikidata',
-  'wikipedia',
-] as const;
-
-interface FeatureInfo {
-  id: string | number;
-  tags: Record<string, string>;
+  onClickFeature: (features: FeatureInfo[]) => void;
 }
 
 function decodePositions(pos: number[]) {
@@ -48,7 +31,7 @@ function decodePositions(pos: number[]) {
 }
 
 export function AdminAreas(props: AdminAreasProps) {
-  const { year } = props;
+  const { year, onClickFeature } = props;
   const admin2ForYear = React.useMemo(() => {
     const yearStr = String(year).padStart(4, '0');
     const out: typeof relations = {};
@@ -109,27 +92,19 @@ export function AdminAreas(props: AdminAreasProps) {
 
   const map = useMap();
 
-  const [selectedFeatures, setSelectedFeatures] = React.useState<FeatureInfo[]>(
-    [],
-  );
-
   const handleOnClick = React.useCallback(
     (e: maplibregl.MapLayerMouseEvent) => {
       const features = map?.queryRenderedFeatures(e.point, {
         layers: ['admin2-fill'],
       });
-      if (!features?.length) {
-        setSelectedFeatures([]);
-        return;
-      }
-      setSelectedFeatures(
-        features.map((f) => ({
+      onClickFeature(
+        (features ?? []).map((f) => ({
           id: f.id ?? '?',
           tags: (f.properties ?? {}) as Record<string, string>,
         })),
       );
     },
-    [map],
+    [map, onClickFeature],
   );
 
   React.useEffect(() => {
@@ -168,28 +143,5 @@ export function AdminAreas(props: AdminAreasProps) {
     };
   }, [map, geojson]);
 
-  if (selectedFeatures.length === 0) return null;
-
-  return (
-    <div id="feature-panel">
-      <button id="feature-panel-close" onClick={() => setSelectedFeatures([])}>
-        ✕
-      </button>
-      {selectedFeatures.map((f) => (
-        <div key={f.id} className="feature-info">
-          <h3>OSM relation {f.id}</h3>
-          <table>
-            <tbody>
-              {SHOWN_TAGS.filter((tag) => tag in f.tags).map((tag) => (
-                <tr key={tag}>
-                  <th>{tag}</th>
-                  <td>{f.tags[tag]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
-    </div>
-  );
+  return null;
 }
