@@ -6,8 +6,6 @@ export interface FeatureInfo {
 }
 
 const EXACT_TAGS = [
-  'name',
-  'name:en',
   'admin_level',
   'boundary',
   'type',
@@ -50,19 +48,28 @@ export function FeaturePanel({ features, onClose }: FeaturePanelProps) {
 }
 
 function FeatureInfo({ feature }: { feature: FeatureInfo }) {
+  const { id, tags } = feature;
+  const tagsToShow = Object.entries(tags).filter(([key]) => KEY_PAT.exec(key));
+  const name = tags['name:en'] ?? tags['name'];
+
   return (
-    <div key={feature.id} className="feature-info">
-      <h3>OSM relation {feature.id}</h3>
+    <div className="feature-info">
+      <h3>
+        <a
+          href={`https://www.openhistoricalmap.org/relation/${id}`}
+          target="_blank"
+        >
+          {name}
+        </a>
+      </h3>
       <table>
         <tbody>
-          {Object.entries(feature.tags)
-            .filter(([key]) => KEY_PAT.exec(key))
-            .map(([key, value]) => (
-              <tr key={key}>
-                <th>{key}</th>
-                <td>{value}</td>
-              </tr>
-            ))}
+          {tagsToShow.map(([key, value]) => (
+            <tr key={key}>
+              <th>{key}</th>
+              <td>{value}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
