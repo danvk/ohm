@@ -43,22 +43,28 @@ export function FeaturePanel({ features, onClose }: FeaturePanelProps) {
         ✕
       </button>
       {features.map((f) => (
-        <div key={f.id} className="feature-info">
-          <h3>OSM relation {f.id}</h3>
-          <table>
-            <tbody>
-              {Object.entries(f.tags)
-                .filter(([key]) => KEY_PAT.exec(key))
-                .map(([key, value]) => (
-                  <tr key={key}>
-                    <th>{key}</th>
-                    <td>{value}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+        <FeatureInfo key={f.id} feature={f} />
       ))}
+    </div>
+  );
+}
+
+function FeatureInfo({ feature }: { feature: FeatureInfo }) {
+  return (
+    <div key={feature.id} className="feature-info">
+      <h3>OSM relation {feature.id}</h3>
+      <table>
+        <tbody>
+          {Object.entries(feature.tags)
+            .filter(([key]) => KEY_PAT.exec(key))
+            .map(([key, value]) => (
+              <tr key={key}>
+                <th>{key}</th>
+                <td>{value}</td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
     </div>
   );
 }
