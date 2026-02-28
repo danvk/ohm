@@ -7,30 +7,7 @@ import React, {
 } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-
-const MINIMAL_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    maplibre: {
-      type: 'vector',
-      url: 'https://vector.openstreetmap.org/shortbread_v1/tilejson.json',
-    },
-  },
-  layers: [
-    {
-      id: 'background',
-      type: 'background',
-      paint: { 'background-color': '#e8e8e8' },
-    },
-    {
-      id: 'countries-fill',
-      type: 'fill',
-      source: 'maplibre',
-      'source-layer': 'countries',
-      paint: { 'fill-color': '#aaaaaa' },
-    },
-  ],
-};
+import { MINIMAL_STYLE } from './map-style';
 
 interface MapLibreMapProps extends Partial<maplibregl.MapOptions> {
   containerId?: string;
