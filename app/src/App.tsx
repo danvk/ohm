@@ -6,7 +6,7 @@ import { AdminAreas } from './AdminAreas';
 const DEFAULT_CENTER: [number, number] = [0, 20];
 
 export default function App() {
-  const [year, setYear] = React.useState(2020);
+  const [year, setYear] = React.useState(1100);
 
   return (
     <>
