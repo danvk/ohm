@@ -28,6 +28,8 @@ from typing import Any
 
 import osmium
 
+from geometry import build_rings
+
 
 def tags_to_dict(tags) -> dict[str, str]:
     return {tag.k: tag.v for tag in tags}
@@ -76,21 +78,28 @@ class WayHandler(osmium.SimpleHandler):
     def __init__(self, way_ids: set[int]) -> None:
         super().__init__()
         self._way_ids = way_ids
-        # way_id (int) → {"nodes": [node_id, ...]}
+        # way_id (int) → quantized delta-encoded flat list (for output)
         self.ways: dict[int, list[int]] = {}
+        # way_id (int) → ordered list of node IDs (for ring topology)
+        self.way_nodes: dict[int, list[int]] = {}
+        # way_id (int) → ordered list of (lon, lat) float tuples (for orientation)
+        self.way_coords: dict[int, list[tuple[float, float]]] = {}
 
     def way(self, w: Any) -> None:
         if w.id not in self._way_ids:
             return
-        locs = [quantize((n.lon, n.lat)) for n in w.nodes if n.location.valid()]
-        deltas = (
-            [
-                locs[0],
-                *[(nx - px, ny - py) for (px, py), (nx, ny) in zip(locs, locs[1:])],
-            ]
-            if locs
-            else []
-        )
+        valid_nodes = [(n.ref, (n.lon, n.lat)) for n in w.nodes if n.location.valid()]
+        if not valid_nodes:
+            return
+        node_ids = [ref for ref, _ in valid_nodes]
+        coords = [lonlat for _, lonlat in valid_nodes]
+        self.way_nodes[w.id] = node_ids
+        self.way_coords[w.id] = coords
+        locs = [quantize(c) for c in coords]
+        deltas = [
+            locs[0],
+            *[(nx - px, ny - py) for (px, py), (nx, ny) in zip(locs, locs[1:])],
+        ]
         self.ways[w.id] = [coord for delta in deltas for coord in delta]
 
 
@@ -133,10 +142,6 @@ def main() -> None:
         f"{len(rel_handler.way_ids):,} unique ways  ({elapsed:.1f}s)"
     )
 
-    # Serialise relation IDs as strings for JSON keys
-    relations_out = {str(rid): data for rid, data in rel_handler.relations.items()}
-    write_json(args.relations_out, relations_out)
-
     # --- Pass 2: Ways ---
     _log("Pass 2: scanning ways …")
     t0 = time.monotonic()
@@ -149,6 +154,21 @@ def main() -> None:
 
     ways_out = {str(wid): data for wid, data in way_handler.ways.items()}
     write_json(args.ways_out, ways_out)
+
+    # --- Order ways in each relation into oriented rings, then write relations ---
+    _log("Ordering ways into oriented rings …")
+    for rid, rel_data in rel_handler.relations.items():
+        raw_way_ids: list[int] = rel_data["ways"]
+        rings = build_rings(
+            raw_way_ids,
+            way_handler.way_nodes,
+            way_handler.way_coords,
+            warn=lambda msg: _log(f"    Warning: {msg}"),
+        )
+        rel_data["ways"] = rings
+
+    relations_out = {str(rid): data for rid, data in rel_handler.relations.items()}
+    write_json(args.relations_out, relations_out)
 
     _log("Done.")
 
