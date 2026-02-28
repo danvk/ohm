@@ -20,6 +20,8 @@ interface MapLibreMapProps extends Partial<maplibregl.MapOptions> {
   containerClassName?: string;
   onClick?: () => void;
   onMapMove?: (view: MapView) => void;
+  /** When set, imperatively flies the map to this view. Use a new object reference to trigger. */
+  externalView?: MapView & { seq: number };
   children?: React.JSX.Element | React.JSX.Element[];
 }
 
@@ -33,6 +35,7 @@ export function MapLibreMap({
   children,
   onClick,
   onMapMove,
+  externalView,
   containerId,
   containerClassName,
   ...mapOptions
@@ -62,13 +65,12 @@ export function MapLibreMap({
     };
   }, [initialOptions]);
 
-  // TODO: other options should be reactive, too
-  const { center } = mapOptions;
+  // Imperatively reposition the map when an external navigation arrives.
   React.useEffect(() => {
-    if (center) {
-      mapRef?.setCenter(center);
-    }
-  }, [center, mapRef]);
+    if (!mapRef || !externalView) return;
+    mapRef.setCenter([externalView.lng, externalView.lat]);
+    mapRef.setZoom(externalView.zoom);
+  }, [mapRef, externalView]);
 
   React.useEffect(() => {
     if (onClick) {
