@@ -16,18 +16,36 @@ export default function App() {
     [selectedFeatures],
   );
 
+  const MIN_YEAR = 0;
+  const MAX_YEAR = 2030;
+  // Fraction 0–1 of thumb position, used to position the label above the thumb
+  const thumbFraction = (year - MIN_YEAR) / (MAX_YEAR - MIN_YEAR);
+
   return (
     <>
       <div id="time-slider">
-        {year}
-        <input
-          id="year"
-          type="range"
-          min={0}
-          max={2030}
-          value={year}
-          onChange={(e) => setYear(e.currentTarget.valueAsNumber)}
-        />
+        <div id="time-slider-track-row">
+          <div
+            id="time-slider-input-wrap"
+            style={{ '--thumb-fraction': thumbFraction } as React.CSSProperties}
+          >
+            <span id="year-display">{year}</span>
+            <input
+              id="year"
+              type="range"
+              min={MIN_YEAR}
+              max={MAX_YEAR}
+              value={year}
+              onChange={(e) => setYear(e.currentTarget.valueAsNumber)}
+            />
+          </div>
+          <span className="time-slider-label time-slider-label-min">
+            {MIN_YEAR}
+          </span>
+          <span className="time-slider-label time-slider-label-max">
+            {MAX_YEAR}
+          </span>
+        </div>
       </div>
       <MapLibreMap
         containerId="map"

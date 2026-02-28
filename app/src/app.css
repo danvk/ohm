@@ -16,28 +16,101 @@ body {
 .maplibregl-ctrl-top-left {
   margin-top: 2em;
 }
+.maplibregl-ctrl-bottom-right {
+  margin-bottom: 3em;
+}
+
+/* ── Time slider ──────────────────────────────────────────── */
 
 #time-slider {
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1rem 1.5rem; /* extra bottom padding for min/max labels */
   z-index: 1;
+  /* subtle frosted background so map doesn't bleed through */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+}
+
+.time-slider-label {
+  position: absolute;
+  color: #555;
+  white-space: nowrap;
+  margin-bottom: -1rem; /* descend below the track to form the bottom label row */
+}
+.time-slider-label-min {
+  left: 1em;
+}
+.time-slider-label-max {
+  right: 1em;
+  text-align: right;
+}
+
+#time-slider-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+#year-display {
+  position: absolute;
+  /* place above the thumb: calc shifts from left edge by thumb fraction,
+     then centres the label over it */
+  left: calc(var(--thumb-fraction) * (100% - 16px) + 8px);
+  transform: translateX(-50%);
+  bottom: calc(100% + 8px);
+  font-weight: 600;
+  color: #222;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 #year {
-  position: absolute;
-  left: 4em;
-  right: 1em;
+  width: 100%;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: #bbb; /* uniform colour — no fill */
+  outline: none;
+  cursor: pointer;
 }
 
+/* Thumb — all browsers */
+#year::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3050a0;
+  cursor: pointer;
+}
+#year::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3050a0;
+  border: none;
+  cursor: pointer;
+}
+/* Remove default fill track in Firefox */
+#year::-moz-range-progress {
+  background: #bbb;
+}
+
+/* Time-slider height is ~4rem total (padding + track + labels).
+   Leave at least 1rem breathing room above the slider. */
 #feature-panel {
   position: absolute;
-  top: 2.5rem;
+  top: 0;
   right: 0;
   width: 300px;
-  height: calc(100vh - 2.5rem);
+  max-height: calc(100vh - 5rem);
   background: white;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
   overflow-y: auto;
