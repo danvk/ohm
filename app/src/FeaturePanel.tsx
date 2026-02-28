@@ -67,11 +67,26 @@ function FeatureInfo({ feature }: { feature: FeatureInfo }) {
           {tagsToShow.map(([key, value]) => (
             <tr key={key}>
               <th>{key}</th>
-              <td>{value}</td>
+              <td>
+                <TagValue tagKey={key} value={value} />
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
+}
+
+function TagValue({ tagKey, value }: { tagKey: string; value: string }) {
+  if (tagKey === 'wikipedia') {
+    const [lang] = value.split(':', 1);
+    const url = `https://${lang}.wikipedia.org/wiki/${value}`;
+    return (
+      <a href={url} target="_blank">
+        {value}
+      </a>
+    );
+  }
+  return value;
 }
