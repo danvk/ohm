@@ -11,7 +11,10 @@ export default function App() {
   const [selectedFeatures, setSelectedFeatures] = React.useState<FeatureInfo[]>(
     [],
   );
-  const clearSelectionRef = React.useRef<(() => void) | null>(null);
+  const selectedIds = React.useMemo(
+    () => new Set(selectedFeatures.map((f) => f.id)),
+    [selectedFeatures],
+  );
 
   return (
     <>
@@ -35,16 +38,13 @@ export default function App() {
         <ZoomControl />
         <AdminAreas
           year={year}
+          selectedIds={selectedIds}
           onClickFeature={setSelectedFeatures}
-          clearSelectionRef={clearSelectionRef}
         />
       </MapLibreMap>
       <FeaturePanel
         features={selectedFeatures}
-        onClose={() => {
-          clearSelectionRef.current?.();
-          setSelectedFeatures([]);
-        }}
+        onClose={() => setSelectedFeatures([])}
       />
     </>
   );

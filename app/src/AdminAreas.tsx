@@ -11,8 +11,8 @@ import type { FeatureInfo } from './FeaturePanel';
 
 export interface AdminAreasProps {
   year: number;
+  selectedIds: Set<string | number>;
   onClickFeature: (features: FeatureInfo[]) => void;
-  clearSelectionRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 const SOURCE_ID = 'admin2';
@@ -135,41 +135,28 @@ export function AdminAreas(props: AdminAreasProps) {
   }, [admin2ForYear]);
 
   const map = useMap();
-  const selectedIds = React.useRef<Set<string | number>>(new Set());
 
-  const clearSelection = React.useCallback(() => {
-    if (!map) return;
-    for (const id of selectedIds.current) {
-      map.setFeatureState({ source: 'admin2', id }, { selected: false });
-    }
-    selectedIds.current.clear();
-  }, [map]);
-
+  // Sync selectedIds prop → MapLibre feature state
+  const prevSelectedIds = React.useRef<Set<string | number>>(new Set());
   React.useEffect(() => {
-    if (props.clearSelectionRef) {
-      props.clearSelectionRef.current = clearSelection;
+    if (!map) return;
+    for (const id of prevSelectedIds.current) {
+      if (!props.selectedIds.has(id)) {
+        map.setFeatureState({ source: SOURCE_ID, id }, { selected: false });
+      }
     }
-  }, [clearSelection, props.clearSelectionRef]);
+    for (const id of props.selectedIds) {
+      map.setFeatureState({ source: SOURCE_ID, id }, { selected: true });
+    }
+    prevSelectedIds.current = new Set(props.selectedIds);
+  }, [map, props.selectedIds]);
 
   const handleOnClick = React.useCallback(
     (e: maplibregl.MapLayerMouseEvent) => {
       if (!map) return;
-      const SOURCE_ID = 'admin2';
-      // Clear previous selection
-      clearSelection();
-
       const features = map.queryRenderedFeatures(e.point, {
-        layers: ['admin2-fill'],
+        layers: [FILL_LAYER_ID],
       });
-      for (const f of features) {
-        if (f.id !== undefined) {
-          map.setFeatureState(
-            { source: SOURCE_ID, id: f.id },
-            { selected: true },
-          );
-          selectedIds.current.add(f.id);
-        }
-      }
       onClickFeature(
         features.map((f) => ({
           id: f.id ?? '?',
@@ -208,7 +195,6 @@ export function AdminAreas(props: AdminAreasProps) {
         layers: [FILL_LAYER_ID],
       });
       if (hits.length === 0) {
-        clearSelection();
         onClickFeature([]);
       }
     };
@@ -222,7 +208,7 @@ export function AdminAreas(props: AdminAreasProps) {
       map.off('click', LINE_LAYER_ID, handleOnClick);
       map.off('click', handleMapClick);
     };
-  }, [map, geojson, clearSelection, onClickFeature]);
+  }, [map, geojson, onClickFeature]);
 
   return null;
 }
