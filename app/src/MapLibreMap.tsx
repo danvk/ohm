@@ -9,10 +9,17 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MINIMAL_STYLE } from './map-style';
 
+export interface MapView {
+  zoom: number;
+  lat: number;
+  lng: number;
+}
+
 interface MapLibreMapProps extends Partial<maplibregl.MapOptions> {
   containerId?: string;
   containerClassName?: string;
   onClick?: () => void;
+  onMapMove?: (view: MapView) => void;
   children?: React.JSX.Element | React.JSX.Element[];
 }
 
@@ -25,6 +32,7 @@ export function useMap() {
 export function MapLibreMap({
   children,
   onClick,
+  onMapMove,
   containerId,
   containerClassName,
   ...mapOptions
@@ -70,6 +78,21 @@ export function MapLibreMap({
       };
     }
   }, [mapRef, onClick]);
+
+  const onMapMoveRef = React.useRef(onMapMove);
+  React.useEffect(() => {
+    onMapMoveRef.current = onMapMove;
+  }, [onMapMove]);
+
+  React.useEffect(() => {
+    if (!mapRef) return;
+    const handler = () => {
+      const { lng, lat } = mapRef.getCenter();
+      onMapMoveRef.current?.({ zoom: mapRef.getZoom(), lat, lng });
+    };
+    mapRef.on('moveend', handler);
+    return () => void mapRef.off('moveend', handler);
+  }, [mapRef]);
 
   // TODO: maybe another wrapper div would be safer -- setting containerClassName here is dangerous.
   return (
