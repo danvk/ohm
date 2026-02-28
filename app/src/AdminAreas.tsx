@@ -74,11 +74,50 @@ function decodePositions(pos: number[]) {
   return coords;
 }
 
+function buildFeature(id: string, relation: Relation): Feature<MultiPolygon> {
+  const rings: Position[][] = [];
+  for (const ring of relation.ways) {
+    let currentRing: Position[] = [];
+    for (const wayId of ring) {
+      const encoded = ways[Math.abs(wayId)];
+      if (!encoded) {
+        throw new Error(`Missing way ${wayId}`);
+      }
+      const coords = decodePositions(encoded);
+      if (wayId < 0) {
+        currentRing = currentRing.concat(coords.reverse());
+      } else {
+        currentRing = currentRing.concat(coords);
+      }
+    }
+    rings.push(currentRing);
+  }
+  return {
+    type: 'Feature',
+    id,
+    geometry: {
+      type: 'MultiPolygon',
+      coordinates: rings.map((r) => [r]), // no holes
+    },
+    properties: relation.tags,
+  };
+}
+
 export function AdminAreas(props: AdminAreasProps) {
   const { year, onClickFeature } = props;
-  const admin2ForYear = React.useMemo(() => {
+
+  // Cache built Feature objects by relation ID so that features whose
+  // [start_date, end_date) interval spans the current *and* previous year
+  // don't need to be recomputed.
+  const featureCache = React.useRef<Map<string, Feature<MultiPolygon>>>(
+    new Map(),
+  );
+
+  const geojson = React.useMemo<FeatureCollection<MultiPolygon>>(() => {
     const yearStr = String(year).padStart(4, '0');
-    const out: typeof relations = {};
+    const features: Feature<MultiPolygon>[] = [];
+    const nextCache = new Map<string, Feature<MultiPolygon>>();
+
     for (const [id, relation] of Object.entries(relations)) {
       const { tags } = relation;
       if (
@@ -88,51 +127,18 @@ export function AdminAreas(props: AdminAreasProps) {
       ) {
         continue;
       }
-      out[id] = relation;
-    }
-    return out;
-  }, [year]);
-
-  // admin2ForYear contains an ID -> Relation mapping with a list of way IDs for each
-  //   relation. Together, these form a polygon.
-  // The global "ways" variable contains a mapping from way ID -> coordinate string
-  // The decodePositions function can be used to decode these to lng/lats.
-
-  const geojson = React.useMemo<FeatureCollection<MultiPolygon>>(() => {
-    const features: Feature<MultiPolygon>[] = [];
-    for (const [id, relation] of Object.entries(admin2ForYear)) {
-      const rings: Position[][] = [];
-
-      for (const ring of relation.ways) {
-        let currentRing: Position[] = [];
-        for (const wayId of ring) {
-          const encoded = ways[Math.abs(wayId)];
-          if (!encoded) {
-            throw new Error(`Missing way ${wayId}`);
-          }
-          const coords = decodePositions(encoded);
-          if (wayId < 0) {
-            currentRing = currentRing.concat(coords.reverse());
-          } else {
-            currentRing = currentRing.concat(coords);
-          }
-        }
-        rings.push(currentRing);
+      // Reuse cached feature if available, otherwise build and cache it.
+      let feature = featureCache.current.get(id);
+      if (!feature) {
+        feature = buildFeature(id, relation);
       }
-      if (rings.length > 0) {
-        features.push({
-          type: 'Feature',
-          id,
-          geometry: {
-            type: 'MultiPolygon',
-            coordinates: rings.map((r) => [r]), // no holes
-          },
-          properties: relation.tags,
-        });
-      }
+      nextCache.set(id, feature);
+      features.push(feature);
     }
+
+    featureCache.current = nextCache;
     return { type: 'FeatureCollection', features };
-  }, [admin2ForYear]);
+  }, [year]);
 
   const map = useMap();
 
