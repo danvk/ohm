@@ -16,7 +16,6 @@ Performs three passes over a planet.osm.pbf file:
 Output files (written to the current directory by default):
   relations.json
   ways.json
-  nodes.json
 
 Each file is a JSON object mapping string IDs to their data.
 """
