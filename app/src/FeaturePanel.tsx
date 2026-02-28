@@ -5,18 +5,29 @@ export interface FeatureInfo {
   tags: Record<string, string>;
 }
 
-const SHOWN_TAGS = [
+const EXACT_TAGS = [
   'name',
   'name:en',
-  'start_date',
-  'end_date',
   'admin_level',
   'boundary',
   'type',
   'place',
+  'disputed',
   'wikidata',
   'wikipedia',
-] as const;
+];
+const PREFIX_TAGS = [
+  'start_date',
+  'end_date',
+  'start_event',
+  'end_event',
+  'source',
+  'note',
+  'fixme',
+];
+const EXACT_RE = EXACT_TAGS.join('|');
+const PREFIX_RE = PREFIX_TAGS.join('|');
+const KEY_PAT = new RegExp(`^(?:(?:(?:${EXACT_RE})$)|(?:${PREFIX_RE}))`);
 
 export interface FeaturePanelProps {
   features: FeatureInfo[];
@@ -36,12 +47,14 @@ export function FeaturePanel({ features, onClose }: FeaturePanelProps) {
           <h3>OSM relation {f.id}</h3>
           <table>
             <tbody>
-              {SHOWN_TAGS.filter((tag) => tag in f.tags).map((tag) => (
-                <tr key={tag}>
-                  <th>{tag}</th>
-                  <td>{f.tags[tag]}</td>
-                </tr>
-              ))}
+              {Object.entries(f.tags)
+                .filter(([key]) => KEY_PAT.exec(key))
+                .map(([key, value]) => (
+                  <tr key={key}>
+                    <th>{key}</th>
+                    <td>{value}</td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
