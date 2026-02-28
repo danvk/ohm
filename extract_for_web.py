@@ -44,7 +44,8 @@ def quantize(pt: tuple[float, float]) -> tuple[int, int]:
     return (round((lng + 180) / 360 * 4_000_000), round((lat + 90) / 180 * 2_000_000))
 
 
-ADMIN_LEVELS = {"2", "3", "4"}
+# ADMIN_LEVELS = {"2", "3", "4"}
+ADMIN_LEVELS = {"2"}
 
 
 class RelationHandler(osmium.SimpleHandler):

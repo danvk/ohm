@@ -157,64 +157,77 @@ export function AdminAreas(props: AdminAreasProps) {
     prevSelectedIds.current = new Set(props.selectedIds);
   }, [map, props.selectedIds]);
 
-  const handleOnClick = React.useCallback(
-    (e: maplibregl.MapLayerMouseEvent) => {
-      if (!map) return;
+  // Keep a stable ref to onClickFeature so click handlers registered once
+  // always call the latest version without needing to be re-registered.
+  const onClickFeatureRef = React.useRef(onClickFeature);
+  React.useEffect(() => {
+    onClickFeatureRef.current = onClickFeature;
+  }, [onClickFeature]);
+
+  // Effect 1: add source, layers, and click handlers once per map instance.
+  React.useEffect(() => {
+    if (!map) return;
+
+    const EMPTY: FeatureCollection<MultiPolygon> = {
+      type: 'FeatureCollection',
+      features: [],
+    };
+    map.addSource(SOURCE_ID, { type: 'geojson', data: EMPTY });
+    map.addLayer({
+      id: FILL_LAYER_ID,
+      type: 'fill',
+      source: SOURCE_ID,
+      paint: PAINT_STYLE,
+    });
+    map.addLayer({
+      id: LINE_LAYER_ID,
+      type: 'line',
+      source: SOURCE_ID,
+      paint: LINE_STYLE,
+    });
+
+    const handleLayerClick = (e: maplibregl.MapLayerMouseEvent) => {
       const features = map.queryRenderedFeatures(e.point, {
         layers: [FILL_LAYER_ID],
       });
-      onClickFeature(
+      onClickFeatureRef.current(
         features.map((f) => ({
           id: f.id ?? '?',
           tags: (f.properties ?? {}) as Record<string, string>,
         })),
       );
-    },
-    [map, onClickFeature],
-  );
-
-  React.useEffect(() => {
-    if (!map) return;
-
-    if (!map.getSource(SOURCE_ID)) {
-      map.addSource(SOURCE_ID, { type: 'geojson', data: geojson });
-      map.addLayer({
-        id: FILL_LAYER_ID,
-        type: 'fill',
-        source: SOURCE_ID,
-        paint: PAINT_STYLE,
-      });
-      map.addLayer({
-        id: LINE_LAYER_ID,
-        type: 'line',
-        source: SOURCE_ID,
-        paint: LINE_STYLE,
-      });
-      map.on('click', FILL_LAYER_ID, handleOnClick);
-      map.on('click', LINE_LAYER_ID, handleOnClick);
-    } else {
-      (map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource).setData(geojson);
-    }
-
+    };
     const handleMapClick = (e: maplibregl.MapMouseEvent) => {
       const hits = map.queryRenderedFeatures(e.point, {
         layers: [FILL_LAYER_ID],
       });
       if (hits.length === 0) {
-        onClickFeature([]);
+        onClickFeatureRef.current([]);
       }
     };
+
+    map.on('click', FILL_LAYER_ID, handleLayerClick);
+    map.on('click', LINE_LAYER_ID, handleLayerClick);
     map.on('click', handleMapClick);
 
     return () => {
       if (map.getLayer(FILL_LAYER_ID)) map.removeLayer(FILL_LAYER_ID);
       if (map.getLayer(LINE_LAYER_ID)) map.removeLayer(LINE_LAYER_ID);
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
-      map.off('click', FILL_LAYER_ID, handleOnClick);
-      map.off('click', LINE_LAYER_ID, handleOnClick);
+      map.off('click', FILL_LAYER_ID, handleLayerClick);
+      map.off('click', LINE_LAYER_ID, handleLayerClick);
       map.off('click', handleMapClick);
     };
-  }, [map, geojson, onClickFeature]);
+  }, [map]);
+
+  // Effect 2: push updated geojson data whenever it changes.
+  React.useEffect(() => {
+    if (!map) return;
+    const source = map.getSource(SOURCE_ID) as
+      | maplibregl.GeoJSONSource
+      | undefined;
+    source?.setData(geojson);
+  }, [map, geojson]);
 
   return null;
 }
