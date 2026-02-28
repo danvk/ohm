@@ -118,8 +118,8 @@ export function AdminAreas(props: AdminAreasProps) {
     const features: Feature<MultiPolygon>[] = [];
     const nextCache = new Map<string, Feature<MultiPolygon>>();
 
-    for (const [id, relation] of Object.entries(relations)) {
-      const { tags } = relation;
+    for (const relation of relations) {
+      const { id, tags } = relation;
       if (
         tags['admin_level'] != '2' ||
         ('start_date' in tags && yearStr < tags['start_date']) ||

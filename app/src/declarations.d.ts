@@ -4,10 +4,11 @@ declare module '*.css' {
 }
 
 interface Relation {
+  id: string;
   tags: Record<string, string>;
   ways: number[][];
 }
-let relations: Record<string, Relation>;
+let relations: Relation[];
 
 let ways: Record<string, number[]>;
 let dataReady: Promise<void>;
