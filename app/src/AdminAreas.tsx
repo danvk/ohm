@@ -15,6 +15,49 @@ export interface AdminAreasProps {
   clearSelectionRef?: React.MutableRefObject<(() => void) | null>;
 }
 
+const SOURCE_ID = 'admin2';
+const FILL_LAYER_ID = 'admin2-fill';
+const LINE_LAYER_ID = 'admin2-line';
+
+type FillPaintStyle = Exclude<
+  maplibregl.FillLayerSpecification['paint'],
+  undefined
+>;
+
+const PAINT_STYLE: FillPaintStyle = {
+  'fill-color': [
+    'case',
+    ['boolean', ['feature-state', 'selected'], false],
+    '#ff8c00',
+    '#6080c0',
+  ],
+  'fill-opacity': [
+    'case',
+    ['boolean', ['feature-state', 'selected'], false],
+    0.7,
+    0.5,
+  ],
+};
+
+type LinePaintStyle = Exclude<
+  maplibregl.LineLayerSpecification['paint'],
+  undefined
+>;
+const LINE_STYLE: LinePaintStyle = {
+  'line-color': [
+    'case',
+    ['boolean', ['feature-state', 'selected'], false],
+    '#cc5500',
+    '#3050a0',
+  ],
+  'line-width': [
+    'case',
+    ['boolean', ['feature-state', 'selected'], false],
+    2,
+    1,
+  ],
+};
+
 function decodePositions(pos: number[]) {
   let x = pos[0];
   let y = pos[1];
@@ -140,49 +183,19 @@ export function AdminAreas(props: AdminAreasProps) {
   React.useEffect(() => {
     if (!map) return;
 
-    const SOURCE_ID = 'admin2';
-    const FILL_LAYER_ID = 'admin2-fill';
-    const LINE_LAYER_ID = 'admin2-line';
-
     if (!map.getSource(SOURCE_ID)) {
       map.addSource(SOURCE_ID, { type: 'geojson', data: geojson });
       map.addLayer({
         id: FILL_LAYER_ID,
         type: 'fill',
         source: SOURCE_ID,
-        paint: {
-          'fill-color': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            '#ff8c00',
-            '#6080c0',
-          ],
-          'fill-opacity': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            0.7,
-            0.5,
-          ],
-        },
+        paint: PAINT_STYLE,
       });
       map.addLayer({
         id: LINE_LAYER_ID,
         type: 'line',
         source: SOURCE_ID,
-        paint: {
-          'line-color': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            '#cc5500',
-            '#3050a0',
-          ],
-          'line-width': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            2,
-            1,
-          ],
-        },
+        paint: LINE_STYLE,
       });
       map.on('click', FILL_LAYER_ID, handleOnClick);
       map.on('click', LINE_LAYER_ID, handleOnClick);
@@ -190,14 +203,26 @@ export function AdminAreas(props: AdminAreasProps) {
       (map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource).setData(geojson);
     }
 
+    const handleMapClick = (e: maplibregl.MapMouseEvent) => {
+      const hits = map.queryRenderedFeatures(e.point, {
+        layers: [FILL_LAYER_ID],
+      });
+      if (hits.length === 0) {
+        clearSelection();
+        onClickFeature([]);
+      }
+    };
+    map.on('click', handleMapClick);
+
     return () => {
       if (map.getLayer(FILL_LAYER_ID)) map.removeLayer(FILL_LAYER_ID);
       if (map.getLayer(LINE_LAYER_ID)) map.removeLayer(LINE_LAYER_ID);
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
       map.off('click', FILL_LAYER_ID, handleOnClick);
       map.off('click', LINE_LAYER_ID, handleOnClick);
+      map.off('click', handleMapClick);
     };
-  }, [map, geojson]);
+  }, [map, geojson, clearSelection, onClickFeature]);
 
   return null;
 }
