@@ -33,7 +33,7 @@ export default function App() {
     [selectedFeatures],
   );
 
-  const lastWrittenHash = React.useRef<string>('');
+  const lastWrittenHash = React.useRef('');
 
   const writeHash = React.useCallback((nextYear: number, view?: MapView) => {
     const { zoom, lat, lng } = view ?? viewportRef.current;

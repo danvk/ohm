@@ -32,7 +32,12 @@ from geometry import build_rings
 
 
 def tags_to_dict(tags) -> dict[str, str]:
-    return {tag.k: tag.v for tag in tags}
+    return {
+        tag.k: tag.v
+        for tag in tags
+        # Multilingual names take a lot of storage space
+        if tag.k in ("name", "name:en") or not tag.k.startswith("name")
+    }
 
 
 def _log(msg: str) -> None:
@@ -104,7 +109,30 @@ class WayHandler(osmium.SimpleHandler):
         self.ways[w.id] = [coord for delta in deltas for coord in delta]
 
 
-def write_json(path: str, data: dict) -> None:
+def parse_date_key(date_str: str) -> tuple:
+    """Parse a date string into a sortable tuple.
+
+    Handles formats: YYYY, YYYY-MM, YYYY-MM-DD, and negative years.
+    Returns a tuple that sorts correctly.
+    """
+    # Handle leading negative sign for negative years
+    is_negative = date_str.startswith("-")
+    if is_negative:
+        date_str = date_str[1:]
+
+    parts = date_str.split("-")
+    try:
+        year = int(parts[0])
+        if is_negative:
+            year = -year
+        month = int(parts[1]) if len(parts) > 1 else 0
+        day = int(parts[2]) if len(parts) > 2 else 0
+        return (year, month, day)
+    except (ValueError, IndexError):
+        return (9999, 12, 31)  # Invalid dates sort last
+
+
+def write_json(path: str, data: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
     _log(f"  Wrote {len(data):,} entries to {path}")
@@ -168,7 +196,8 @@ def main() -> None:
         )
         rel_data["ways"] = rings
 
-    relations_out = {str(rid): data for rid, data in rel_handler.relations.items()}
+    relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
+    relations_out.sort(key=lambda r: parse_date_key(r["tags"].get("end_date", "2030")))
     write_json(args.relations_out, relations_out)
 
     _log("Done.")
