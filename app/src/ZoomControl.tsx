@@ -11,7 +11,7 @@ export function ZoomControl() {
         showZoom: true,
         showCompass: false,
       });
-      map.addControl(control, 'top-right');
+      map.addControl(control, 'top-left');
     }
     return () => {
       // console.log('destroy controls', map, control)

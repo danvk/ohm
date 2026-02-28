@@ -11,6 +11,7 @@ export default function App() {
   const [selectedFeatures, setSelectedFeatures] = React.useState<FeatureInfo[]>(
     [],
   );
+  const clearSelectionRef = React.useRef<(() => void) | null>(null);
 
   return (
     <>
@@ -32,11 +33,18 @@ export default function App() {
         zoom={1.5}
       >
         <ZoomControl />
-        <AdminAreas year={year} onClickFeature={setSelectedFeatures} />
+        <AdminAreas
+          year={year}
+          onClickFeature={setSelectedFeatures}
+          clearSelectionRef={clearSelectionRef}
+        />
       </MapLibreMap>
       <FeaturePanel
         features={selectedFeatures}
-        onClose={() => setSelectedFeatures([])}
+        onClose={() => {
+          clearSelectionRef.current?.();
+          setSelectedFeatures([]);
+        }}
       />
     </>
   );

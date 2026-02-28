@@ -13,17 +13,22 @@ body {
   height: 100vh;
 }
 
+.maplibregl-ctrl-top-left {
+  margin-top: 2em;
+}
+
 #time-slider {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   padding: 0.5rem 1rem;
+  z-index: 1;
 }
 
 #year {
   position: absolute;
-  left: 3em;
+  left: 4em;
   right: 1em;
 }
 
