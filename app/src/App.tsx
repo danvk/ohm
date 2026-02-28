@@ -36,6 +36,7 @@ export default function App() {
       <FeaturePanel
         features={selectedFeatures}
         onClose={() => setSelectedFeatures([])}
+        onSetYear={setYear}
       />
     </>
   );

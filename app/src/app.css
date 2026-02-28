@@ -153,6 +153,9 @@ body {
   padding: 2px 8px 2px 0;
   white-space: nowrap;
   vertical-align: top;
+  max-width: 100px;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .feature-info td {
