@@ -272,15 +272,12 @@ def write_osm(
 ) -> None:
     """Write nodes, ways and relations to an OSM PBF file."""
 
-    # OSM IDs: nodes start at 1, ways after nodes, relations after ways
-    # We'll use the 1-based IDs as-is (they don't overlap since we use
-    # separate id spaces assigned during construction).
-    # Node IDs:     1 … len(node_map)
-    # Way IDs:      1 … len(way_map)   – these are written to a separate namespace
-    # OSM doesn't have namespaces, so we offset ways and relations to avoid clashes.
-    node_id_offset = 0
-    way_id_offset = len(node_map)
-    relation_id_offset = len(node_map) + len(way_map)
+    # Use negative IDs — the OSM convention for temporary/unsaved objects.
+    # Each type gets its own negative ID space; no offsets needed since
+    # nodes, ways and relations occupy separate namespaces in OSM.
+    # node internal ID n  →  OSM node ID  -n
+    # way  internal ID w  →  OSM way  ID  -w
+    # relation index  r   →  OSM rel  ID  -(r+1)
 
     with osmium.SimpleWriter(output_path, overwrite=True) as writer:
         # --- Nodes ---
@@ -289,7 +286,7 @@ def write_osm(
             lon, lat = _dequantize(qlon, qlat)
             writer.add_node(
                 mutable.Node(
-                    id=nid + node_id_offset,
+                    id=-nid,
                     location=(lon, lat),
                     tags={},
                     version=1,
@@ -299,11 +296,10 @@ def write_osm(
 
         # --- Ways ---
         for canon_seg, wid in way_map.items():
-            # node IDs in the canonical segment are 1-based; add offset
-            node_refs = [nid + node_id_offset for nid in canon_seg]
+            node_refs = [-nid for nid in canon_seg]
             writer.add_way(
                 mutable.Way(
-                    id=wid + way_id_offset,
+                    id=-wid,
                     nodes=node_refs,
                     tags={},
                     version=1,
@@ -320,14 +316,12 @@ def write_osm(
             members: list[tuple[str, int, str]] = []
             for ring_way_refs in feature_way_refs[feat_idx]:
                 for way_id, is_reversed in ring_way_refs:
-                    osm_way_id = way_id + way_id_offset
                     role = "outer"  # all rings are outer (holes ignored)
-                    members.append(("w", osm_way_id, role))
+                    members.append(("w", -way_id, role))
 
-            rel_id = feat_idx + 1 + relation_id_offset
             writer.add_relation(
                 mutable.Relation(
-                    id=rel_id,
+                    id=-(feat_idx + 1),
                     members=members,
                     tags=tags,
                     version=1,
