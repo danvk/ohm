@@ -71,6 +71,7 @@ def extract_rings(geom: dict) -> list[list[tuple[float, float]]]:
 
     rings: list[list[tuple[float, float]]] = []
     for poly in polys:
+        assert len(poly) == 1, "(Multi)Polygons must not have holes."
         outer = poly[0]  # ignore holes
         # strip closing point if present
         pts = [(lon, lat) for lon, lat in outer]
@@ -271,11 +272,6 @@ def write_osm(
 ) -> None:
     """Write nodes, ways and relations to an OSM PBF file."""
 
-    # Reverse lookups
-    id_to_qpt: dict[int, tuple[int, int]] = {v: k for k, v in node_map.items()}
-    # canonical_seg -> way_id is way_map; we also need way_id -> canonical_seg
-    way_id_to_seg: dict[int, SegKey] = {v: k for k, v in way_map.items()}
-
     # OSM IDs: nodes start at 1, ways after nodes, relations after ways
     # We'll use the 1-based IDs as-is (they don't overlap since we use
     # separate id spaces assigned during construction).
@@ -319,7 +315,7 @@ def write_osm(
         for feat_idx, feat in enumerate(features):
             props = feat.get("properties") or {}
             tags = {str(k): str(v) for k, v in props.items() if v is not None}
-            tags["type"] = "multipolygon"
+            # tags["type"] = "multipolygon"
 
             members: list[tuple[str, int, str]] = []
             for ring_way_refs in feature_way_refs[feat_idx]:
