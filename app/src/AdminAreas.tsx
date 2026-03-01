@@ -63,13 +63,14 @@ function decodePositions(pos: number[]) {
   let y = pos[1];
   const lng = (x / 4_000_000) * 360 - 180;
   const lat = (y / 2_000_000) * 180 - 90;
-  const coords = [[lng, lat]];
+  const coords = new Array<Position>(pos.length / 2);
+  coords[0] = [lng, lat];
   for (let i = 2; i < pos.length; i += 2) {
     x += pos[i];
     y += pos[i + 1];
     const lng = (x / 4_000_000) * 360 - 180;
     const lat = (y / 2_000_000) * 180 - 90;
-    coords.push([lng, lat]);
+    coords[i / 2] = [lng, lat];
   }
   return coords;
 }
@@ -77,7 +78,7 @@ function decodePositions(pos: number[]) {
 function buildFeature(id: string, relation: Relation): Feature<MultiPolygon> {
   const rings: Position[][] = [];
   for (const ring of relation.ways) {
-    let currentRing: Position[] = [];
+    let currentRing: Position[][] = [];
     for (const wayId of ring) {
       const encoded = ways[Math.abs(wayId)];
       if (!encoded) {
@@ -85,12 +86,12 @@ function buildFeature(id: string, relation: Relation): Feature<MultiPolygon> {
       }
       const coords = decodePositions(encoded);
       if (wayId < 0) {
-        currentRing = currentRing.concat(coords.reverse());
+        currentRing.push(coords.reverse());
       } else {
-        currentRing = currentRing.concat(coords);
+        currentRing.push(coords);
       }
     }
-    rings.push(currentRing);
+    rings.push(currentRing.flat());
   }
   return {
     type: 'Feature',
