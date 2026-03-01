@@ -8,13 +8,17 @@ Algorithm:
      point a node ID.
   2. Enumerate all rings (outer only; holes are ignored).  Build per-feature
      ring lists.
-  3. Find "junction" nodes – nodes that appear in more than one polygon, OR
-     where the neighbour relationships differ between rings (i.e. the node is
-     a topological junction within a single ring caused by a meeting point
-     from another ring).
+  3. Find "junction" nodes – nodes where the graph of edges (unordered pairs
+     of adjacent node IDs) has degree ≠ 2.  Degree-2 nodes lie in the
+     interior of a chain and are never split points.  Degree-1 nodes are
+     dead-ends (rare in valid polygons); degree ≥ 3 nodes are true
+     topological junctions (T/X intersections).  Because shared boundaries
+     are traversed in *opposite* directions by adjacent polygons, we treat
+     each edge as an unordered pair so that both traversal directions
+     contribute the same edge.
   4. Split every ring at junction nodes to produce maximal "way segments".
   5. Deduplicate way segments: a segment that is the reverse of another is
-     the same way (since we are dealing with closed polygons).  Assign way IDs.
+     the same way (since we are working with closed polygons).  Assign way IDs.
   6. Write nodes → ways → relations to an OSM PBF via osmium.SimpleWriter.
      Every input GeoJSON feature becomes a relation with type=multipolygon.
 """
@@ -120,42 +124,39 @@ def build_node_index(
 
 
 def find_junctions(feature_rings: list[list[list[int]]]) -> set[int]:
-    """Determine which nodes are junctions.
+    """Determine which nodes are topological junctions.
 
-    A node is a junction if:
-      - It appears in rings belonging to more than one feature, OR
-      - Its neighbourhood set (the set of {prev_node, next_node} pairs across
-        all rings it appears in) has more than one element for the same ring
-        – i.e. another ring "intrudes" at that point.
+    We model the polygon boundaries as an undirected multigraph: each
+    consecutive pair of nodes in a ring contributes an undirected edge
+    (frozenset of the two node IDs).  Because adjacent polygons traverse a
+    shared boundary in *opposite* directions, both traversals produce the
+    same unordered edge, so using frozensets correctly deduplicates them.
 
-    The simpler (and sufficient) characterisation used here:
-      A node is a junction if the set of (prev_node, next_node) pairs seen
-      at that node position (across ALL rings from ALL features) has more
-      than one distinct element for prev AND next combined.  In practice we
-      mark a node as a junction if:
-        a) it appears in rings from ≥ 2 different features, OR
-        b) for any ring that contains the node, there exists another ring
-           (possibly in the same feature) where the node also appears but
-           with a *different* predecessor or successor node.
+    A node is a junction iff its degree in this graph ≠ 2.
+      - degree = 2  → interior node on a chain (not a split point)
+      - degree = 1  → dead-end (should not occur in valid closed rings)
+      - degree ≥ 3  → true topological junction (T- or X-intersection)
+      - degree = 0  → isolated (shouldn't occur)
 
-    Implementation: for every occurrence of a node we record the
-    (prev_id, next_id) neighbour pair.  If a node has >1 distinct neighbour
-    pair it is a junction.
+    Nodes at the start/end of shared segments naturally acquire degree ≥ 3
+    (they are connected to the neighbours from both polygons on either side
+    of the junction), so the split happens exactly at the right places.
     """
-    # node_id -> set of (prev_id, next_id)
-    node_neighbours: dict[int, set[tuple[int, int]]] = defaultdict(set)
+    # node_id -> set of incident unordered edges (each edge = frozenset of 2 node IDs)
+    node_edges: dict[int, set[frozenset[int]]] = defaultdict(set)
 
     for feat_rings in feature_rings:
         for ring in feat_rings:
             n = len(ring)
             for i, nid in enumerate(ring):
-                prev_id = ring[(i - 1) % n]
-                next_id = ring[(i + 1) % n]
-                node_neighbours[nid].add((prev_id, next_id))
+                nb = ring[(i + 1) % n]
+                edge: frozenset[int] = frozenset((nid, nb))
+                node_edges[nid].add(edge)
+                node_edges[nb].add(edge)
 
     junctions: set[int] = set()
-    for nid, neighbours in node_neighbours.items():
-        if len(neighbours) > 1:
+    for nid, edges in node_edges.items():
+        if len(edges) != 2:
             junctions.add(nid)
 
     return junctions
