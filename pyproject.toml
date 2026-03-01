@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "geopandas>=1.1.2",
+    "ogr2osm>=1.2.1",
     "osmium>=4.3.0",
     "shapely>=2.1.2",
 ]
