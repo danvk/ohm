@@ -41,22 +41,20 @@ WIKI = {
 
 
 def main():
-    (input_fc, iso3166_2s) = sys.argv[1:]
+    (input_fc,) = sys.argv[1:]
     fc = json.load(open(input_fc))
     assert fc["type"] == "FeatureCollection"
     features = fc["features"]
-    ok_features = set(iso3166_2s.split(","))
     f_in = len(features)
     features_out = []
     tags_in = 0
     tags_out = 0
     for f in features:
         p = f["properties"]
+        if not p["name"]:
+            continue
         if p["wikidataid"] == "Q2841":
             p["iso_3166_2"] = "CO-DC"
-        iso = p["iso_3166_2"]
-        if iso not in ok_features:
-            continue
         tags_in += len(p)
         props = {
             "admin_level": 4,

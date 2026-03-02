@@ -269,8 +269,37 @@ def write_osm(
     node_map: dict[tuple[int, int], int],
     way_map: dict[SegKey, int],
     feature_way_refs: list[list[list[tuple[int, bool]]]],
+    tag_filter: tuple[str, set[str]] | None = None,
 ) -> None:
     """Write nodes, ways and relations to an OSM PBF file."""
+
+    # Reverse lookups needed for filtering
+    # canonical_seg -> way_id is way_map; we need way_id -> canonical_seg
+    way_id_to_seg: dict[int, SegKey] = {v: k for k, v in way_map.items()}
+
+    # Determine which features (relations) to export
+    kept_feat_indices: list[int] = []
+    for i, feat in enumerate(features):
+        if tag_filter:
+            key, allowed_values = tag_filter
+            props = feat.get("properties") or {}
+            val = str(props.get(key, ""))
+            if val not in allowed_values:
+                continue
+        kept_feat_indices.append(i)
+
+    # Collect used way IDs
+    used_way_ids: set[int] = set()
+    for i in kept_feat_indices:
+        for ring in feature_way_refs[i]:
+            for way_id, _ in ring:
+                used_way_ids.add(way_id)
+
+    # Collect used node IDs
+    used_node_ids: set[int] = set()
+    for wid in used_way_ids:
+        seg = way_id_to_seg[wid]
+        used_node_ids.update(seg)
 
     # Use negative IDs — the OSM convention for temporary/unsaved objects.
     # Each type gets its own negative ID space; no offsets needed since
@@ -279,9 +308,13 @@ def write_osm(
     # way  internal ID w  →  OSM way  ID  -w
     # relation index  r   →  OSM rel  ID  -(r+1)
 
+    n_node, n_way, n_rel = 0, 0, 0
+
     with osmium.SimpleWriter(output_path, overwrite=True) as writer:
         # --- Nodes ---
         for qpt, nid in node_map.items():
+            if nid not in used_node_ids:
+                continue
             qlon, qlat = qpt
             lon, lat = _dequantize(qlon, qlat)
             writer.add_node(
@@ -293,9 +326,12 @@ def write_osm(
                     visible=True,
                 )
             )
+            n_node += 1
 
         # --- Ways ---
         for canon_seg, wid in way_map.items():
+            if wid not in used_way_ids:
+                continue
             node_refs = [-nid for nid in canon_seg]
             writer.add_way(
                 mutable.Way(
@@ -306,9 +342,11 @@ def write_osm(
                     visible=True,
                 )
             )
+            n_way += 1
 
         # --- Relations ---
-        for feat_idx, feat in enumerate(features):
+        for feat_idx in kept_feat_indices:
+            feat = features[feat_idx]
             props = feat.get("properties") or {}
             tags = {str(k): str(v) for k, v in props.items() if v is not None}
             # tags["type"] = "multipolygon"
@@ -328,6 +366,13 @@ def write_osm(
                     visible=True,
                 )
             )
+            n_rel += 1
+
+    # Summary
+    print(
+        f"\nSummary: {n_node} nodes, {n_way} ways, {n_rel} relations",
+        file=sys.stderr,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -353,9 +398,21 @@ def main() -> None:
         metavar="DEGREES",
         help=f"Grid cell size in degrees for coordinate rounding (default: {GRID})",
     )
+    parser.add_argument(
+        "--filter",
+        metavar="KEY=VAL1,VAL2,...",
+        help="Only output relations matching tag KEY with value in {VAL1, VAL2, ...} (and their constituent ways/nodes)",
+    )
     args = parser.parse_args()
 
     GRID = args.grid
+
+    tag_filter: tuple[str, set[str]] | None = None
+    if args.filter:
+        if "=" not in args.filter:
+            parser.error("Filter argument must be in the format KEY=VAL1,VAL2,...")
+        key, vals = args.filter.split("=", 1)
+        tag_filter = (key, set(vals.split(",")))
 
     print(f"Reading {args.input} …", file=sys.stderr)
     with open(args.input) as f:
@@ -381,17 +438,8 @@ def main() -> None:
 
     # Step 4 – write output
     print(f"Writing {args.output} …", file=sys.stderr)
-    write_osm(args.output, features, node_map, way_map, feature_way_refs)
+    write_osm(args.output, features, node_map, way_map, feature_way_refs, tag_filter)
     print("Done.", file=sys.stderr)
-
-    # Summary
-    n_nodes = len(node_map)
-    n_ways = len(way_map)
-    n_rels = len(features)
-    print(
-        f"\nSummary: {n_nodes} nodes, {n_ways} ways, {n_rels} relations",
-        file=sys.stderr,
-    )
 
 
 if __name__ == "__main__":
