@@ -20,9 +20,10 @@ body {
   z-index: 1;
   right: 0;
   font-family: sans-serif;
+  display: flex;
+  align-items: center;
 }
 .title h3 {
-  display: inline-block;
   user-select: none;
   margin-left: 4px;
 }
