@@ -28,7 +28,7 @@ from typing import Any
 
 import osmium
 
-from geometry import build_polygon_rings
+from geometry import build_polygon_rings, rdp_simplify
 
 
 def tags_to_dict(tags) -> dict[str, str]:
@@ -88,6 +88,26 @@ class RelationHandler(osmium.SimpleHandler):
         self.way_ids.update(all_ways)
 
 
+# Perpendicular-distance tolerance for RDP simplification, in quantized units.
+# 1 unit ≈ 10 m at the equator (360° / 4 000 000 ≈ 0.000090° ≈ 10 m).
+_RDP_TOLERANCE = 1.0
+
+
+def _kept_indices(original: list, simplified: list) -> list[int]:
+    """Return the indices in *original* that correspond to the points in *simplified*.
+
+    RDP returns a subsequence of the input list, so we recover positions by
+    scanning forward through *original* and matching each simplified point.
+    """
+    indices: list[int] = []
+    j = 0
+    for i, pt in enumerate(original):
+        if j < len(simplified) and pt == simplified[j]:
+            indices.append(i)
+            j += 1
+    return indices
+
+
 class WayHandler(osmium.SimpleHandler):
     """Collect ways that appear in admin boundary relations."""
 
@@ -100,6 +120,9 @@ class WayHandler(osmium.SimpleHandler):
         self.way_nodes: dict[int, list[int]] = {}
         # way_id (int) → ordered list of (lon, lat) float tuples (for orientation)
         self.way_coords: dict[int, list[tuple[float, float]]] = {}
+        # simplification stats
+        self.nodes_before: int = 0
+        self.nodes_after: int = 0
 
     def way(self, w: Any) -> None:
         if w.id not in self._way_ids:
@@ -109,12 +132,30 @@ class WayHandler(osmium.SimpleHandler):
             return
         node_ids = [ref for ref, _ in valid_nodes]
         coords = [lonlat for _, lonlat in valid_nodes]
-        self.way_nodes[w.id] = node_ids
-        self.way_coords[w.id] = coords
         locs = [quantize(c) for c in coords]
+
+        # Simplify interior nodes with RDP, keeping endpoints fixed.
+        # We work in quantized space so the tolerance is in ~10 m units.
+        simplified = rdp_simplify(locs, tolerance=_RDP_TOLERANCE)
+        self.nodes_before += len(locs)
+        self.nodes_after += len(simplified)
+
+        # Map simplified quantized points back to node IDs / float coords
+        # for ring topology (match by index into the original locs list).
+        simplified_set = set(map(id, simplified))  # identity not reliable for tuples
+        # Use index-based comparison instead
+        simplified_indices = _kept_indices(locs, simplified)
+        simp_node_ids = [node_ids[i] for i in simplified_indices]
+        simp_coords = [coords[i] for i in simplified_indices]
+
+        self.way_nodes[w.id] = simp_node_ids
+        self.way_coords[w.id] = simp_coords
         deltas = [
-            locs[0],
-            *[(nx - px, ny - py) for (px, py), (nx, ny) in zip(locs, locs[1:])],
+            simplified[0],
+            *[
+                (nx - px, ny - py)
+                for (px, py), (nx, ny) in zip(simplified, simplified[1:])
+            ],
         ]
         self.ways[w.id] = [coord for delta in deltas for coord in delta]
 
@@ -201,7 +242,13 @@ def main() -> None:
         osm_file, filters=[osmium.filter.IdFilter(rel_handler.way_ids)], locations=True
     )
     elapsed = time.monotonic() - t0
-    _log(f"  Found {len(way_handler.ways):,} ways in ({elapsed:.1f}s)")
+    removed = way_handler.nodes_before - way_handler.nodes_after
+    pct = 100 * removed / way_handler.nodes_before if way_handler.nodes_before else 0
+    _log(
+        f"  Found {len(way_handler.ways):,} ways in ({elapsed:.1f}s)  "
+        f"nodes: {way_handler.nodes_before:,} → {way_handler.nodes_after:,} "
+        f"({removed:,} removed, {pct:.1f}%)"
+    )
 
     ways_out = {str(wid): data for wid, data in way_handler.ways.items()}
     write_json(args.ways_out, ways_out)

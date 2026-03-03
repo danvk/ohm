@@ -3,6 +3,65 @@
 from collections import defaultdict
 
 
+def rdp_simplify(
+    pts: list[tuple[int, int]],
+    tolerance: float = 1.0,
+) -> list[tuple[int, int]]:
+    """Ramer-Douglas-Peucker polyline simplification.
+
+    Removes interior points whose perpendicular distance from the line segment
+    between their neighbours is ≤ *tolerance* (in the same units as the
+    coordinates).  The first and last points are always kept.
+
+    Works on integer or float (x, y) tuples; uses squared distances to avoid
+    a square-root call in the inner loop.
+    """
+    if len(pts) < 3:
+        return list(pts)
+
+    tol_sq = tolerance * tolerance
+
+    def _perp_dist_sq(px: int, py: int, ax: int, ay: int, bx: int, by: int) -> float:
+        """Squared perpendicular distance from point P to line segment AB."""
+        dx, dy = bx - ax, by - ay
+        if dx == 0 and dy == 0:
+            # Degenerate segment – use point-to-point distance
+            return (px - ax) ** 2 + (py - ay) ** 2
+        # Parameter t of the foot of the perpendicular (clamped to [0,1])
+        t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)
+        if t < 0:
+            t = 0.0
+        elif t > 1:
+            t = 1.0
+        fx, fy = ax + t * dx, ay + t * dy
+        return (px - fx) ** 2 + (py - fy) ** 2
+
+    def _rdp(start: int, end: int, keep: list[bool]) -> None:
+        if end <= start + 1:
+            return
+        # Find the point with the largest perpendicular distance
+        ax, ay = pts[start]
+        bx, by = pts[end]
+        max_dsq = -1.0
+        max_i = start
+        for i in range(start + 1, end):
+            px, py = pts[i]
+            dsq = _perp_dist_sq(px, py, ax, ay, bx, by)
+            if dsq > max_dsq:
+                max_dsq = dsq
+                max_i = i
+        if max_dsq > tol_sq:
+            keep[max_i] = True
+            _rdp(start, max_i, keep)
+            _rdp(max_i, end, keep)
+
+    keep = [False] * len(pts)
+    keep[0] = True
+    keep[-1] = True
+    _rdp(0, len(pts) - 1, keep)
+    return [p for p, k in zip(pts, keep) if k]
+
+
 def shoelace_signed_area(coords: list[tuple[float, float]]) -> float:
     """Return the signed area of a polygon via the shoelace formula.
 

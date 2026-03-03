@@ -2,7 +2,74 @@
 
 import math
 
-from geometry import build_polygon_rings, build_rings, shoelace_signed_area
+from geometry import (
+    build_polygon_rings,
+    build_rings,
+    rdp_simplify,
+    shoelace_signed_area,
+)
+
+# ---------------------------------------------------------------------------
+# rdp_simplify
+# ---------------------------------------------------------------------------
+
+
+def test_rdp_short_sequences_unchanged():
+    """0-, 1-, and 2-point sequences are returned as-is."""
+    assert rdp_simplify([]) == []
+    assert rdp_simplify([(0, 0)]) == [(0, 0)]
+    assert rdp_simplify([(0, 0), (1, 1)]) == [(0, 0), (1, 1)]
+
+
+def test_rdp_collinear_interior_removed():
+    """Interior points exactly on the line are removed."""
+    pts = [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)]
+    result = rdp_simplify(pts, tolerance=0.0)
+    assert result == [(0, 0), (4, 0)]
+
+
+def test_rdp_keeps_endpoints():
+    """First and last point are always kept even when collinear."""
+    pts = [(0, 0), (5, 0), (10, 0)]
+    result = rdp_simplify(pts, tolerance=1.0)
+    assert result[0] == (0, 0)
+    assert result[-1] == (10, 0)
+
+
+def test_rdp_significant_deviation_kept():
+    """A point that deviates more than the tolerance is retained."""
+    # Straight line from (0,0) to (10,0) with a spike at (5,5)
+    pts = [(0, 0), (5, 5), (10, 0)]
+    result = rdp_simplify(pts, tolerance=1.0)
+    assert (5, 5) in result
+
+
+def test_rdp_within_tolerance_removed():
+    """A point that deviates by less than tolerance is removed."""
+    # Point (5,0) is exactly on the line (0,0)→(10,0), so distance = 0
+    pts = [(0, 0), (5, 0), (10, 0)]
+    result = rdp_simplify(pts, tolerance=1.0)
+    assert result == [(0, 0), (10, 0)]
+
+
+def test_rdp_zigzag_all_kept():
+    """All points of a zigzag well above tolerance are preserved."""
+    pts = [(0, 0), (1, 10), (2, 0), (3, 10), (4, 0)]
+    result = rdp_simplify(pts, tolerance=1.0)
+    assert result == pts
+
+
+def test_rdp_mixed_remove_some_keep_some():
+    """Near-collinear interior points are removed; significant ones kept."""
+    # Points: straight line with a tiny wiggle at (2,1) and a big spike at (5,20)
+    pts = [(0, 0), (2, 1), (5, 20), (8, 1), (10, 0)]
+    result = rdp_simplify(pts, tolerance=2.0)
+    # (5,20) is far from the (0,0)→(10,0) line → kept
+    assert (5, 20) in result
+    # (2,1) and (8,1) are close to their enclosing segment → removed
+    assert (2, 1) not in result
+    assert (8, 1) not in result
+
 
 # ---------------------------------------------------------------------------
 # shoelace_signed_area
