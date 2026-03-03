@@ -110,7 +110,13 @@ function TagValue({
   if ((tagKey === 'start_date' || tagKey === 'end_date') && value) {
     const year = Number(value.slice(0, 4));
     return (
-      <a href="#" onClick={() => onSetYear(year)}>
+      <a
+        href="#"
+        onClick={(e) => {
+          e.preventDefault();
+          onSetYear(year);
+        }}
+      >
         {value}
       </a>
     );

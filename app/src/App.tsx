@@ -77,7 +77,7 @@ export default function App() {
       <div className="title">
         <img src={Logo} width={30} height={30} className="logo" />
         <h3>Boundary Viewer</h3>
-        <a href="https://github.com/danvk/ohm/" target="_blank">
+        <a href="https://github.com/danvk/ohm/tree/main/app" target="_blank">
           About
         </a>
       </div>
