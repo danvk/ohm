@@ -11,6 +11,8 @@ Scripts for exploring OpenHistoryMap.
 
 ## Boundary Viewer
 
+🌎 [Live Site](https://danvk.org/ohm/)
+
 The boundary viewer is a web app for viewing administrative=boundary features in OHM. For more on running it, see [app/README.md](app/README.md).
 
 The viewer encodes ways and relations in a special format so that it can load the entire history of the world into a browser tab. To extract data in this format, run:

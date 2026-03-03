@@ -2,7 +2,29 @@
 
 Viewer for administrative=boundary features on OpenHistoricalMap.
 
-Built using [Vite](https://vite.dev), [React](https://react.dev), and [TypeScript](https://www.typescriptlang.org/).
+🌎 [Live Site](https://danvk.org/ohm/)
+
+The idea is to get a clearer sense for OHM's global coverage of administrative boundaries through time:
+
+- Where are the blank spots?
+- Where are there overlapping features?
+
+The site is built using [Vite](https://vite.dev), [React](https://react.dev), [TypeScript](https://www.typescriptlang.org/) and [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/).
+
+## Data encoding
+
+This site is all static content. It loads the full data set on page load from `relations.json` and `ways.json`. Not very efficient, but simple and effective!
+
+To make this at all workable, the boundary viewer encodes the ways and relations in a custom format (`extract_for_web.py`). Here's the gist:
+
+1. Extract relevant relations (say admin_level=2) from a planet file.
+2. Collect relevant ways and nodes.
+3. Quantize latitudes and longitudes to 1m precision. Use delta encoding for ways: `[lng1,lat1,dlng1,dlat1,dlng2,dlat2,...]`.
+4. For each relation, group ways into rings. If a way needs to be reversed to form a properly-oriented ring, store its way ID as a negative number.
+
+This produces files that are large but workable (~7MB for `relations.json` and 22MB for `ways.json` for admin_level=2). The grouping into rings reduces the amount of work the frontend needs to do when you scrub through time. See OSM's [multipolygon algorithm] for details. (`extract_for_web.py` doesn't do all this.)
+
+[multipolygon algorithm]: https://wiki.openstreetmap.org/wiki/Relation:multipolygon/Algorithm
 
 ## Prerequisites
 
