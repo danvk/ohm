@@ -88,9 +88,9 @@ class RelationHandler(osmium.SimpleHandler):
         self.way_ids.update(all_ways)
 
 
-# Perpendicular-distance tolerance for RDP simplification, in quantized units.
-# 1 unit ≈ 10 m at the equator (360° / 4 000 000 ≈ 0.000090° ≈ 10 m).
-_RDP_TOLERANCE = 1.0
+# Default simplification tolerance in meters (converted to quantized units at runtime).
+# 1 quantized unit ≈ 10 m at the equator (360° / 4 000 000 ≈ 0.000090° ≈ 10 m).
+_DEFAULT_SIMPLIFY_TOLERANCE_M = 10.0
 
 
 def _kept_indices(original: list, simplified: list) -> list[int]:
@@ -123,9 +123,10 @@ def _kept_indices(original: list, simplified: list) -> list[int]:
 class WayHandler(osmium.SimpleHandler):
     """Collect ways that appear in admin boundary relations."""
 
-    def __init__(self, way_ids: set[int]) -> None:
+    def __init__(self, way_ids: set[int], rdp_tolerance: float = 1.0) -> None:
         super().__init__()
         self._way_ids = way_ids
+        self._rdp_tolerance = rdp_tolerance
         # way_id (int) → quantized delta-encoded flat list (for output)
         self.ways: dict[int, list[int]] = {}
         # way_id (int) → ordered list of node IDs (for ring topology)
@@ -148,7 +149,7 @@ class WayHandler(osmium.SimpleHandler):
 
         # Simplify interior nodes with RDP, keeping endpoints fixed.
         # We work in quantized space so the tolerance is in ~10 m units.
-        simplified = rdp_simplify(locs, tolerance=_RDP_TOLERANCE)
+        simplified = rdp_simplify(locs, tolerance=self._rdp_tolerance)
         self.nodes_before += len(locs)
         self.nodes_after += len(simplified)
 
@@ -224,6 +225,17 @@ def main() -> None:
         metavar="KEY=VAL1,VAL2,...",
         help="Only output relations matching tag KEY with value in {VAL1, VAL2, ...}",
     )
+    parser.add_argument(
+        "--simplify-tolerance-m",
+        type=float,
+        default=_DEFAULT_SIMPLIFY_TOLERANCE_M,
+        metavar="METERS",
+        help=(
+            "Ramer-Douglas-Peucker simplification tolerance in meters "
+            f"(default: {_DEFAULT_SIMPLIFY_TOLERANCE_M}). "
+            "Set to 0 to disable simplification."
+        ),
+    )
     args = parser.parse_args()
 
     tag_filter: tuple[str, set[str]] | None = None
@@ -246,10 +258,13 @@ def main() -> None:
         f"{len(rel_handler.way_ids):,} unique ways  ({elapsed:.1f}s)"
     )
 
+    # Convert meters → quantized units (1 unit ≈ 10 m at the equator)
+    rdp_tolerance = args.simplify_tolerance_m / 10.0
+
     # --- Pass 2: Ways ---
     _log("Pass 2: scanning ways …")
     t0 = time.monotonic()
-    way_handler = WayHandler(rel_handler.way_ids)
+    way_handler = WayHandler(rel_handler.way_ids, rdp_tolerance=rdp_tolerance)
     way_handler.apply_file(
         osm_file, filters=[osmium.filter.IdFilter(rel_handler.way_ids)], locations=True
     )
