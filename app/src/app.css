@@ -13,11 +13,38 @@ body {
   height: 100vh;
 }
 
-/*
-.maplibregl-ctrl-top-left {
-  margin-top: 2em;
+.title {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+  right: 0;
+  font-family: sans-serif;
 }
-*/
+.title h3 {
+  display: inline-block;
+  user-select: none;
+  margin-left: 4px;
+}
+.title a {
+  position: absolute;
+  right: 1em;
+  font-size: small;
+}
+
+a {
+  color: #6080c0;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #3050a0;
+  text-decoration: underline;
+}
+
+.maplibregl-ctrl-top-left {
+  margin-top: 3em;
+}
 .maplibregl-ctrl-bottom-right {
   margin-bottom: 3em;
 }
@@ -141,16 +168,6 @@ body {
   margin-bottom: 0.5rem;
   font-size: 13px;
   color: #666;
-}
-
-.feature-info a {
-  color: #6080c0;
-  text-decoration: none;
-}
-
-.feature-info a:hover {
-  color: #3050a0;
-  text-decoration: underline;
 }
 
 .feature-info table {

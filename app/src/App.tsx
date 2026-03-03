@@ -5,6 +5,7 @@ import { AdminAreas } from './AdminAreas';
 import { FeaturePanel, type FeatureInfo } from './FeaturePanel';
 import { TimeSlider } from './TimeSlider';
 import { parseHash, serializeHash } from './useUrlState';
+import Logo from './ohm_logo.svg';
 
 export default function App() {
   const initial = React.useMemo(() => parseHash(window.location.hash), []);
@@ -73,6 +74,13 @@ export default function App() {
 
   return (
     <>
+      <div className="title">
+        <img src={Logo} width={30} height={30} className="logo" />
+        <h3>Boundary Viewer</h3>
+        <a href="https://github.com/danvk/ohm/" target="_blank">
+          About
+        </a>
+      </div>
       <TimeSlider
         year={year}
         minYear={0}
