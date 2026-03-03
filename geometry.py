@@ -139,3 +139,84 @@ def build_rings(
         oriented.append(ring)
 
     return oriented
+
+
+def _point_in_ring(
+    point: tuple[float, float],
+    coords: list[tuple[float, float]],
+) -> bool:
+    """Ray-casting point-in-polygon test."""
+    px, py = point
+    inside = False
+    n = len(coords)
+    j = n - 1
+    for i in range(n):
+        xi, yi = coords[i]
+        xj, yj = coords[j]
+        if ((yi > py) != (yj > py)) and (px < (xj - xi) * (py - yi) / (yj - yi) + xi):
+            inside = not inside
+        j = i
+    return inside
+
+
+def build_polygon_rings(
+    outer_way_ids: list[int],
+    inner_way_ids: list[int],
+    way_nodes: dict[int, list[int]],
+    way_coords: dict[int, list[tuple[float, float]]],
+    warn=None,
+) -> list[list[list[int]]]:
+    """Build a MultiPolygon ring structure from outer and inner (hole) ways.
+
+    Returns a list of polygons. Each polygon is a list whose first element is
+    the outer ring (list of signed way IDs) and whose subsequent elements are
+    inner rings (holes).  Inner rings are oriented CW (clockwise) to follow the
+    GeoJSON right-hand rule for holes.
+
+    Containment is determined geometrically: each inner ring is assigned to the
+    smallest outer ring that contains it.
+    """
+    if warn is None:
+        warn = lambda msg: None  # noqa: E731
+
+    # Build outer rings (CCW)
+    outer_rings = build_rings(outer_way_ids, way_nodes, way_coords, warn=warn)
+
+    # Build inner rings, then flip to CW (negate each way and reverse list)
+    raw_inner = build_rings(inner_way_ids, way_nodes, way_coords, warn=warn)
+    inner_rings: list[list[int]] = [[-wid for wid in reversed(r)] for r in raw_inner]
+
+    # Pre-compute a representative point (first coord of first way) for each inner ring
+    def ring_representative(ring: list[int]) -> tuple[float, float]:
+        first_wid = abs(ring[0])
+        wc = way_coords.get(first_wid)
+        if wc:
+            return wc[0]
+        return (0.0, 0.0)
+
+    # Pre-compute coords for each outer ring (for containment test)
+    outer_coords_list = [ring_coords(r, way_coords) for r in outer_rings]
+
+    # Assign each inner ring to the smallest outer that contains it
+    # "smallest" = smallest absolute area (most specific container)
+    outer_areas = [abs(shoelace_signed_area(c)) for c in outer_coords_list]
+
+    # polygons[i] = [outer_ring, ...inner_rings]
+    polygons: list[list[list[int]]] = [[r] for r in outer_rings]
+
+    for inner_ring in inner_rings:
+        pt = ring_representative(inner_ring)
+        best_idx: int | None = None
+        best_area = float("inf")
+        for i, (oc, area) in enumerate(zip(outer_coords_list, outer_areas)):
+            if area < best_area and _point_in_ring(pt, oc):
+                best_area = area
+                best_idx = i
+        if best_idx is not None:
+            polygons[best_idx].append(inner_ring)
+        else:
+            warn(
+                f"inner ring starting at way {abs(inner_ring[0])} has no containing outer ring"
+            )
+
+    return polygons

@@ -75,30 +75,30 @@ function decodePositions(pos: number[]) {
   return coords;
 }
 
-function buildFeature(id: string, relation: Relation): Feature<MultiPolygon> {
-  const rings: Position[][] = [];
-  for (const ring of relation.ways) {
-    let currentRing: Position[][] = [];
-    for (const wayId of ring) {
-      const encoded = ways[Math.abs(wayId)];
-      if (!encoded) {
-        throw new Error(`Missing way ${wayId}`);
-      }
-      const coords = decodePositions(encoded);
-      if (wayId < 0) {
-        currentRing.push(coords.reverse());
-      } else {
-        currentRing.push(coords);
-      }
+function decodeRing(signedWayIds: number[]): Position[] {
+  const segments: Position[][] = [];
+  for (const wayId of signedWayIds) {
+    const encoded = ways[Math.abs(wayId)];
+    if (!encoded) {
+      throw new Error(`Missing way ${wayId}`);
     }
-    rings.push(currentRing.flat());
+    const coords = decodePositions(encoded);
+    segments.push(wayId < 0 ? coords.reverse() : coords);
   }
+  return segments.flat();
+}
+
+function buildFeature(id: string, relation: Relation): Feature<MultiPolygon> {
+  // relation.ways is a list of polygons; each polygon is [outerRing, ...holeRings]
+  const polygons: Position[][][] = relation.ways.map((polygon) =>
+    polygon.map((ring) => decodeRing(ring)),
+  );
   return {
     type: 'Feature',
     id,
     geometry: {
       type: 'MultiPolygon',
-      coordinates: rings.map((r) => [r]), // no holes
+      coordinates: polygons,
     },
     properties: relation.tags,
   };
@@ -122,7 +122,6 @@ export function AdminAreas(props: AdminAreasProps) {
     for (const relation of relations) {
       const { id, tags } = relation;
       if (
-        tags['admin_level'] != '2' ||
         ('start_date' in tags && yearStr < tags['start_date']) ||
         ('end_date' in tags && yearStr >= tags['end_date'])
       ) {

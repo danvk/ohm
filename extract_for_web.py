@@ -28,7 +28,7 @@ from typing import Any
 
 import osmium
 
-from geometry import build_rings
+from geometry import build_polygon_rings
 
 
 def tags_to_dict(tags) -> dict[str, str]:
@@ -70,12 +70,17 @@ class RelationHandler(osmium.SimpleHandler):
         if tags.get("admin_level") not in ADMIN_LEVELS:
             return
 
-        way_members = [m.ref for m in r.members if m.type == "w"]
+        outer_ways = [
+            m.ref for m in r.members if m.type == "w" and m.role in ("outer", "")
+        ]
+        inner_ways = [m.ref for m in r.members if m.type == "w" and m.role == "inner"]
+        all_ways = outer_ways + inner_ways
         self.relations[r.id] = {
             "tags": tags_to_dict(tags),
-            "ways": way_members,
+            "outer_ways": outer_ways,
+            "inner_ways": inner_ways,
         }
-        self.way_ids.update(way_members)
+        self.way_ids.update(all_ways)
 
 
 class WayHandler(osmium.SimpleHandler):
@@ -187,14 +192,16 @@ def main() -> None:
     # --- Order ways in each relation into oriented rings, then write relations ---
     _log("Ordering ways into oriented rings …")
     for rid, rel_data in rel_handler.relations.items():
-        raw_way_ids: list[int] = rel_data["ways"]
-        rings = build_rings(
-            raw_way_ids,
+        outer_way_ids: list[int] = rel_data.pop("outer_ways")
+        inner_way_ids: list[int] = rel_data.pop("inner_ways")
+        polygons = build_polygon_rings(
+            outer_way_ids,
+            inner_way_ids,
             way_handler.way_nodes,
             way_handler.way_coords,
             warn=lambda msg: _log(f"    Warning: {msg}"),
         )
-        rel_data["ways"] = rings
+        rel_data["ways"] = polygons
 
     relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
     relations_out.sort(key=lambda r: parse_date_key(r["tags"].get("end_date", "2030")))
