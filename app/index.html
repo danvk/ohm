@@ -8,9 +8,10 @@
   <body>
     <div id="root"></div>
     <script type="text/javascript">
+      // TODO: move this into the TypeScript
       window.dataReady = (async () => {
-        const relationsR = fetch('/static/relations.json');
-        const waysR = fetch('/static/ways.json');
+        const relationsR = fetch('/relations.json');
+        const waysR = fetch('/ways.json');
 
         const [relations, ways] = await Promise.all([
           (await relationsR).json(),

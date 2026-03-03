@@ -218,6 +218,5 @@ __marimo__/
 data
 *.pbf
 *.geojson
-*.json
 *.txt
 *.osm
