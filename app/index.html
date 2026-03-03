@@ -7,28 +7,7 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="text/javascript">
-      // TODO: move this into the TypeScript
-      window.dataReady = (async () => {
-        const relationsR = fetch('/relations.json');
-        const waysR = fetch('/ways.json');
-
-        const [relations, ways] = await Promise.all([
-          (await relationsR).json(),
-          (await waysR).json(),
-        ]);
-
-        console.log(
-          'Loaded',
-          [...Object.keys(relations)].length,
-          'relations and',
-          [...Object.keys(ways)].length,
-          'ways',
-        );
-        window.relations = relations;
-        window.ways = ways;
-      })();
-    </script>
+    <script type="module" src="/src/loader.ts"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
