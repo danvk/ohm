@@ -337,7 +337,7 @@ def write_osm(
                 mutable.Way(
                     id=-wid,
                     nodes=node_refs,
-                    tags={},
+                    tags={"source": "ned"},
                     version=1,
                     visible=True,
                 )
