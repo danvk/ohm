@@ -56,12 +56,13 @@ ADMIN_LEVELS = {"2"}
 class RelationHandler(osmium.SimpleHandler):
     """Collect admin boundary relations (admin_level 2/3/4) and their way members."""
 
-    def __init__(self) -> None:
+    def __init__(self, tag_filter: tuple[str, set[str]] | None = None) -> None:
         super().__init__()
         # relation_id (int) → {"tags": {...}, "ways": [way_id, ...]}
         self.relations: dict[int, dict[str, Any]] = {}
         # set of way IDs referenced by collected relations
         self.way_ids: set[int] = set()
+        self._tag_filter = tag_filter
 
     def relation(self, r: Any) -> None:
         tags = r.tags
@@ -69,6 +70,10 @@ class RelationHandler(osmium.SimpleHandler):
             return
         if tags.get("admin_level") not in ADMIN_LEVELS:
             return
+        if self._tag_filter is not None:
+            key, allowed_values = self._tag_filter
+            if tags.get(key) not in allowed_values:
+                return
 
         outer_ways = [
             m.ref for m in r.members if m.type == "w" and m.role in ("outer", "")
@@ -161,14 +166,26 @@ def main() -> None:
         default="ways.json",
         help="Output path for ways JSON (default: ways.json)",
     )
+    parser.add_argument(
+        "--filter",
+        metavar="KEY=VAL1,VAL2,...",
+        help="Only output relations matching tag KEY with value in {VAL1, VAL2, ...}",
+    )
     args = parser.parse_args()
+
+    tag_filter: tuple[str, set[str]] | None = None
+    if args.filter:
+        if "=" not in args.filter:
+            parser.error("--filter must be in the format KEY=VAL1,VAL2,...")
+        key, vals = args.filter.split("=", 1)
+        tag_filter = (key, set(vals.split(",")))
 
     osm_file = args.osm_file
 
     # --- Pass 1: Relations ---
     _log("Pass 1: scanning relations …")
     t0 = time.monotonic()
-    rel_handler = RelationHandler()
+    rel_handler = RelationHandler(tag_filter=tag_filter)
     rel_handler.apply_file(osm_file, filters=[osmium.filter.KeyFilter("name")])
     elapsed = time.monotonic() - t0
     _log(
