@@ -61,7 +61,9 @@ npm run preview
 
 ## Deployment
 
-1. Run `npm run build` to generate the `dist/` folder.
-2. Upload the contents of `dist/` to your static hosting provider (e.g. GitHub Pages, Netlify, Vercel, an S3 bucket, or any nginx/Apache server).
+To deploy to https://danvk.org/ohm/
 
-No server-side runtime is required — the built output is pure HTML, CSS, and JavaScript.
+```
+npm run build
+cp -r dist/* ../../danvk.github.io/ohm
+```

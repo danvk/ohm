@@ -6,8 +6,8 @@ type Globals = typeof window & {
 };
 
 async function loadData() {
-  const relationsR = fetch('/relations.json');
-  const waysR = fetch('/ways.json');
+  const relationsR = fetch('relations.json');
+  const waysR = fetch('ways.json');
 
   const [relationsJSON, waysJSON] = (await Promise.all([
     (await relationsR).json(),
