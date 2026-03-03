@@ -2,6 +2,7 @@
 
 import math
 
+from extract_for_web import _kept_indices
 from geometry import (
     build_polygon_rings,
     build_rings,
@@ -409,3 +410,41 @@ def test_build_polygon_rings_uncontained_inner_warns():
     # The polygon has only its outer ring; the orphan inner is discarded
     assert len(polygons) == 1
     assert len(polygons[0]) == 1
+
+
+# ---------------------------------------------------------------------------
+# _kept_indices (RDP index recovery)
+# ---------------------------------------------------------------------------
+
+
+def test_kept_indices_basic():
+    """Every kept point maps to the correct original index."""
+    original = [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)]
+    simplified = [(0, 0), (2, 0), (4, 0)]
+    assert _kept_indices(original, simplified) == [0, 2, 4]
+
+
+def test_kept_indices_endpoints_always_anchored():
+    """First simplified point maps to index 0; last maps to index -1."""
+    original = [(0, 0), (5, 0), (10, 0)]
+    simplified = [(0, 0), (10, 0)]
+    indices = _kept_indices(original, simplified)
+    assert indices[0] == 0
+    assert indices[-1] == 2  # len(original) - 1
+
+
+def test_kept_indices_duplicate_endpoint_uses_last_occurrence():
+    """When the last coordinate appears more than once, the final index is used.
+
+    This was the Angola bug: a way whose last two raw nodes quantize to the
+    same grid cell.  A naive forward scan would match simplified[-1] to the
+    first (earlier) occurrence, returning the wrong node ID for the endpoint.
+    """
+    # Simulate: original has a duplicate at the end (two nodes at same quantized loc)
+    dup = (10, 0)
+    original = [(0, 0), (3, 0), (7, 0), dup, dup]  # indices 3 and 4 are identical
+    # RDP keeps first and last: simplified = [(0,0), (10,0)]
+    simplified = [(0, 0), dup]
+    indices = _kept_indices(original, simplified)
+    # Must map to index 0 and index 4 (the true last element), NOT index 3
+    assert indices == [0, 4]

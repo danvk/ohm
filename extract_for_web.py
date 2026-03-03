@@ -96,15 +96,27 @@ _RDP_TOLERANCE = 1.0
 def _kept_indices(original: list, simplified: list) -> list[int]:
     """Return the indices in *original* that correspond to the points in *simplified*.
 
-    RDP returns a subsequence of the input list, so we recover positions by
-    scanning forward through *original* and matching each simplified point.
+    RDP returns a subsequence of the input list.  The first and last simplified
+    points always correspond to original[0] and original[-1] by construction,
+    so we anchor those directly and forward-scan only the interior points.
+
+    A pure forward scan would fail when the last coordinate appears more than
+    once in *original* (e.g. duplicate endpoint nodes), incorrectly mapping
+    simplified[-1] to an earlier occurrence rather than original[-1].
     """
-    indices: list[int] = []
-    j = 0
-    for i, pt in enumerate(original):
-        if j < len(simplified) and pt == simplified[j]:
+    if not simplified:
+        return []
+    if len(simplified) == 1:
+        return [0]
+
+    indices: list[int] = [0]  # simplified[0] always maps to original[0]
+    j = 1
+    search_end = len(original) - 1  # reserve original[-1] for simplified[-1]
+    for i in range(1, search_end):
+        if j < len(simplified) - 1 and original[i] == simplified[j]:
             indices.append(i)
             j += 1
+    indices.append(len(original) - 1)  # simplified[-1] always maps to original[-1]
     return indices
 
 
