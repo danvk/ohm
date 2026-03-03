@@ -2,7 +2,7 @@
 
 import math
 
-from geometry import build_rings, shoelace_signed_area
+from geometry import build_polygon_rings, build_rings, shoelace_signed_area
 
 # ---------------------------------------------------------------------------
 # shoelace_signed_area
@@ -176,3 +176,169 @@ def test_build_rings_missing_way_skipped():
 def test_build_rings_empty():
     rings = build_rings([], {}, {})
     assert rings == []
+
+
+# ---------------------------------------------------------------------------
+# build_polygon_rings – holes support
+# ---------------------------------------------------------------------------
+
+# Outer ring: large CCW square  (0,0)→(4,0)→(4,4)→(0,4)
+# Inner ring: small square inside it  (1,1)→(3,1)→(3,3)→(1,3)
+#
+#  0,4 ---- 4,4
+#   |  1,3-3,3 |
+#   |  |     | |
+#   |  1,1-3,1 |
+#  0,0 ---- 4,0
+
+OUTER_NODES = {
+    10: [100, 101],  # (0,0)→(4,0)
+    11: [101, 102],  # (4,0)→(4,4)
+    12: [102, 103],  # (4,4)→(0,4)
+    13: [103, 100],  # (0,4)→(0,0)
+}
+OUTER_COORDS = {
+    10: [(0.0, 0.0), (4.0, 0.0)],
+    11: [(4.0, 0.0), (4.0, 4.0)],
+    12: [(4.0, 4.0), (0.0, 4.0)],
+    13: [(0.0, 4.0), (0.0, 0.0)],
+}
+INNER_NODES = {
+    20: [200, 201],  # (1,1)→(3,1)
+    21: [201, 202],  # (3,1)→(3,3)
+    22: [202, 203],  # (3,3)→(1,3)
+    23: [203, 200],  # (1,3)→(1,1)
+}
+INNER_COORDS = {
+    20: [(1.0, 1.0), (3.0, 1.0)],
+    21: [(3.0, 1.0), (3.0, 3.0)],
+    22: [(3.0, 3.0), (1.0, 3.0)],
+    23: [(1.0, 3.0), (1.0, 1.0)],
+}
+ALL_NODES = {**OUTER_NODES, **INNER_NODES}
+ALL_COORDS = {**OUTER_COORDS, **INNER_COORDS}
+
+
+def test_build_polygon_rings_one_polygon_one_hole():
+    """One outer ring + one inner ring → one polygon with one hole."""
+    polygons = build_polygon_rings(
+        list(OUTER_NODES), list(INNER_NODES), ALL_NODES, ALL_COORDS
+    )
+    assert len(polygons) == 1
+    poly = polygons[0]
+    assert len(poly) == 2  # outer + one hole
+
+
+def test_build_polygon_rings_outer_ccw_inner_cw():
+    """Outer ring must be CCW; inner (hole) ring must be CW."""
+    from geometry import ring_coords, ring_is_ccw
+
+    polygons = build_polygon_rings(
+        list(OUTER_NODES), list(INNER_NODES), ALL_NODES, ALL_COORDS
+    )
+    poly = polygons[0]
+    outer_ring, hole_ring = poly[0], poly[1]
+
+    outer_coords = ring_coords(outer_ring, ALL_COORDS)
+    hole_coords = ring_coords(hole_ring, ALL_COORDS)
+
+    assert ring_is_ccw(outer_coords), "outer ring should be CCW"
+    assert not ring_is_ccw(hole_coords), "hole ring should be CW"
+
+
+def test_build_polygon_rings_no_holes():
+    """No inner ways → each outer way becomes a polygon with no holes."""
+    polygons = build_polygon_rings(list(OUTER_NODES), [], ALL_NODES, ALL_COORDS)
+    assert len(polygons) == 1
+    assert len(polygons[0]) == 1  # outer ring only
+
+
+def test_build_polygon_rings_two_outers_one_hole():
+    """Two outer rings; hole belongs to the smaller (more specific) outer."""
+    from geometry import ring_coords
+
+    # Second outer ring: a large ring far away that also contains the inner ring
+    # but is bigger — the inner should still be assigned to the smaller outer.
+    # We reuse OUTER as the smaller ring (4×4=16 area).
+    # Create a huge outer: (-10,-10)→(20,-10)→(20,20)→(-10,20)
+    BIG_OUTER_NODES = {
+        30: [300, 301],
+        31: [301, 302],
+        32: [302, 303],
+        33: [303, 300],
+    }
+    BIG_OUTER_COORDS = {
+        30: [(-10.0, -10.0), (20.0, -10.0)],
+        31: [(20.0, -10.0), (20.0, 20.0)],
+        32: [(20.0, 20.0), (-10.0, 20.0)],
+        33: [(-10.0, 20.0), (-10.0, -10.0)],
+    }
+    combined_nodes = {**ALL_NODES, **BIG_OUTER_NODES}
+    combined_coords = {**ALL_COORDS, **BIG_OUTER_COORDS}
+
+    outer_ids = list(OUTER_NODES) + list(BIG_OUTER_NODES)
+    inner_ids = list(INNER_NODES)
+    polygons = build_polygon_rings(
+        outer_ids, inner_ids, combined_nodes, combined_coords
+    )
+
+    assert len(polygons) == 2
+    # Identify the small vs large outer polygon by coordinate area
+    poly_areas = [
+        abs(
+            sum(
+                (
+                    ring_coords(p[0], combined_coords)[i][0]
+                    - ring_coords(p[0], combined_coords)[
+                        (i + 1) % len(ring_coords(p[0], combined_coords))
+                    ][0]
+                )
+                * (
+                    ring_coords(p[0], combined_coords)[i][1]
+                    + ring_coords(p[0], combined_coords)[
+                        (i + 1) % len(ring_coords(p[0], combined_coords))
+                    ][1]
+                )
+                for i in range(len(ring_coords(p[0], combined_coords)))
+            )
+        )
+        / 2
+        for p in polygons
+    ]
+    small_poly = polygons[poly_areas.index(min(poly_areas))]
+    large_poly = polygons[poly_areas.index(max(poly_areas))]
+
+    assert len(small_poly) == 2, "hole should be assigned to the smaller outer"
+    assert len(large_poly) == 1, "large outer should have no holes"
+
+
+def test_build_polygon_rings_uncontained_inner_warns():
+    """An inner ring with no containing outer ring triggers a warning."""
+    warnings = []
+    # Inner ring is far outside the outer ring
+    FAR_INNER_NODES = {
+        40: [400, 401],
+        41: [401, 402],
+        42: [402, 403],
+        43: [403, 400],
+    }
+    FAR_INNER_COORDS = {
+        40: [(100.0, 100.0), (102.0, 100.0)],
+        41: [(102.0, 100.0), (102.0, 102.0)],
+        42: [(102.0, 102.0), (100.0, 102.0)],
+        43: [(100.0, 102.0), (100.0, 100.0)],
+    }
+    combined_nodes = {**OUTER_NODES, **FAR_INNER_NODES}
+    combined_coords = {**OUTER_COORDS, **FAR_INNER_COORDS}
+
+    polygons = build_polygon_rings(
+        list(OUTER_NODES),
+        list(FAR_INNER_NODES),
+        combined_nodes,
+        combined_coords,
+        warn=warnings.append,
+    )
+    assert any("no containing outer ring" in w for w in warnings)
+    # The polygon has only its outer ring; the orphan inner is discarded
+    assert len(polygons) == 1
+    assert len(polygons[0]) == 1
