@@ -13,9 +13,11 @@ body {
   height: 100vh;
 }
 
+/*
 .maplibregl-ctrl-top-left {
   margin-top: 2em;
 }
+*/
 .maplibregl-ctrl-bottom-right {
   margin-bottom: 3em;
 }
