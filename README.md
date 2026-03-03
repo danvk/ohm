@@ -2,12 +2,61 @@
 
 Scripts for exploring OpenHistoryMap.
 
-## Development
+## Setup
 
 - Create & sync the environment: `uv lock && uv sync`
-- Run the app: `uv run main.py`
-- Find elements by name: `uv run find_by_name.py <file.osm.pbf> <name>`
-- Run ruff checks: `uv run ruff check .`
+- Run tests: `uv run pytest`
 - Format/fix with ruff: `uv run ruff format .`
+- Run ruff checks: `uv run ruff check .`
 
-The workspace is configured to use `ruff` as the Python formatter/linter in VS Code (format on save).
+## Boundary Viewer
+
+The boundary viewer is a web app for viewing administrative=boundary features in OHM. For more on running it, see [app/README.md](app/README.md).
+
+The viewer encodes ways and relations in a special format so that it can load the entire history of the world into a browser tab. To extract data in this format, run:
+
+```
+uv run extract_for_web.py planet-260214_0301.osm.pbf
+mv relations.json ways.json app/static/
+```
+
+## Tools
+
+Most of these tools work with an OHM [planet file].
+
+[planet file]: https://planet.openhistoricalmap.org/?prefix=planet/
+
+### decade_coverage.py
+
+This prints stats on how many square kilometers are covered by admin_level=2 and admin_level=4 features each decade. Since areas are often covered by two or more such features, this script does a geometric union of all features in each decade.
+
+```
+uv run decade_coverage.py planet.osm.pbf > admin.decade.txt
+```
+
+### find_by_name.py
+
+Search `name` tag in a planet file. The parameter is a regular expression matched at the start of the string.
+
+```
+$ uv run find_by_name.py planet.osm.pbf "Imperium Roman
+um"
+Searching for 'Imperium Romanum' in planet.osm.pbf...
+Found relation/2684681 Imperium Romanum
+Found relation/2692869 Imperium Romanum
+Found relation/2800647 Imperium Romanum Occidentale
+...
+```
+
+### geojson_to_osm.py
+
+Convert a GeoJSON FeatureCollection to an osm.pbf file, extracting common nodes and ways to the greatest extent possible. The Features will wind up as relations. [shp2osm] and [ogr2osm] should do something like this, but I was unable to get them to do exactly what I wanted.
+
+```
+uv run geojson_to_osm.py --filter='tag=val1,val2,...' input.geojson output.osm.pbf
+```
+
+This file can be imported into JOSM for uploading to OSM/OHM. The filter is applied _after_ topology extraction, so features that get filtered out will still affect how a polygon is broken up into ways. (This is what you want.)
+
+[shp2osm]: https://wiki.openstreetmap.org/wiki/Shp2osm
+[ogr2osm]: https://wiki.openstreetmap.org/wiki/Ogr2osm

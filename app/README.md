@@ -1,6 +1,8 @@
-# App
+# OHM Boundary Viewer
 
-A Hello World web app built with [Vite](https://vite.dev), [React](https://react.dev), and [TypeScript](https://www.typescriptlang.org/).
+Viewer for administrative=boundary features on OpenHistoricalMap.
+
+Built using [Vite](https://vite.dev), [React](https://react.dev), and [TypeScript](https://www.typescriptlang.org/).
 
 ## Prerequisites
 
