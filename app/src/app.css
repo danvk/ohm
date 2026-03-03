@@ -25,12 +25,22 @@ body {
 }
 .title h3 {
   user-select: none;
-  margin-left: 4px;
+  margin-left: 6px;
+  text-shadow:
+    -1px -1px 0 rgba(255, 255, 255, 0.5),
+    1px -1px 0 rgba(255, 255, 255, 0.5),
+    -1px 1px 0 rgba(255, 255, 255, 0.5),
+    1px 1px 0 rgba(255, 255, 255, 0.5);
 }
 .title a {
   position: absolute;
   right: 1em;
   font-size: small;
+  text-shadow:
+    -1px -1px 0 rgba(255, 255, 255, 0.5),
+    1px -1px 0 rgba(255, 255, 255, 0.5),
+    -1px 1px 0 rgba(255, 255, 255, 0.5),
+    1px 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 a {
@@ -97,6 +107,12 @@ a:hover {
   color: #222;
   pointer-events: none;
   white-space: nowrap;
+
+  text-shadow:
+    -1px -1px 0 rgba(255, 255, 255, 0.5),
+    1px -1px 0 rgba(255, 255, 255, 0.5),
+    -1px 1px 0 rgba(255, 255, 255, 0.5),
+    1px 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 #year {
