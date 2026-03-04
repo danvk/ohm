@@ -8,6 +8,7 @@ from geometry import (
     build_rings,
     rdp_simplify,
     shoelace_signed_area,
+    vw_simplify,
 )
 
 # ---------------------------------------------------------------------------
@@ -70,6 +71,150 @@ def test_rdp_mixed_remove_some_keep_some():
     # (2,1) and (8,1) are close to their enclosing segment → removed
     assert (2, 1) not in result
     assert (8, 1) not in result
+
+
+# ---------------------------------------------------------------------------
+# vw_simplify
+# ---------------------------------------------------------------------------
+
+
+def test_vw_short_sequences_unchanged():
+    """0-, 1-, and 2-point sequences are returned as-is."""
+    assert vw_simplify([]) == []
+    assert vw_simplify([(0, 0)]) == [(0, 0)]
+    assert vw_simplify([(0, 0), (1, 1)]) == [(0, 0), (1, 1)]
+
+
+def test_vw_collinear_interior_removed():
+    """A collinear interior point (triangle area = 0) is removed."""
+    pts = [(0, 0), (5, 0), (10, 0)]
+    result = vw_simplify(pts, tolerance=0.0)
+    assert result == [(0, 0), (10, 0)]
+
+
+def test_vw_keeps_endpoints_open():
+    """First and last points of an open polyline are always kept."""
+    pts = [(0, 0), (5, 0), (10, 0)]
+    result = vw_simplify(pts, tolerance=1.0)
+    assert result[0] == (0, 0)
+    assert result[-1] == (10, 0)
+
+
+def test_vw_significant_point_kept():
+    """A point forming a large triangle is retained."""
+    # Triangle area for (0,0)-(5,10)-(10,0) = 0.5 * base * height = 50
+    pts = [(0, 0), (5, 10), (10, 0)]
+    result = vw_simplify(pts, tolerance=1.0)
+    assert (5, 10) in result
+
+
+def test_vw_removes_small_triangle():
+    """A point forming a triangle below the threshold is removed."""
+    # (5,1) forms triangle area 0.5*10*1 = 5; tolerance=10 removes it
+    pts = [(0, 0), (5, 1), (10, 0)]
+    result = vw_simplify(pts, tolerance=10.0)
+    assert result == [(0, 0), (10, 0)]
+
+
+def test_vw_closed_ring_stays_closed():
+    """A closed ring (pts[0]==pts[-1]) remains closed after simplification."""
+    # Oval-ish ring
+    pts = [
+        (0, 5),
+        (2, 9),
+        (5, 10),
+        (8, 9),
+        (10, 5),
+        (8, 1),
+        (5, 0),
+        (2, 1),
+        (0, 5),
+    ]
+    result = vw_simplify(pts, tolerance=1.0)
+    assert result[0] == result[-1]
+    assert len(result) >= 3
+
+
+def test_vw_closed_ring_not_collapsed():
+    """A small island ring keeps enough points to cover its bounding box at 100m tolerance."""
+    # Quantized coords of way 200757260 (~3.3 km wide island)
+    locs = [
+        (613350, 725674),
+        (613336, 725708),
+        (613332, 725755),
+        (613329, 725804),
+        (613341, 725829),
+        (613369, 725847),
+        (613433, 725856),
+        (613511, 725868),
+        (613552, 725870),
+        (613583, 725866),
+        (613614, 725852),
+        (613640, 725830),
+        (613656, 725799),
+        (613661, 725772),
+        (613652, 725741),
+        (613617, 725702),
+        (613551, 725661),
+        (613502, 725645),
+        (613444, 725626),
+        (613382, 725626),
+        (613355, 725641),
+        (613350, 725674),
+    ]
+    # tolerance = 100 m² / 100 = 1.0 unit²
+    result = vw_simplify(locs, tolerance=1.0)
+    assert result[0] == result[-1], "ring must stay closed"
+    assert len(result) >= 6, "should retain enough detail"
+    xs = [x for x, _ in result]
+    ys = [y for _, y in result]
+    x_span = max(xs) - min(xs)
+    y_span = max(ys) - min(ys)
+    orig_xs = [x for x, _ in locs]
+    orig_ys = [y for _, y in locs]
+    orig_x_span = max(orig_xs) - min(orig_xs)
+    orig_y_span = max(orig_ys) - min(orig_ys)
+    assert x_span > 0.8 * orig_x_span, "should cover >80% of original x extent"
+    assert y_span > 0.8 * orig_y_span, "should cover >80% of original y extent"
+
+
+def test_vw_monotone_removal_order():
+    """Points are removed in order of increasing effective area."""
+    # Five-point polyline; middle area is smallest
+    pts = [(0, 0), (1, 2), (5, 1), (9, 3), (10, 0)]
+    # Verify that reducing tolerance gradually removes points one at a time
+    prev_len = len(pts)
+    for tol in [0.5, 2.0, 5.0, 20.0]:
+        result = vw_simplify(pts, tolerance=tol)
+        assert len(result) <= prev_len
+        prev_len = len(result)
+
+
+def test_vw_collinear_ring_no_crash():
+    """A closed ring whose interior points are all collinear (area=0) must not crash.
+
+    Regression test: previously raised ``IndexError: list index out of range``
+    because all interior points were removed, leaving an empty result list, and
+    then ``result[0]`` was accessed to re-close the ring.
+    """
+    # Five points on the x-axis, closed; every triangle has area 0.
+    pts = [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (0, 0)]
+    result = vw_simplify(pts, tolerance=1.0)
+    # Must not crash, must be a valid closed ring with at least 2 unique points
+    assert len(result) >= 3  # at least [a, b, a]
+    assert result[0] == result[-1]
+
+
+def test_vw_huge_tolerance_ring_no_crash():
+    """A ring simplified with an extremely large tolerance must not crash.
+
+    Regression test: same root cause as test_vw_collinear_ring_no_crash —
+    over-aggressive removal emptied the result list before re-closing.
+    """
+    pts = [(0, 0), (1, 1), (2, 0), (3, 1), (4, 0), (0, 0)]
+    result = vw_simplify(pts, tolerance=10_000_000.0)
+    assert len(result) >= 3
+    assert result[0] == result[-1]
 
 
 # ---------------------------------------------------------------------------

@@ -62,6 +62,135 @@ def rdp_simplify(
     return [p for p, k in zip(pts, keep) if k]
 
 
+def vw_simplify(
+    pts: list[tuple[int, int]],
+    tolerance: float = 1.0,
+) -> list[tuple[int, int]]:
+    """Visvalingam–Whyatt polyline/ring simplification.
+
+    Iteratively removes the point that forms the triangle of *smallest area*
+    with its two neighbours, until all remaining triangles have area >
+    *tolerance* (in the same squared units as the coordinates).
+
+    For open polylines the first and last points are always kept.
+    For closed rings (``pts[0] == pts[-1]``) the ring is treated as a cycle
+    so every interior point (indices 1 … n-2) participates equally; the
+    duplicate closing point is re-appended at the end.
+    """
+    if len(pts) < 3:
+        return list(pts)
+
+    def _triangle_area(
+        a: tuple[int, int], b: tuple[int, int], c: tuple[int, int]
+    ) -> float:
+        """Twice the signed area of triangle ABC (absolute value used)."""
+        return abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2.0
+
+    is_ring = pts[0] == pts[-1]
+
+    if is_ring:
+        # Work on unique interior points: pts[0] .. pts[n-2]
+        # pts[n-1] == pts[0] is just a sentinel; we re-add it at the end.
+        work = list(pts[:-1])  # length = n-1
+    else:
+        work = list(pts)
+
+    n = len(work)  # number of active points
+
+    # Build a doubly-linked list so we can remove points in O(1).
+    # prev[i] / next_[i] are indices into *work*; for a ring they wrap.
+    prev = list(range(-1, n - 1))  # prev[0] = -1 (sentinel for open)
+    next_ = list(range(1, n + 1))  # next_[n-1] = n (sentinel for open)
+    if is_ring:
+        prev[0] = n - 1
+        next_[n - 1] = 0
+
+    # Compute initial area for each removable point.
+    # Open: indices 1 … n-2.  Ring: indices 0 … n-1.
+    areas: list[float | None] = [None] * n
+    start, end = (0, n) if is_ring else (1, n - 1)
+    for i in range(start, end):
+        areas[i] = _triangle_area(work[prev[i]], work[i], work[next_[i]])
+
+    removed = [False] * n
+    active = n  # number of non-removed points
+    # For a ring we must keep at least 2 unique points (+ the closing duplicate),
+    # i.e. active >= 2.  For an open polyline the endpoints are fixed, so the
+    # minimum is handled naturally (start/end bounds stop the scan).
+    min_active = 2 if is_ring else 2
+    max_area_so_far = 0.0
+
+    while True:
+        if active <= min_active:
+            break
+
+        # Find the removable point with the smallest effective area.
+        best_i = -1
+        best_a = float("inf")
+        for i in range(start, end):
+            if removed[i]:
+                continue
+            a = areas[i]
+            if a is not None and a < best_a:
+                best_a = a
+                best_i = i
+
+        if best_i == -1 or best_a > tolerance:
+            break
+
+        # VW rule: effective area is max(actual area, previous max)
+        effective = max(best_a, max_area_so_far)
+        if effective > tolerance:
+            break
+        max_area_so_far = effective
+
+        # Remove best_i from the linked list.
+        p = prev[best_i]
+        n_ = next_[best_i]
+        if not is_ring:
+            if p >= 0:
+                next_[p] = n_
+            if n_ < n:
+                prev[n_] = p
+        else:
+            next_[p] = n_
+            prev[n_] = p
+        removed[best_i] = True
+        areas[best_i] = None
+        active -= 1
+
+        # Recompute areas for the two neighbours.
+        if not is_ring:
+            if 0 < p < n - 1:
+                pp = prev[p]
+                np_ = next_[p]
+                if pp >= 0 and np_ < n:
+                    areas[p] = max(
+                        _triangle_area(work[pp], work[p], work[np_]), max_area_so_far
+                    )
+            if 0 < n_ < n - 1:
+                pn_ = prev[n_]
+                nn_ = next_[n_]
+                if pn_ >= 0 and nn_ < n:
+                    areas[n_] = max(
+                        _triangle_area(work[pn_], work[n_], work[nn_]), max_area_so_far
+                    )
+        else:
+            # Ring: all indices are valid
+            areas[p] = max(
+                _triangle_area(work[prev[p]], work[p], work[next_[p]]), max_area_so_far
+            )
+            areas[n_] = max(
+                _triangle_area(work[prev[n_]], work[n_], work[next_[n_]]),
+                max_area_so_far,
+            )
+
+    result = [work[i] for i in range(len(work)) if not removed[i]]
+    if is_ring:
+        result.append(result[0])  # re-close
+    return result
+
+
 def shoelace_signed_area(coords: list[tuple[float, float]]) -> float:
     """Return the signed area of a polygon via the shoelace formula.
 

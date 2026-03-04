@@ -30,7 +30,7 @@ from typing import Any
 
 import osmium
 
-from geometry import build_polygon_rings, rdp_simplify
+from geometry import build_polygon_rings, rdp_simplify, vw_simplify
 
 
 def tags_to_dict(tags) -> dict[str, str]:
@@ -126,6 +126,9 @@ class RelationHandler(osmium.SimpleHandler):
 # Default simplification tolerance in meters (converted to quantized units at runtime).
 # 1 quantized unit ≈ 10 m at the equator (360° / 4 000 000 ≈ 0.000090° ≈ 10 m).
 _DEFAULT_SIMPLIFY_TOLERANCE_M = 10.0
+# Default Visvalingam–Whyatt area threshold in m² (used for closed rings).
+# 1 unit² ≈ 100 m²; 50 m² ≈ 0.5 unit² is comparable to RDP at 10 m.
+_DEFAULT_VW_TOLERANCE_M2 = 50.0
 
 
 def _kept_indices(original: list, simplified: list) -> list[int]:
@@ -158,10 +161,16 @@ def _kept_indices(original: list, simplified: list) -> list[int]:
 class WayHandler(osmium.SimpleHandler):
     """Collect ways that appear in admin boundary relations."""
 
-    def __init__(self, way_ids: set[int], rdp_tolerance: float = 1.0) -> None:
+    def __init__(
+        self,
+        way_ids: set[int],
+        rdp_tolerance: float = 1.0,
+        vw_tolerance: float = 0.5,
+    ) -> None:
         super().__init__()
         self._way_ids = way_ids
         self._rdp_tolerance = rdp_tolerance
+        self._vw_tolerance = vw_tolerance
         # way_id (int) → quantized delta-encoded flat list (for output)
         self.ways: dict[int, list[int]] = {}
         # way_id (int) → ordered list of node IDs (for ring topology)
@@ -182,9 +191,15 @@ class WayHandler(osmium.SimpleHandler):
         coords = [lonlat for _, lonlat in valid_nodes]
         locs = [quantize(c) for c in coords]
 
-        # Simplify interior nodes with RDP, keeping endpoints fixed.
-        # We work in quantized space so the tolerance is in ~10 m units.
-        simplified = rdp_simplify(locs, tolerance=self._rdp_tolerance)
+        # Simplify interior nodes.
+        # Closed ways (rings) use Visvalingam–Whyatt (area-based, handles rings
+        # natively).  Open ways use Ramer-Douglas-Peucker.
+        # We work in quantized space: 1 unit ≈ 10 m, 1 unit² ≈ 100 m².
+        is_closed = len(locs) >= 2 and locs[0] == locs[-1]
+        if is_closed:
+            simplified = vw_simplify(locs, tolerance=self._vw_tolerance)
+        else:
+            simplified = rdp_simplify(locs, tolerance=self._rdp_tolerance)
         self.nodes_before += len(locs)
         self.nodes_after += len(simplified)
 
@@ -266,9 +281,20 @@ def main() -> None:
         default=_DEFAULT_SIMPLIFY_TOLERANCE_M,
         metavar="METERS",
         help=(
-            "Ramer-Douglas-Peucker simplification tolerance in meters "
+            "Ramer-Douglas-Peucker simplification tolerance in meters for open ways "
             f"(default: {_DEFAULT_SIMPLIFY_TOLERANCE_M}). "
             "Set to 0 to disable simplification."
+        ),
+    )
+    parser.add_argument(
+        "--vw-tolerance-m2",
+        type=float,
+        default=_DEFAULT_VW_TOLERANCE_M2,
+        metavar="M2",
+        help=(
+            "Visvalingam–Whyatt area threshold in m² for closed rings "
+            f"(default: {_DEFAULT_VW_TOLERANCE_M2}). "
+            "Set to 0 to disable simplification for closed rings."
         ),
     )
     args = parser.parse_args()
@@ -306,13 +332,16 @@ def main() -> None:
         f"{len(rel_handler.way_ids):,} unique ways  ({elapsed:.1f}s)"
     )
 
-    # Convert meters → quantized units (1 unit ≈ 10 m at the equator)
+    # Convert meters → quantized units (1 unit ≈ 10 m, 1 unit² ≈ 100 m²)
     rdp_tolerance = args.simplify_tolerance_m / 10.0
+    vw_tolerance = args.vw_tolerance_m2 / 100.0
 
     # --- Pass 2: Ways ---
     _log("Pass 2: scanning ways …")
     t0 = time.monotonic()
-    way_handler = WayHandler(rel_handler.way_ids, rdp_tolerance=rdp_tolerance)
+    way_handler = WayHandler(
+        rel_handler.way_ids, rdp_tolerance=rdp_tolerance, vw_tolerance=vw_tolerance
+    )
     way_handler.apply_file(
         osm_file, filters=[osmium.filter.IdFilter(rel_handler.way_ids)], locations=True
     )
