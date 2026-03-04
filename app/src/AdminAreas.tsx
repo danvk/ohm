@@ -114,6 +114,12 @@ export function AdminAreas(props: AdminAreasProps) {
     new Map(),
   );
 
+  // Build a map from relation ID (as string) to the full Relation object for O(1) lookup.
+  const relationById = React.useMemo(
+    () => new Map<string, Relation>(relations.map((r) => [String(r.id), r])),
+    [],
+  );
+
   const geojson = React.useMemo<FeatureCollection<MultiPolygon>>(() => {
     const yearStr = String(year).padStart(4, '0');
     const features: Feature<MultiPolygon>[] = [];
@@ -191,10 +197,15 @@ export function AdminAreas(props: AdminAreasProps) {
         layers: [FILL_LAYER_ID],
       });
       onClickFeatureRef.current(
-        features.map((f) => ({
-          id: f.id ?? '?',
-          tags: (f.properties ?? {}) as Record<string, string>,
-        })),
+        features.map((f) => {
+          const id = f.id ?? '?';
+          const relation = relationById.get(String(id));
+          return {
+            id,
+            tags: (f.properties ?? {}) as Record<string, string>,
+            ...(relation?.chronology && { chronology: relation.chronology }),
+          };
+        }),
       );
     };
     const handleMapClick = (e: maplibregl.MapMouseEvent) => {

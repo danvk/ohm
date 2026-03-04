@@ -3,6 +3,7 @@ import React from 'react';
 export interface FeatureInfo {
   id: string | number;
   tags: Record<string, string>;
+  chronology?: Chronology[];
 }
 
 const EXACT_TAGS = [
@@ -30,6 +31,7 @@ const KEY_PAT = new RegExp(`^(?:(?:(?:${EXACT_RE})$)|(?:${PREFIX_RE}))`);
 export interface FeaturePanelProps {
   features: FeatureInfo[];
   onSetYear: (year: number) => void;
+  onSelectRelation: (relationId: number) => void;
   onClose: () => void;
 }
 
@@ -37,6 +39,7 @@ export function FeaturePanel({
   features,
   onClose,
   onSetYear,
+  onSelectRelation,
 }: FeaturePanelProps) {
   if (features.length === 0) return null;
 
@@ -46,7 +49,12 @@ export function FeaturePanel({
         ✕
       </button>
       {features.map((f) => (
-        <FeatureInfo key={f.id} feature={f} onSetYear={onSetYear} />
+        <FeatureInfo
+          key={f.id}
+          feature={f}
+          onSetYear={onSetYear}
+          onSelectRelation={onSelectRelation}
+        />
       ))}
     </div>
   );
@@ -55,11 +63,13 @@ export function FeaturePanel({
 function FeatureInfo({
   feature,
   onSetYear,
+  onSelectRelation,
 }: {
   feature: FeatureInfo;
   onSetYear: FeaturePanelProps['onSetYear'];
+  onSelectRelation: FeaturePanelProps['onSelectRelation'];
 }) {
-  const { id, tags } = feature;
+  const { id, tags, chronology } = feature;
   const tagsToShow = Object.entries(tags).filter(([key]) => KEY_PAT.exec(key));
   const name = tags['name:en'] ?? tags['name'];
 
@@ -73,6 +83,17 @@ function FeatureInfo({
           {name}
         </a>
       </h3>
+      {chronology && chronology.length > 0 && (
+        <div className="chronologies">
+          {chronology.map((c) => (
+            <ChronologyRow
+              key={c.id}
+              entry={c}
+              onSelectRelation={onSelectRelation}
+            />
+          ))}
+        </div>
+      )}
       <table>
         <tbody>
           {tagsToShow.map(([key, value]) => (
@@ -85,6 +106,54 @@ function FeatureInfo({
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function ChronologyRow({
+  entry,
+  onSelectRelation,
+}: {
+  entry: Chronology;
+  onSelectRelation: FeaturePanelProps['onSelectRelation'];
+}) {
+  return (
+    <div className="chronology-row">
+      {entry.prev !== undefined ? (
+        <a
+          href="#"
+          title="Previous in chronology"
+          onClick={(e) => {
+            e.preventDefault();
+            onSelectRelation(entry.prev!);
+          }}
+        >
+          ←
+        </a>
+      ) : (
+        <span className="chronology-arrow-placeholder" />
+      )}
+      <a
+        href={`https://www.openhistoricalmap.org/relation/${entry.id}`}
+        target="_blank"
+        className="chronology-name"
+      >
+        {entry.name}
+      </a>
+      {entry.next !== undefined ? (
+        <a
+          href="#"
+          title="Next in chronology"
+          onClick={(e) => {
+            e.preventDefault();
+            onSelectRelation(entry.next!);
+          }}
+        >
+          →
+        </a>
+      ) : (
+        <span className="chronology-arrow-placeholder" />
+      )}
     </div>
   );
 }

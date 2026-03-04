@@ -6,6 +6,12 @@ declare module '*.svg' {
   export default {};
 }
 
+interface Chronology {
+  id: number;
+  name: string;
+  prev?: number;
+  next?: number;
+}
 interface Relation {
   id: string;
   tags: Record<string, string>;
@@ -13,6 +19,7 @@ interface Relation {
    *  ways[i][1..] are inner rings (holes). Each ring is an ordered list
    *  of signed way IDs (negative = reversed). */
   ways: number[][][];
+  chronology: Chronology[];
 }
 let relations: Relation[];
 

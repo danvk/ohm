@@ -59,6 +59,27 @@ export default function App() {
     [year, writeHash],
   );
 
+  // Build a map from relation ID (number) to Relation for O(1) lookup.
+  // relations is a global loaded asynchronously; we access it at call time.
+  const handleSelectRelation = React.useCallback(
+    (relationId: number) => {
+      const relation = relations.find((r) => Number(r.id) === relationId);
+      if (!relation) return;
+      const startDateStr = relation.tags['start_date'];
+      const nextYear = startDateStr ? Number(startDateStr.slice(0, 4)) : year;
+      setYear(nextYear);
+      writeHash(nextYear);
+      setSelectedFeatures([
+        {
+          id: relation.id,
+          tags: relation.tags,
+          chronology: relation.chronology,
+        },
+      ]);
+    },
+    [year, writeHash],
+  );
+
   // Respond to external hash edits (user typing in the URL bar).
   React.useEffect(() => {
     const handler = () => {
@@ -106,6 +127,7 @@ export default function App() {
         features={selectedFeatures}
         onClose={() => setSelectedFeatures([])}
         onSetYear={handleYearChange}
+        onSelectRelation={handleSelectRelation}
       />
     </>
   );
