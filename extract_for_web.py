@@ -2,6 +2,11 @@
 
 Performs three passes over a planet.osm.pbf file:
 
+  Pass 0 - Chronologies: collect all relations with type=chronology.  These
+            have other relations as ordered members.  Build a map from each
+            member relation ID to the chronology metadata (id, name, prev, next)
+            that will be embedded in the output.
+
   Pass 1 - Relations: collect all relations with boundary=administrative and
             admin_level in {2, 3, 4}.  Output their tags and the list of
             constituent way IDs.  Build the set of way IDs to fetch.
@@ -9,9 +14,6 @@ Performs three passes over a planet.osm.pbf file:
   Pass 2 - Ways: collect every way whose ID appears in the set built in pass 1.
             Output the ordered list of node IDs for each way.  Build the set of
             node IDs to fetch.
-
-  Pass 3 - Nodes: collect every node whose ID appears in the set built in pass 2.
-            Output lon/lat for each node.
 
 Output files (written to the current directory by default):
   relations.json
@@ -51,6 +53,39 @@ def quantize(pt: tuple[float, float]) -> tuple[int, int]:
 
 # ADMIN_LEVELS = {"2", "3", "4"}
 ADMIN_LEVELS = {"2"}
+
+
+class ChronologyHandler(osmium.SimpleHandler):
+    """Collect type=chronology relations and build a per-member lookup.
+
+    For each member relation, stores a list of
+    ``{"id": int, "name": str, "prev": int|None, "next": int|None}`` dicts —
+    one entry per chronology the member belongs to.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        # member_relation_id → list of chronology entries
+        self.by_member: dict[int, list[dict[str, Any]]] = {}
+        self.chronology_count: int = 0
+
+    def relation(self, r: Any) -> None:
+        if r.tags.get("type") != "chronology":
+            return
+        self.chronology_count += 1
+        chrono_id = r.id
+        chrono_name = r.tags.get("name", "")
+        # Members are stored in chronological order; all are relation members.
+        members = [m.ref for m in r.members if m.type == "r"]
+        for i, member_id in enumerate(members):
+            prev_id = members[i - 1] if i > 0 else None
+            next_id = members[i + 1] if i < len(members) - 1 else None
+            entry: dict[str, Any] = {"id": chrono_id, "name": chrono_name}
+            if prev_id is not None:
+                entry["prev"] = prev_id
+            if next_id is not None:
+                entry["next"] = next_id
+            self.by_member.setdefault(member_id, []).append(entry)
 
 
 class RelationHandler(osmium.SimpleHandler):
@@ -247,6 +282,19 @@ def main() -> None:
 
     osm_file = args.osm_file
 
+    # --- Pass 0: Chronologies ---
+    _log("Pass 0: scanning chronology relations …")
+    t0 = time.monotonic()
+    chrono_handler = ChronologyHandler()
+    chrono_handler.apply_file(
+        osm_file, filters=[osmium.filter.TagFilter(("type", "chronology"))]
+    )
+    elapsed = time.monotonic() - t0
+    _log(
+        f"  Found {chrono_handler.chronology_count:,} chronologies covering "
+        f"{len(chrono_handler.by_member):,} unique member relations  ({elapsed:.1f}s)"
+    )
+
     # --- Pass 1: Relations ---
     _log("Pass 1: scanning relations …")
     t0 = time.monotonic()
@@ -293,6 +341,12 @@ def main() -> None:
             warn=lambda msg: _log(f"    Warning: {msg}"),
         )
         rel_data["ways"] = polygons
+
+    # Attach chronology membership to each relation that belongs to one.
+    for rid, rel_data in rel_handler.relations.items():
+        chrono_entries = chrono_handler.by_member.get(rid)
+        if chrono_entries:
+            rel_data["chronology"] = chrono_entries
 
     relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
     relations_out.sort(key=lambda r: parse_date_key(r["tags"].get("end_date", "2030")))
