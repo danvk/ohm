@@ -3,7 +3,8 @@ declare module '*.css' {
   export default content;
 }
 declare module '*.svg' {
-  export default {};
+  const filename: string;
+  export default filename;
 }
 
 interface Chronology {

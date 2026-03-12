@@ -1,4 +1,5 @@
 import React from 'react';
+import { yearFromDateStr } from './date-utils';
 
 export interface TimeSliderProps {
   year: string;
@@ -13,7 +14,7 @@ export function TimeSlider({
   maxYear,
   onChange,
 }: TimeSliderProps) {
-  const numericYear = parseInt(year, 10);
+  const numericYear = yearFromDateStr(year);
   const thumbFraction = (numericYear - minYear) / (maxYear - minYear);
 
   return (
