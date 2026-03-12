@@ -11,6 +11,7 @@ import type { FeatureInfo } from './FeaturePanel';
 
 export interface AdminAreasProps {
   year: string;
+  adminLevels: Set<string>;
   selectedIds: Set<string | number>;
   onClickFeature: (features: FeatureInfo[]) => void;
 }
@@ -105,7 +106,7 @@ function buildFeature(id: string, relation: Relation): Feature<MultiPolygon> {
 }
 
 export function AdminAreas(props: AdminAreasProps) {
-  const { year, onClickFeature } = props;
+  const { year, adminLevels, onClickFeature } = props;
 
   // Cache built Feature objects by relation ID so that features whose
   // [start_date, end_date) interval spans the current *and* previous year
@@ -127,7 +128,7 @@ export function AdminAreas(props: AdminAreasProps) {
     for (const relation of relations) {
       const { id, tags } = relation;
       if (
-        tags['admin_level'] != '2' ||
+        !adminLevels.has(tags['admin_level'] ?? '') ||
         ('start_date' in tags && year < tags['start_date']) ||
         ('end_date' in tags && year >= tags['end_date'])
       ) {
@@ -144,7 +145,7 @@ export function AdminAreas(props: AdminAreasProps) {
 
     featureCache.current = nextCache;
     return { type: 'FeatureCollection', features };
-  }, [year]);
+  }, [year, adminLevels]);
 
   const map = useMap();
 

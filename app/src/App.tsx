@@ -2,6 +2,7 @@ import React from 'react';
 import { MapLibreMap, type MapView } from './MapLibreMap';
 import { ZoomControl } from './ZoomControl';
 import { AdminAreas } from './AdminAreas';
+import { AdminLevelFilter } from './AdminLevelFilter';
 import { FeaturePanel, type FeatureInfo } from './FeaturePanel';
 import { TimeSlider } from './TimeSlider';
 import { DEFAULT_YEAR, parseHash, serializeHash } from './useUrlState';
@@ -30,6 +31,10 @@ export default function App() {
   const [externalView, setExternalView] = React.useState<
     (MapView & { seq: number }) | undefined
   >(undefined);
+
+  const [adminLevels, setAdminLevels] = React.useState<Set<string>>(
+    () => new Set(['2']),
+  );
 
   const [selectedFeatures, setSelectedFeatures] = React.useState<FeatureInfo[]>(
     [],
@@ -189,8 +194,10 @@ export default function App() {
         onMapMove={handleMapMove}
       >
         <ZoomControl />
+        <AdminLevelFilter adminLevels={adminLevels} onChange={setAdminLevels} />
         <AdminAreas
           year={year}
+          adminLevels={adminLevels}
           selectedIds={selectedIds}
           onClickFeature={handleClickFeature}
         />

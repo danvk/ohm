@@ -60,6 +60,39 @@ a:hover {
   margin-bottom: 5em;
 }
 
+/* ── Admin level filter ───────────────────────────────────── */
+
+.admin-level-filter {
+  position: absolute;
+  top: calc(3em + 7px);
+  left: 46px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: sans-serif;
+  font-size: 13px;
+  user-select: none;
+}
+
+.admin-level-filter-label {
+  color: #333;
+  font-weight: 500;
+  margin-right: 2px;
+}
+
+.admin-level-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  color: #333;
+}
+
 /* ── Time slider ──────────────────────────────────────────── */
 
 #time-slider {
