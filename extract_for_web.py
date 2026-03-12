@@ -51,10 +51,6 @@ def quantize(pt: tuple[float, float]) -> tuple[int, int]:
     return (round((lng + 180) / 360 * 4_000_000), round((lat + 90) / 180 * 2_000_000))
 
 
-# ADMIN_LEVELS = {"2", "3", "4"}
-ADMIN_LEVELS = {"2"}
-
-
 class ChronologyHandler(osmium.SimpleHandler):
     """Collect type=chronology relations and build a per-member lookup.
 
@@ -91,22 +87,25 @@ class ChronologyHandler(osmium.SimpleHandler):
 class RelationHandler(osmium.SimpleHandler):
     """Collect admin boundary relations (admin_level 2/3/4) and their way members."""
 
-    def __init__(self, tag_filter: tuple[str, set[str]] | None = None) -> None:
+    def __init__(
+        self, admin_levels: set[str], tag_filter: tuple[str, set[str]] | None = None
+    ) -> None:
         super().__init__()
         # relation_id (int) → {"tags": {...}, "ways": [way_id, ...]}
         self.relations: dict[int, dict[str, Any]] = {}
         # set of way IDs referenced by collected relations
         self.way_ids: set[int] = set()
-        self._tag_filter = tag_filter
+        self.admin_levels = admin_levels
+        self.tag_filter = tag_filter
 
     def relation(self, r: Any) -> None:
         tags = r.tags
         if tags.get("boundary") != "administrative":
             return
-        if tags.get("admin_level") not in ADMIN_LEVELS:
+        if tags.get("admin_level") not in self.admin_levels:
             return
-        if self._tag_filter is not None:
-            key, allowed_values = self._tag_filter
+        if self.tag_filter is not None:
+            key, allowed_values = self.tag_filter
             if tags.get(key) not in allowed_values:
                 return
 
@@ -203,9 +202,6 @@ class WayHandler(osmium.SimpleHandler):
         self.nodes_before += len(locs)
         self.nodes_after += len(simplified)
 
-        # Map simplified quantized points back to node IDs / float coords
-        # for ring topology (match by index into the original locs list).
-        simplified_set = set(map(id, simplified))  # identity not reliable for tuples
         # Use index-based comparison instead
         simplified_indices = _kept_indices(locs, simplified)
         simp_node_ids = [node_ids[i] for i in simplified_indices]
@@ -287,6 +283,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--admin-levels",
+        default="2",
+        metavar="LEVELS",
+        help=(
+            "Comma-separated list of admin_level values to include "
+            "(default: 2). Example: --admin-levels 2,3,4"
+        ),
+    )
+    parser.add_argument(
         "--vw-tolerance-m2",
         type=float,
         default=_DEFAULT_VW_TOLERANCE_M2,
@@ -298,6 +303,8 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+
+    admin_levels = set(args.admin_levels.split(","))
 
     tag_filter: tuple[str, set[str]] | None = None
     if args.filter:
@@ -324,7 +331,7 @@ def main() -> None:
     # --- Pass 1: Relations ---
     _log("Pass 1: scanning relations …")
     t0 = time.monotonic()
-    rel_handler = RelationHandler(tag_filter=tag_filter)
+    rel_handler = RelationHandler(admin_levels, tag_filter=tag_filter)
     rel_handler.apply_file(osm_file, filters=[osmium.filter.KeyFilter("name")])
     elapsed = time.monotonic() - t0
     _log(
