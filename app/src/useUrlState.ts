@@ -11,11 +11,13 @@ export interface UrlState {
   ids: number[];
 }
 
+export const DEFAULT_YEAR = '1100';
+
 const DEFAULT_STATE: UrlState = {
   zoom: 1.5,
   lat: 20,
   lng: 0,
-  year: '1100',
+  year: DEFAULT_YEAR,
   ids: [],
 };
 

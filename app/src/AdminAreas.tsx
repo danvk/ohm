@@ -151,8 +151,12 @@ export function AdminAreas(props: AdminAreasProps) {
   // Sync selectedIds prop → MapLibre feature state
   const prevSelectedIds = React.useRef<Set<string | number>>(new Set());
   React.useEffect(() => {
-    if (!map) return;
-    for (const id of prevSelectedIds.current) {
+    // Always update prevSelectedIds so deselection works correctly later,
+    // even if the source doesn't exist yet (Effect 2 will re-apply selections).
+    const prev = prevSelectedIds.current;
+    prevSelectedIds.current = new Set(props.selectedIds);
+    if (!map || !map.getSource(SOURCE_ID)) return;
+    for (const id of prev) {
       if (!props.selectedIds.has(id)) {
         map.setFeatureState({ source: SOURCE_ID, id }, { selected: false });
       }
@@ -160,7 +164,6 @@ export function AdminAreas(props: AdminAreasProps) {
     for (const id of props.selectedIds) {
       map.setFeatureState({ source: SOURCE_ID, id }, { selected: true });
     }
-    prevSelectedIds.current = new Set(props.selectedIds);
   }, [map, props.selectedIds]);
 
   // Keep a stable ref to onClickFeature so click handlers registered once

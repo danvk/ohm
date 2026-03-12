@@ -4,7 +4,7 @@ import { ZoomControl } from './ZoomControl';
 import { AdminAreas } from './AdminAreas';
 import { FeaturePanel, type FeatureInfo } from './FeaturePanel';
 import { TimeSlider } from './TimeSlider';
-import { parseHash, serializeHash } from './useUrlState';
+import { DEFAULT_YEAR, parseHash, serializeHash } from './useUrlState';
 import Logo from './ohm_logo.svg';
 import { yearFromDateStr } from './date-utils';
 
@@ -15,6 +15,10 @@ export default function App() {
   // Viewport (zoom/lat/lng) is kept in a ref so map moves don't cause re-renders
   // and don't feed back into setCenter.
   const [year, setYear] = React.useState<string>(initial.year);
+  const yearRef = React.useRef<string>(initial.year);
+  React.useEffect(() => {
+    yearRef.current = year;
+  });
   const viewportRef = React.useRef<MapView>({
     zoom: initial.zoom,
     lat: initial.lat,
@@ -61,9 +65,9 @@ export default function App() {
   const handleMapMove = React.useCallback(
     (view: MapView) => {
       viewportRef.current = view;
-      writeHash(year, currentIdsRef.current, view);
+      writeHash(yearRef.current, currentIdsRef.current, view);
     },
-    [year, writeHash],
+    [writeHash],
   );
 
   // Derive FeatureInfo[] from a list of numeric relation IDs.
@@ -89,9 +93,9 @@ export default function App() {
       const ids = features.map((f) => Number(f.id));
       currentIdsRef.current = ids;
       setSelectedFeatures(features);
-      writeHash(year, ids);
+      writeHash(yearRef.current, ids);
     },
-    [year, writeHash],
+    [writeHash],
   );
 
   // Build a map from relation ID (number) to Relation for O(1) lookup.
@@ -119,13 +123,26 @@ export default function App() {
   );
 
   // Hydrate selectedFeatures from URL ids on initial load (after data is ready).
+  // Also update the year to the feature's start_date if no explicit date was in the URL.
   React.useEffect(() => {
     if (initial.ids.length === 0) return;
     dataReady.then(() => {
       const features = resolveFeatureInfos(initial.ids);
       setSelectedFeatures(features);
+      const currentHash = window.location.hash;
+      const parsedYear = parseHash(currentHash).year;
+      const hasExplicitDate = parsedYear !== DEFAULT_YEAR;
+      if (!hasExplicitDate && features.length > 0) {
+        const firstId = initial.ids[0];
+        const relation = relations.find((r) => Number(r.id) === firstId);
+        const startDate = relation?.tags['start_date'];
+        if (startDate) {
+          setYear(startDate);
+          writeHash(startDate, initial.ids);
+        }
+      }
     });
-  }, [initial.ids, resolveFeatureInfos]);
+  }, [initial.ids, resolveFeatureInfos, writeHash]);
 
   // Respond to external hash edits (user typing in the URL bar).
   React.useEffect(() => {
@@ -180,7 +197,7 @@ export default function App() {
         onClose={() => {
           currentIdsRef.current = [];
           setSelectedFeatures([]);
-          writeHash(year, []);
+          writeHash(yearRef.current, []);
         }}
         onSetYear={handleYearChange}
         onSelectRelation={handleSelectRelation}

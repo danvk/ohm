@@ -119,6 +119,7 @@ function ChronologyRow({
 }) {
   return (
     <div className="chronology-row">
+      <span className="label">Chronology: </span>
       {entry.prev !== undefined ? (
         <a
           href="#"
@@ -137,6 +138,7 @@ function ChronologyRow({
         href={`https://www.openhistoricalmap.org/relation/${entry.id}`}
         target="_blank"
         className="chronology-name"
+        title={entry.name}
       >
         {entry.name}
       </a>
