@@ -33,8 +33,12 @@ export default function App() {
   >(undefined);
 
   const [adminLevels, setAdminLevels] = React.useState<Set<string>>(
-    () => new Set(['2']),
+    () => initial.adminLevels ?? new Set(['2']),
   );
+  const adminLevelsRef = React.useRef<Set<string>>(adminLevels);
+  React.useEffect(() => {
+    adminLevelsRef.current = adminLevels;
+  });
 
   const [selectedFeatures, setSelectedFeatures] = React.useState<FeatureInfo[]>(
     [],
@@ -47,9 +51,16 @@ export default function App() {
   const lastWrittenHash = React.useRef('');
 
   const writeHash = React.useCallback(
-    (nextYear: string, ids: number[], view?: MapView) => {
+    (nextYear: string, ids: number[], view?: MapView, levels?: Set<string>) => {
       const { zoom, lat, lng } = view ?? viewportRef.current;
-      const hash = serializeHash({ zoom, lat, lng, year: nextYear, ids });
+      const hash = serializeHash({
+        zoom,
+        lat,
+        lng,
+        year: nextYear,
+        ids,
+        adminLevels: levels ?? adminLevelsRef.current,
+      });
       lastWrittenHash.current = hash;
       window.location.hash = hash;
     },
@@ -132,11 +143,25 @@ export default function App() {
 
   // Hydrate selectedFeatures from URL ids on initial load (after data is ready).
   // Also update the year to the feature's start_date if no explicit date was in the URL.
+  // If no admin levels were specified in the URL, infer them from the features' admin_level tags.
   React.useEffect(() => {
     if (initial.ids.length === 0) return;
     dataReady.then(() => {
       const features = resolveFeatureInfos(initial.ids);
       setSelectedFeatures(features);
+
+      let nextLevels: Set<string> | undefined;
+      if (!initial.adminLevels) {
+        const levels = new Set(
+          features.map((f) => f.tags['admin_level']).filter(Boolean),
+        );
+        if (levels.size > 0) {
+          nextLevels = levels;
+          setAdminLevels(levels);
+          adminLevelsRef.current = levels;
+        }
+      }
+
       const currentHash = window.location.hash;
       const parsedYear = parseHash(currentHash).year;
       const hasExplicitDate = parsedYear !== DEFAULT_YEAR;
@@ -146,11 +171,15 @@ export default function App() {
         const startDate = relation?.tags['start_date'];
         if (startDate) {
           setYear(startDate);
-          writeHash(startDate, initial.ids);
+          writeHash(startDate, initial.ids, undefined, nextLevels);
+        } else if (nextLevels) {
+          writeHash(yearRef.current, initial.ids, undefined, nextLevels);
         }
+      } else if (nextLevels) {
+        writeHash(yearRef.current, initial.ids, undefined, nextLevels);
       }
     });
-  }, [initial.ids, resolveFeatureInfos, writeHash]);
+  }, [initial.ids, initial.adminLevels, resolveFeatureInfos, writeHash]);
 
   // Respond to external hash edits (user typing in the URL bar).
   React.useEffect(() => {
@@ -161,6 +190,9 @@ export default function App() {
       viewportRef.current = parsed;
       setExternalView((prev) => ({ ...parsed, seq: (prev?.seq ?? 0) + 1 }));
       currentIdsRef.current = parsed.ids;
+      if (parsed.adminLevels) {
+        setAdminLevels(parsed.adminLevels);
+      }
       dataReady.then(() => {
         const features = resolveFeatureInfos(parsed.ids);
         setSelectedFeatures(features);
@@ -194,7 +226,18 @@ export default function App() {
         onMapMove={handleMapMove}
       >
         <ZoomControl />
-        <AdminLevelFilter adminLevels={adminLevels} onChange={setAdminLevels} />
+        <AdminLevelFilter
+          adminLevels={adminLevels}
+          onChange={(levels) => {
+            setAdminLevels(levels);
+            writeHash(
+              yearRef.current,
+              currentIdsRef.current,
+              undefined,
+              levels,
+            );
+          }}
+        />
         <AdminAreas
           year={year}
           adminLevels={adminLevels}
