@@ -30,7 +30,7 @@ const KEY_PAT = new RegExp(`^(?:(?:(?:${EXACT_RE})$)|(?:${PREFIX_RE}))`);
 
 export interface FeaturePanelProps {
   features: FeatureInfo[];
-  onSetYear: (year: number) => void;
+  onSetDate: (date: string) => void;
   onSelectRelation: (relationId: number) => void;
   onClose: () => void;
 }
@@ -38,7 +38,7 @@ export interface FeaturePanelProps {
 export function FeaturePanel({
   features,
   onClose,
-  onSetYear,
+  onSetDate,
   onSelectRelation,
 }: FeaturePanelProps) {
   if (features.length === 0) return null;
@@ -52,7 +52,7 @@ export function FeaturePanel({
         <FeatureInfo
           key={f.id}
           feature={f}
-          onSetYear={onSetYear}
+          onSetDate={onSetDate}
           onSelectRelation={onSelectRelation}
         />
       ))}
@@ -62,13 +62,11 @@ export function FeaturePanel({
 
 function FeatureInfo({
   feature,
-  onSetYear,
+  onSetDate,
   onSelectRelation,
 }: {
   feature: FeatureInfo;
-  onSetYear: FeaturePanelProps['onSetYear'];
-  onSelectRelation: FeaturePanelProps['onSelectRelation'];
-}) {
+} & Pick<FeaturePanelProps, 'onSetDate' | 'onSelectRelation'>) {
   const { id, tags, chronology } = feature;
   const tagsToShow = Object.entries(tags).filter(([key]) => KEY_PAT.exec(key));
   const name = tags['name:en'] ?? tags['name'];
@@ -100,7 +98,7 @@ function FeatureInfo({
             <tr key={key}>
               <th title={key}>{key}</th>
               <td>
-                <TagValue tagKey={key} value={value} onSetYear={onSetYear} />
+                <TagValue tagKey={key} value={value} onSetDate={onSetDate} />
               </td>
             </tr>
           ))}
@@ -163,11 +161,11 @@ function ChronologyRow({
 function TagValue({
   tagKey,
   value,
-  onSetYear,
+  onSetDate,
 }: {
   tagKey: string;
   value: string;
-  onSetYear: FeaturePanelProps['onSetYear'];
+  onSetDate: FeaturePanelProps['onSetDate'];
 }) {
   if (tagKey === 'wikipedia') {
     const [lang] = value.split(':', 1);
@@ -179,13 +177,12 @@ function TagValue({
     );
   }
   if ((tagKey === 'start_date' || tagKey === 'end_date') && value) {
-    const year = Number(value.slice(0, 4));
     return (
       <a
         href="#"
         onClick={(e) => {
           e.preventDefault();
-          onSetYear(year);
+          onSetDate(value);
         }}
       >
         {value}

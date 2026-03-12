@@ -53,14 +53,17 @@ export default function App() {
 
   const currentIdsRef = React.useRef<number[]>(initial.ids);
 
-  const handleYearChange = React.useCallback(
-    (nextYear: number) => {
-      const nextYearStr = String(nextYear).padStart(4, '0');
-      setYear(nextYearStr);
-      writeHash(nextYearStr, currentIdsRef.current);
+  const handleDateChange = React.useCallback(
+    (nextDate: string) => {
+      setYear(nextDate);
+      writeHash(nextDate, currentIdsRef.current);
     },
     [writeHash],
   );
+  const handleYearChange = React.useCallback((nextYear: number) => {
+    const nextYearStr = String(nextYear).padStart(4, '0');
+    handleDateChange(nextYearStr);
+  }, []);
 
   const handleMapMove = React.useCallback(
     (view: MapView) => {
@@ -199,7 +202,7 @@ export default function App() {
           setSelectedFeatures([]);
           writeHash(yearRef.current, []);
         }}
-        onSetYear={handleYearChange}
+        onSetDate={handleDateChange}
         onSelectRelation={handleSelectRelation}
       />
     </>
