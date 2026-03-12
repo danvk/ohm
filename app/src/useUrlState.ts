@@ -7,7 +7,7 @@ export interface UrlState {
   zoom: number;
   lat: number;
   lng: number;
-  year: number;
+  year: string;
   ids: number[];
 }
 
@@ -15,7 +15,7 @@ const DEFAULT_STATE: UrlState = {
   zoom: 1.5,
   lat: 20,
   lng: 0,
-  year: 1100,
+  year: '1100',
   ids: [],
 };
 
@@ -37,9 +37,8 @@ export function parseHash(hash: string): UrlState {
   }
 
   const date = params.get('date');
-  if (date) {
-    const year = parseInt(date, 10);
-    if (isFinite(year)) state.year = year;
+  if (date && /^-?\d{1,4}(-\d{2}(-\d{2})?)?$/.test(date)) {
+    state.year = date;
   }
 
   const ids = params.get('ids');
@@ -59,4 +58,9 @@ export function serializeHash(state: UrlState): string {
     hash += `&ids=${ids.join(',')}`;
   }
   return hash;
+}
+
+/** Extract the numeric year from a date string (YYYY, YYYY-MM, or YYYY-MM-DD). */
+export function yearFromDateStr(dateStr: string): number {
+  return parseInt(dateStr.slice(0, 4), 10);
 }

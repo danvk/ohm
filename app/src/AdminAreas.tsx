@@ -10,7 +10,7 @@ import { useMap } from './MapLibreMap';
 import type { FeatureInfo } from './FeaturePanel';
 
 export interface AdminAreasProps {
-  year: number;
+  year: string;
   selectedIds: Set<string | number>;
   onClickFeature: (features: FeatureInfo[]) => void;
 }
@@ -121,7 +121,6 @@ export function AdminAreas(props: AdminAreasProps) {
   );
 
   const geojson = React.useMemo<FeatureCollection<MultiPolygon>>(() => {
-    const yearStr = String(year).padStart(4, '0');
     const features: Feature<MultiPolygon>[] = [];
     const nextCache = new Map<string, Feature<MultiPolygon>>();
 
@@ -129,8 +128,8 @@ export function AdminAreas(props: AdminAreasProps) {
       const { id, tags } = relation;
       if (
         tags['admin_level'] != '2' ||
-        ('start_date' in tags && yearStr < tags['start_date']) ||
-        ('end_date' in tags && yearStr >= tags['end_date'])
+        ('start_date' in tags && year < tags['start_date']) ||
+        ('end_date' in tags && year >= tags['end_date'])
       ) {
         continue;
       }

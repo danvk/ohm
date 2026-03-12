@@ -1,7 +1,7 @@
 import React from 'react';
 
 export interface TimeSliderProps {
-  year: number;
+  year: string;
   minYear: number;
   maxYear: number;
   onChange: (year: number) => void;
@@ -13,7 +13,8 @@ export function TimeSlider({
   maxYear,
   onChange,
 }: TimeSliderProps) {
-  const thumbFraction = (year - minYear) / (maxYear - minYear);
+  const numericYear = parseInt(year, 10);
+  const thumbFraction = (numericYear - minYear) / (maxYear - minYear);
 
   return (
     <div id="time-slider">
@@ -28,7 +29,7 @@ export function TimeSlider({
             type="range"
             min={minYear}
             max={maxYear}
-            value={year}
+            value={numericYear}
             onChange={(e) => onChange(e.currentTarget.valueAsNumber)}
           />
         </div>

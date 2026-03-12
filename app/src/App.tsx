@@ -4,7 +4,7 @@ import { ZoomControl } from './ZoomControl';
 import { AdminAreas } from './AdminAreas';
 import { FeaturePanel, type FeatureInfo } from './FeaturePanel';
 import { TimeSlider } from './TimeSlider';
-import { parseHash, serializeHash } from './useUrlState';
+import { parseHash, serializeHash, yearFromDateStr } from './useUrlState';
 import Logo from './ohm_logo.svg';
 
 export default function App() {
@@ -13,7 +13,7 @@ export default function App() {
   // year is the only piece of URL state that drives React re-renders.
   // Viewport (zoom/lat/lng) is kept in a ref so map moves don't cause re-renders
   // and don't feed back into setCenter.
-  const [year, setYear] = React.useState(initial.year);
+  const [year, setYear] = React.useState<string>(initial.year);
   const viewportRef = React.useRef<MapView>({
     zoom: initial.zoom,
     lat: initial.lat,
@@ -37,7 +37,7 @@ export default function App() {
   const lastWrittenHash = React.useRef('');
 
   const writeHash = React.useCallback(
-    (nextYear: number, ids: number[], view?: MapView) => {
+    (nextYear: string, ids: number[], view?: MapView) => {
       const { zoom, lat, lng } = view ?? viewportRef.current;
       const hash = serializeHash({ zoom, lat, lng, year: nextYear, ids });
       lastWrittenHash.current = hash;
@@ -50,8 +50,9 @@ export default function App() {
 
   const handleYearChange = React.useCallback(
     (nextYear: number) => {
-      setYear(nextYear);
-      writeHash(nextYear, currentIdsRef.current);
+      const nextYearStr = String(nextYear).padStart(4, '0');
+      setYear(nextYearStr);
+      writeHash(nextYearStr, currentIdsRef.current);
     },
     [writeHash],
   );
@@ -99,7 +100,8 @@ export default function App() {
       const relation = relations.find((r) => Number(r.id) === relationId);
       if (!relation) return;
       const startDateStr = relation.tags['start_date'];
-      const nextYear = startDateStr ? Number(startDateStr.slice(0, 4)) : year;
+      const nextYear =
+        startDateStr ?? String(yearFromDateStr(year)).padStart(4, '0');
       const ids = [relationId];
       currentIdsRef.current = ids;
       setYear(nextYear);
