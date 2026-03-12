@@ -95,6 +95,8 @@ class RelationHandler(osmium.SimpleHandler):
         self.relations: dict[int, dict[str, Any]] = {}
         # set of way IDs referenced by collected relations
         self.way_ids: set[int] = set()
+        # set of node IDs that are direct members of collected relations
+        self.node_ids: set[int] = set()
         self.admin_levels = admin_levels
         self.tag_filter = tag_filter
 
@@ -114,12 +116,37 @@ class RelationHandler(osmium.SimpleHandler):
         ]
         inner_ways = [m.ref for m in r.members if m.type == "w" and m.role == "inner"]
         all_ways = outer_ways + inner_ways
-        self.relations[r.id] = {
+        node_members = [m.ref for m in r.members if m.type == "n"]
+        rel_data: dict[str, Any] = {
             "tags": tags_to_dict(tags),
             "outer_ways": outer_ways,
             "inner_ways": inner_ways,
         }
+        if node_members:
+            rel_data["node_members"] = node_members
+        self.relations[r.id] = rel_data
         self.way_ids.update(all_ways)
+        self.node_ids.update(node_members)
+
+
+class NodeHandler(osmium.SimpleHandler):
+    """Collect nodes that are direct members of admin boundary relations."""
+
+    def __init__(self, node_ids: set[int]) -> None:
+        super().__init__()
+        self._node_ids = node_ids
+        # node_id (int) → {"loc": [lon, lat], "tags": {...}}
+        self.nodes: dict[int, dict[str, Any]] = {}
+
+    def node(self, n: Any) -> None:
+        if n.id not in self._node_ids:
+            return
+        if not n.location.valid():
+            return
+        self.nodes[n.id] = {
+            "loc": [n.location.lon, n.location.lat],
+            "tags": tags_to_dict(n.tags),
+        }
 
 
 # Default simplification tolerance in meters (converted to quantized units at runtime).
@@ -267,6 +294,11 @@ def main() -> None:
         help="Output path for ways JSON (default: ways.json)",
     )
     parser.add_argument(
+        "--nodes-out",
+        default="nodes.json",
+        help="Output path for nodes JSON (default: nodes.json)",
+    )
+    parser.add_argument(
         "--filter",
         metavar="KEY=VAL1,VAL2,...",
         help="Only output relations matching tag KEY with value in {VAL1, VAL2, ...}",
@@ -336,7 +368,8 @@ def main() -> None:
     elapsed = time.monotonic() - t0
     _log(
         f"  Found {len(rel_handler.relations):,} relations, "
-        f"{len(rel_handler.way_ids):,} unique ways  ({elapsed:.1f}s)"
+        f"{len(rel_handler.way_ids):,} unique ways, "
+        f"{len(rel_handler.node_ids):,} direct node members  ({elapsed:.1f}s)"
     )
 
     # Convert meters → quantized units (1 unit ≈ 10 m, 1 unit² ≈ 100 m²)
@@ -364,6 +397,23 @@ def main() -> None:
     ways_out = {str(wid): data for wid, data in way_handler.ways.items()}
     write_json(args.ways_out, ways_out)
 
+    # --- Pass 3: Nodes (direct relation members) ---
+    nodes_out: dict[str, Any] = {}
+    if rel_handler.node_ids:
+        _log("Pass 3: scanning nodes …")
+        t0 = time.monotonic()
+        node_handler = NodeHandler(rel_handler.node_ids)
+        node_filter = osmium.filter.IdFilter(rel_handler.node_ids).enable_for(
+            osmium.osm.NODE
+        )
+        node_handler.apply_file(osm_file, filters=[node_filter], locations=True)
+        elapsed = time.monotonic() - t0
+        _log(f"  Found {len(node_handler.nodes):,} nodes  ({elapsed:.1f}s)")
+        nodes_out = {str(nid): data for nid, data in node_handler.nodes.items()}
+    else:
+        _log("Pass 3: no direct node members found, skipping.")
+    write_json(args.nodes_out, nodes_out)
+
     # --- Order ways in each relation into oriented rings, then write relations ---
     _log("Ordering ways into oriented rings …")
     for rid, rel_data in rel_handler.relations.items():
@@ -377,6 +427,12 @@ def main() -> None:
             warn=lambda msg: _log(f"    Warning: {msg}"),
         )
         rel_data["ways"] = polygons
+
+    # Attach node members to each relation that has them.
+    for rid, rel_data in rel_handler.relations.items():
+        node_members = rel_data.pop("node_members", None)
+        if node_members:
+            rel_data["nodes"] = node_members
 
     # Attach chronology membership to each relation that belongs to one.
     for rid, rel_data in rel_handler.relations.items():
