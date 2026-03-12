@@ -128,7 +128,7 @@ export function AdminAreas(props: AdminAreasProps) {
     for (const relation of relations) {
       const { id, tags } = relation;
       if (
-        tags['admin_level'] != '1' ||
+        tags['admin_level'] != '2' ||
         ('start_date' in tags && yearStr < tags['start_date']) ||
         ('end_date' in tags && yearStr >= tags['end_date'])
       ) {
