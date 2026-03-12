@@ -231,14 +231,21 @@ export function AdminAreas(props: AdminAreasProps) {
     };
   }, [map]);
 
-  // Effect 2: push updated geojson data whenever it changes.
+  // Effect 2: push updated geojson data whenever it changes, then re-apply
+  // feature state. MapLibre clears feature state when setData is called, so we
+  // must restore selectedIds after every data reload.
   React.useEffect(() => {
     if (!map) return;
     const source = map.getSource(SOURCE_ID) as
       | maplibregl.GeoJSONSource
       | undefined;
-    source?.setData(geojson);
-  }, [map, geojson]);
+    if (!source) return;
+    source.setData(geojson);
+    // Re-apply selected state after the data reload wipes it.
+    for (const id of props.selectedIds) {
+      map.setFeatureState({ source: SOURCE_ID, id }, { selected: true });
+    }
+  }, [map, geojson, props.selectedIds]);
 
   return null;
 }
