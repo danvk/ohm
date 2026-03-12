@@ -36,17 +36,22 @@ export default function App() {
 
   const lastWrittenHash = React.useRef('');
 
-  const writeHash = React.useCallback((nextYear: number, view?: MapView) => {
-    const { zoom, lat, lng } = view ?? viewportRef.current;
-    const hash = serializeHash({ zoom, lat, lng, year: nextYear });
-    lastWrittenHash.current = hash;
-    window.location.hash = hash;
-  }, []);
+  const writeHash = React.useCallback(
+    (nextYear: number, ids: number[], view?: MapView) => {
+      const { zoom, lat, lng } = view ?? viewportRef.current;
+      const hash = serializeHash({ zoom, lat, lng, year: nextYear, ids });
+      lastWrittenHash.current = hash;
+      window.location.hash = hash;
+    },
+    [],
+  );
+
+  const currentIdsRef = React.useRef<number[]>(initial.ids);
 
   const handleYearChange = React.useCallback(
     (nextYear: number) => {
       setYear(nextYear);
-      writeHash(nextYear);
+      writeHash(nextYear, currentIdsRef.current);
     },
     [writeHash],
   );
@@ -54,7 +59,35 @@ export default function App() {
   const handleMapMove = React.useCallback(
     (view: MapView) => {
       viewportRef.current = view;
-      writeHash(year, view);
+      writeHash(year, currentIdsRef.current, view);
+    },
+    [year, writeHash],
+  );
+
+  // Derive FeatureInfo[] from a list of numeric relation IDs.
+  const resolveFeatureInfos = React.useCallback(
+    (ids: number[]): FeatureInfo[] => {
+      return ids.flatMap((id) => {
+        const relation = relations.find((r) => Number(r.id) === id);
+        if (!relation) return [];
+        return [
+          {
+            id: relation.id,
+            tags: relation.tags,
+            chronology: relation.chronology,
+          },
+        ];
+      });
+    },
+    [],
+  );
+
+  const handleClickFeature = React.useCallback(
+    (features: FeatureInfo[]) => {
+      const ids = features.map((f) => Number(f.id));
+      currentIdsRef.current = ids;
+      setSelectedFeatures(features);
+      writeHash(year, ids);
     },
     [year, writeHash],
   );
@@ -67,8 +100,10 @@ export default function App() {
       if (!relation) return;
       const startDateStr = relation.tags['start_date'];
       const nextYear = startDateStr ? Number(startDateStr.slice(0, 4)) : year;
+      const ids = [relationId];
+      currentIdsRef.current = ids;
       setYear(nextYear);
-      writeHash(nextYear);
+      writeHash(nextYear, ids);
       setSelectedFeatures([
         {
           id: relation.id,
@@ -80,6 +115,15 @@ export default function App() {
     [year, writeHash],
   );
 
+  // Hydrate selectedFeatures from URL ids on initial load (after data is ready).
+  React.useEffect(() => {
+    if (initial.ids.length === 0) return;
+    dataReady.then(() => {
+      const features = resolveFeatureInfos(initial.ids);
+      setSelectedFeatures(features);
+    });
+  }, [initial.ids, resolveFeatureInfos]);
+
   // Respond to external hash edits (user typing in the URL bar).
   React.useEffect(() => {
     const handler = () => {
@@ -88,10 +132,15 @@ export default function App() {
       setYear(parsed.year);
       viewportRef.current = parsed;
       setExternalView((prev) => ({ ...parsed, seq: (prev?.seq ?? 0) + 1 }));
+      currentIdsRef.current = parsed.ids;
+      dataReady.then(() => {
+        const features = resolveFeatureInfos(parsed.ids);
+        setSelectedFeatures(features);
+      });
     };
     window.addEventListener('hashchange', handler);
     return () => window.removeEventListener('hashchange', handler);
-  }, []);
+  }, [resolveFeatureInfos]);
 
   return (
     <>
@@ -120,12 +169,16 @@ export default function App() {
         <AdminAreas
           year={year}
           selectedIds={selectedIds}
-          onClickFeature={setSelectedFeatures}
+          onClickFeature={handleClickFeature}
         />
       </MapLibreMap>
       <FeaturePanel
         features={selectedFeatures}
-        onClose={() => setSelectedFeatures([])}
+        onClose={() => {
+          currentIdsRef.current = [];
+          setSelectedFeatures([]);
+          writeHash(year, []);
+        }}
         onSetYear={handleYearChange}
         onSelectRelation={handleSelectRelation}
       />

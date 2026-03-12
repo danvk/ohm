@@ -8,6 +8,7 @@ export interface UrlState {
   lat: number;
   lng: number;
   year: number;
+  ids: number[];
 }
 
 const DEFAULT_STATE: UrlState = {
@@ -15,6 +16,7 @@ const DEFAULT_STATE: UrlState = {
   lat: 20,
   lng: 0,
   year: 1100,
+  ids: [],
 };
 
 export function parseHash(hash: string): UrlState {
@@ -40,11 +42,21 @@ export function parseHash(hash: string): UrlState {
     if (isFinite(year)) state.year = year;
   }
 
+  const ids = params.get('ids');
+  if (ids) {
+    const parsed = ids.split(',').map(Number).filter(isFinite);
+    if (parsed.length > 0) state.ids = parsed;
+  }
+
   return state;
 }
 
 export function serializeHash(state: UrlState): string {
-  const { zoom, lat, lng, year } = state;
+  const { zoom, lat, lng, year, ids } = state;
   const mapStr = `${zoom.toFixed(2)}/${lat.toFixed(4)}/${lng.toFixed(4)}`;
-  return `#map=${mapStr}&date=${year}`;
+  let hash = `#map=${mapStr}&date=${year}`;
+  if (ids && ids.length > 0) {
+    hash += `&ids=${ids.join(',')}`;
+  }
+  return hash;
 }
