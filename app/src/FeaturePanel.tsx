@@ -99,7 +99,9 @@ function FeatureInfo({
             <tr key={key}>
               <th title={key}>{key}</th>
               <td>
-                <TagValue tagKey={key} value={value} onSetDate={onSetDate} />
+                <span className="tag-value" title={value}>
+                  <TagValue tagKey={key} value={value} onSetDate={onSetDate} />
+                </span>
               </td>
             </tr>
           ))}

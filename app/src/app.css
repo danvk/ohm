@@ -240,6 +240,13 @@ a:hover {
 
 .feature-info td {
   padding: 2px 0;
+}
+
+.feature-info td .tag-value {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   word-break: break-word;
 }
 

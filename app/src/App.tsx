@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { MapLibreMap, type MapView } from './MapLibreMap';
 import { ZoomControl } from './ZoomControl';
 import { AdminAreas } from './AdminAreas';
@@ -10,7 +10,7 @@ import {
   DEFAULT_YEAR,
   DEFAULT_STATE,
   parseSearchParams,
-  buildSearchParams,
+  buildSearch,
 } from './useUrlState';
 import Logo from './ohm_logo.svg';
 import { yearFromDateStr } from './date-utils';
@@ -18,7 +18,8 @@ import type { AppData } from './loader.ts';
 
 export default function App({ data }: { data: AppData }) {
   const { relations } = data;
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Parse current URL state. This is the single source of truth.
   const urlState = React.useMemo(
@@ -45,17 +46,19 @@ export default function App({ data }: { data: AppData }) {
     (MapView & { seq: number }) | undefined
   >(undefined);
 
-  // Track the previous search params string to detect external navigation.
-  const lastWrittenParams = React.useRef('');
+  // Track the previous raw search string to detect external navigation.
+  // We store and compare the raw window.location.search (with unencoded chars)
+  // rather than searchParams.toString() (which re-encodes).
+  const lastWrittenSearch = React.useRef('');
 
   // Detect external navigation (user editing the address bar) by comparing
-  // current params to what we last wrote.
-  const prevParamsRef = React.useRef(searchParams.toString());
+  // current location.search to what we last wrote.
+  const prevSearchRef = React.useRef(window.location.search);
   React.useEffect(() => {
-    const current = searchParams.toString();
+    const current = window.location.search;
     if (
-      current !== lastWrittenParams.current &&
-      current !== prevParamsRef.current
+      current !== lastWrittenSearch.current &&
+      current !== prevSearchRef.current
     ) {
       // External navigation: sync viewport imperatively.
       setExternalView((prev) => ({
@@ -70,13 +73,13 @@ export default function App({ data }: { data: AppData }) {
         lng: urlState.lng,
       };
     }
-    prevParamsRef.current = current;
+    prevSearchRef.current = current;
   }, [searchParams, urlState.zoom, urlState.lat, urlState.lng]);
 
   const updateUrl = React.useCallback(
     (nextYear: string, ids: number[], view?: MapView, levels?: Set<string>) => {
       const { zoom, lat, lng } = view ?? viewportRef.current;
-      const params = buildSearchParams({
+      const search = buildSearch({
         zoom,
         lat,
         lng,
@@ -84,10 +87,10 @@ export default function App({ data }: { data: AppData }) {
         ids,
         adminLevels: levels ?? urlState.adminLevels ?? new Set(['2']),
       });
-      lastWrittenParams.current = params.toString();
-      setSearchParams(params, { replace: true });
+      lastWrittenSearch.current = `?${search}`;
+      navigate({ search: `?${search}` }, { replace: true });
     },
-    [setSearchParams, urlState.adminLevels],
+    [navigate, urlState.adminLevels],
   );
 
   // Derive FeatureInfo[] from a list of numeric relation IDs.

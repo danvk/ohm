@@ -59,16 +59,20 @@ export function parseSearchParams(params: URLSearchParams): UrlState {
   return state;
 }
 
-export function buildSearchParams(state: UrlState): URLSearchParams {
+/** Returns a raw, unencoded query string (no leading `?`). Commas and slashes are
+ * intentionally left unencoded for readability, e.g. `map=1.50/20.0000/0.0000&levels=2,4`.
+ */
+export function buildSearch(state: UrlState): string {
   const { zoom, lat, lng, year, ids, adminLevels } = state;
-  const params = new URLSearchParams();
-  params.set('map', `${zoom.toFixed(2)}/${lat.toFixed(4)}/${lng.toFixed(4)}`);
-  params.set('date', year);
+  const parts: string[] = [
+    `map=${zoom.toFixed(2)}/${lat.toFixed(4)}/${lng.toFixed(4)}`,
+    `date=${year}`,
+  ];
   if (ids && ids.length > 0) {
-    params.set('ids', ids.join(','));
+    parts.push(`ids=${ids.join(',')}`);
   }
   if (adminLevels && adminLevels.size > 0) {
-    params.set('levels', [...adminLevels].sort().join(','));
+    parts.push(`levels=${[...adminLevels].sort().join(',')}`);
   }
-  return params;
+  return parts.join('&');
 }
