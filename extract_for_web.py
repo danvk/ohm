@@ -29,6 +29,8 @@ import time
 from typing import Any
 
 import osmium
+import osmium.filter
+import osmium.osm
 
 from geometry import build_polygon_rings, rdp_simplify, vw_simplify
 
