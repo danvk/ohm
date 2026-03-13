@@ -54,12 +54,6 @@ The app will be available at `http://localhost:5173` (or the next available port
 Run the TypeScript type checker:
 
 ```bash
-npx type-check
-```
-
-Or equivalently:
-
-```bash
 npm run type-check
 ```
 
@@ -87,5 +81,5 @@ To deploy to https://danvk.org/ohm/
 
 ```
 npm run build
-cp -r dist/* ../../danvk.github.io/ohm
+rm -rf ../../danvk.github.io/ohm && cp -r dist ../../danvk.github.io/ohm
 ```

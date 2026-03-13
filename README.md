@@ -19,7 +19,7 @@ The viewer encodes ways and relations in a special format so that it can load th
 
 ```
 uv run extract_for_web.py planet-260214_0301.osm.pbf
-mv relations.json ways.json app/static/
+mv relations.json ways.json nodes.json app/static/
 ```
 
 ## Tools
