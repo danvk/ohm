@@ -85,6 +85,10 @@ const CIRCLE_STYLE: CirclePaintStyle = {
     10,
     16,
   ],
+  // This increases the click target size, which makes it much easier
+  // to tap a dot with your finger on mobile.
+  'circle-stroke-width': 4,
+  'circle-stroke-opacity': 0.0,
 };
 
 function decodePositions(pos: number[]) {
@@ -272,7 +276,7 @@ export function AdminAreas(props: AdminAreasProps) {
     };
     const handleMapClick = (e: maplibregl.MapMouseEvent) => {
       const hits = map.queryRenderedFeatures(e.point, {
-        layers: [FILL_LAYER_ID],
+        layers: [FILL_LAYER_ID, CIRCLE_LAYER_ID],
       });
       if (hits.length === 0) {
         onClickFeatureRef.current([]);
