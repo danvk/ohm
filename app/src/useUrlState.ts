@@ -1,6 +1,5 @@
 /**
- * URL hash state: `#map=zoom/lat/lng&date=year`
- * Matches the OHM URL format.
+ * URL search-parameter state: `?map=zoom/lat/lng&date=year`
  */
 
 export interface UrlState {
@@ -15,7 +14,7 @@ export interface UrlState {
 
 export const DEFAULT_YEAR = '1100';
 
-const DEFAULT_STATE: UrlState = {
+export const DEFAULT_STATE: UrlState = {
   zoom: 1.5,
   lat: 20,
   lng: 0,
@@ -24,9 +23,8 @@ const DEFAULT_STATE: UrlState = {
   adminLevels: null,
 };
 
-export function parseHash(hash: string): UrlState {
+export function parseSearchParams(params: URLSearchParams): UrlState {
   const state = { ...DEFAULT_STATE };
-  const params = new URLSearchParams(hash.replace(/^#/, ''));
 
   const map = params.get('map');
   if (map) {
@@ -61,15 +59,16 @@ export function parseHash(hash: string): UrlState {
   return state;
 }
 
-export function serializeHash(state: UrlState): string {
+export function buildSearchParams(state: UrlState): URLSearchParams {
   const { zoom, lat, lng, year, ids, adminLevels } = state;
-  const mapStr = `${zoom.toFixed(2)}/${lat.toFixed(4)}/${lng.toFixed(4)}`;
-  let hash = `#map=${mapStr}&date=${year}`;
+  const params = new URLSearchParams();
+  params.set('map', `${zoom.toFixed(2)}/${lat.toFixed(4)}/${lng.toFixed(4)}`);
+  params.set('date', year);
   if (ids && ids.length > 0) {
-    hash += `&ids=${ids.join(',')}`;
+    params.set('ids', ids.join(','));
   }
   if (adminLevels && adminLevels.size > 0) {
-    hash += `&levels=${[...adminLevels].sort().join(',')}`;
+    params.set('levels', [...adminLevels].sort().join(','));
   }
-  return hash;
+  return params;
 }

@@ -1,94 +1,93 @@
 import React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MapLibreMap, type MapView } from './MapLibreMap';
 import { ZoomControl } from './ZoomControl';
 import { AdminAreas } from './AdminAreas';
 import { AdminLevelFilter } from './AdminLevelFilter';
 import { FeaturePanel, type FeatureInfo } from './FeaturePanel';
 import { TimeSlider } from './TimeSlider';
-import { DEFAULT_YEAR, parseHash, serializeHash } from './useUrlState';
+import {
+  DEFAULT_YEAR,
+  DEFAULT_STATE,
+  parseSearchParams,
+  buildSearchParams,
+} from './useUrlState';
 import Logo from './ohm_logo.svg';
 import { yearFromDateStr } from './date-utils';
 import type { AppData } from './loader.ts';
 
 export default function App({ data }: { data: AppData }) {
   const { relations } = data;
-  const initial = React.useMemo(() => parseHash(window.location.hash), []);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // year is the only piece of URL state that drives React re-renders.
+  // Parse current URL state. This is the single source of truth.
+  const urlState = React.useMemo(
+    () => parseSearchParams(searchParams),
+    [searchParams],
+  );
+
+  const year = urlState.year;
+  const adminLevels = urlState.adminLevels ?? new Set(['2']);
+  const urlIds = urlState.ids;
+
   // Viewport (zoom/lat/lng) is kept in a ref so map moves don't cause re-renders
   // and don't feed back into setCenter.
-  const [year, setYear] = React.useState<string>(initial.year);
-  const yearRef = React.useRef<string>(initial.year);
-  React.useEffect(() => {
-    yearRef.current = year;
-  });
   const viewportRef = React.useRef<MapView>({
-    zoom: initial.zoom,
-    lat: initial.lat,
-    lng: initial.lng,
+    zoom: urlState.zoom,
+    lat: urlState.lat,
+    lng: urlState.lng,
   });
 
-  // When an external hash change arrives, we need to imperatively move the map.
-  // Use a counter so MapLibreMap sees a new object reference each time.
+  // When URL-driven viewport changes arrive (e.g. user edits address bar),
+  // we need to imperatively move the map. Use a counter so MapLibreMap sees
+  // a new object reference each time.
   const [externalView, setExternalView] = React.useState<
     (MapView & { seq: number }) | undefined
   >(undefined);
 
-  const [adminLevels, setAdminLevels] = React.useState<Set<string>>(
-    () => initial.adminLevels ?? new Set(['2']),
-  );
-  const adminLevelsRef = React.useRef<Set<string>>(adminLevels);
+  // Track the previous search params string to detect external navigation.
+  const lastWrittenParams = React.useRef('');
+
+  // Detect external navigation (user editing the address bar) by comparing
+  // current params to what we last wrote.
+  const prevParamsRef = React.useRef(searchParams.toString());
   React.useEffect(() => {
-    adminLevelsRef.current = adminLevels;
-  });
+    const current = searchParams.toString();
+    if (
+      current !== lastWrittenParams.current &&
+      current !== prevParamsRef.current
+    ) {
+      // External navigation: sync viewport imperatively.
+      setExternalView((prev) => ({
+        zoom: urlState.zoom,
+        lat: urlState.lat,
+        lng: urlState.lng,
+        seq: (prev?.seq ?? 0) + 1,
+      }));
+      viewportRef.current = {
+        zoom: urlState.zoom,
+        lat: urlState.lat,
+        lng: urlState.lng,
+      };
+    }
+    prevParamsRef.current = current;
+  }, [searchParams, urlState.zoom, urlState.lat, urlState.lng]);
 
-  const [selectedFeatures, setSelectedFeatures] = React.useState<FeatureInfo[]>(
-    [],
-  );
-  const selectedIds = React.useMemo(
-    () => new Set(selectedFeatures.map((f) => f.id)),
-    [selectedFeatures],
-  );
-
-  const lastWrittenHash = React.useRef('');
-
-  const writeHash = React.useCallback(
+  const updateUrl = React.useCallback(
     (nextYear: string, ids: number[], view?: MapView, levels?: Set<string>) => {
       const { zoom, lat, lng } = view ?? viewportRef.current;
-      const hash = serializeHash({
+      const params = buildSearchParams({
         zoom,
         lat,
         lng,
         year: nextYear,
         ids,
-        adminLevels: levels ?? adminLevelsRef.current,
+        adminLevels: levels ?? urlState.adminLevels ?? new Set(['2']),
       });
-      lastWrittenHash.current = hash;
-      window.location.hash = hash;
+      lastWrittenParams.current = params.toString();
+      setSearchParams(params, { replace: true });
     },
-    [],
-  );
-
-  const currentIdsRef = React.useRef<number[]>(initial.ids);
-
-  const handleDateChange = React.useCallback(
-    (nextDate: string) => {
-      setYear(nextDate);
-      writeHash(nextDate, currentIdsRef.current);
-    },
-    [writeHash],
-  );
-  const handleYearChange = React.useCallback((nextYear: number) => {
-    const nextYearStr = String(nextYear).padStart(4, '0');
-    handleDateChange(nextYearStr);
-  }, []);
-
-  const handleMapMove = React.useCallback(
-    (view: MapView) => {
-      viewportRef.current = view;
-      writeHash(yearRef.current, currentIdsRef.current, view);
-    },
-    [writeHash],
+    [setSearchParams, urlState.adminLevels],
   );
 
   // Derive FeatureInfo[] from a list of numeric relation IDs.
@@ -109,14 +108,43 @@ export default function App({ data }: { data: AppData }) {
     [relations],
   );
 
+  const selectedFeatures = React.useMemo(
+    () => resolveFeatureInfos(urlIds),
+    [urlIds, resolveFeatureInfos],
+  );
+  const selectedIds = React.useMemo(
+    () => new Set(selectedFeatures.map((f) => f.id)),
+    [selectedFeatures],
+  );
+
+  const handleDateChange = React.useCallback(
+    (nextDate: string) => {
+      updateUrl(nextDate, urlIds);
+    },
+    [updateUrl, urlIds],
+  );
+
+  const handleYearChange = React.useCallback(
+    (nextYear: number) => {
+      handleDateChange(String(nextYear).padStart(4, '0'));
+    },
+    [handleDateChange],
+  );
+
+  const handleMapMove = React.useCallback(
+    (view: MapView) => {
+      viewportRef.current = view;
+      updateUrl(year, urlIds, view);
+    },
+    [updateUrl, year, urlIds],
+  );
+
   const handleClickFeature = React.useCallback(
     (features: FeatureInfo[]) => {
       const ids = features.map((f) => Number(f.id));
-      currentIdsRef.current = ids;
-      setSelectedFeatures(features);
-      writeHash(yearRef.current, ids);
+      updateUrl(year, ids);
     },
-    [writeHash],
+    [updateUrl, year],
   );
 
   const handleSelectRelation = React.useCallback(
@@ -126,83 +154,60 @@ export default function App({ data }: { data: AppData }) {
       const startDateStr = relation.tags['start_date'];
       const nextYear =
         startDateStr ?? String(yearFromDateStr(year)).padStart(4, '0');
-      const ids = [relationId];
-      currentIdsRef.current = ids;
-      setYear(nextYear);
-      writeHash(nextYear, ids);
-      setSelectedFeatures([
-        {
-          id: relation.id,
-          tags: relation.tags,
-          chronology: relation.chronology,
-        },
-      ]);
+      updateUrl(nextYear, [relationId]);
     },
-    [relations, year, writeHash],
+    [relations, year, updateUrl],
   );
 
-  // Hydrate selectedFeatures from URL ids on initial load.
-  // Also update the year to the feature's start_date if no explicit date was in the URL.
-  // If no admin levels were specified in the URL, infer them from the features' admin_level tags.
+  // On initial load: if ids are present but no explicit date, set date to the
+  // first feature's start_date. Also infer admin levels from feature tags if
+  // not set in URL.
+  const initializedRef = React.useRef(false);
   React.useEffect(() => {
-    if (initial.ids.length === 0) return;
-    const features = resolveFeatureInfos(initial.ids);
-    setSelectedFeatures(features);
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    if (urlIds.length === 0) return;
+    const features = resolveFeatureInfos(urlIds);
 
     let nextLevels: Set<string> | undefined;
-    if (!initial.adminLevels) {
+    if (!urlState.adminLevels) {
       const levels = new Set(
         features.map((f) => f.tags['admin_level']).filter(Boolean),
       );
-      if (levels.size > 0) {
-        nextLevels = levels;
-        setAdminLevels(levels);
-        adminLevelsRef.current = levels;
-      }
+      if (levels.size > 0) nextLevels = levels;
     }
 
-    const currentHash = window.location.hash;
-    const parsedYear = parseHash(currentHash).year;
-    const hasExplicitDate = parsedYear !== DEFAULT_YEAR;
+    const hasExplicitDate = urlState.year !== DEFAULT_YEAR;
     if (!hasExplicitDate && features.length > 0) {
-      const firstId = initial.ids[0];
-      const relation = relations.find((r) => Number(r.id) === firstId);
+      const relation = relations.find((r) => Number(r.id) === urlIds[0]);
       const startDate = relation?.tags['start_date'];
       if (startDate) {
-        setYear(startDate);
-        writeHash(startDate, initial.ids, undefined, nextLevels);
-      } else if (nextLevels) {
-        writeHash(yearRef.current, initial.ids, undefined, nextLevels);
+        updateUrl(startDate, urlIds, undefined, nextLevels);
+        return;
       }
-    } else if (nextLevels) {
-      writeHash(yearRef.current, initial.ids, undefined, nextLevels);
     }
-  }, [
-    initial.ids,
-    initial.adminLevels,
-    relations,
-    resolveFeatureInfos,
-    writeHash,
-  ]);
+    if (nextLevels) {
+      updateUrl(urlState.year, urlIds, undefined, nextLevels);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Respond to external hash edits (user typing in the URL bar).
+  // Keep initialCenter/Zoom stable across re-renders so MapLibreMap doesn't re-mount.
+  const initialViewRef = React.useRef({
+    zoom: DEFAULT_STATE.zoom,
+    lat: DEFAULT_STATE.lat,
+    lng: DEFAULT_STATE.lng,
+  });
   React.useEffect(() => {
-    const handler = () => {
-      if (window.location.hash === lastWrittenHash.current) return;
-      const parsed = parseHash(window.location.hash);
-      setYear(parsed.year);
-      viewportRef.current = parsed;
-      setExternalView((prev) => ({ ...parsed, seq: (prev?.seq ?? 0) + 1 }));
-      currentIdsRef.current = parsed.ids;
-      if (parsed.adminLevels) {
-        setAdminLevels(parsed.adminLevels);
-      }
-      const features = resolveFeatureInfos(parsed.ids);
-      setSelectedFeatures(features);
-    };
-    window.addEventListener('hashchange', handler);
-    return () => window.removeEventListener('hashchange', handler);
-  }, [resolveFeatureInfos]);
+    // Capture real initial viewport from first URL parse (runs once before any updateUrl).
+    if (!initializedRef.current) {
+      initialViewRef.current = {
+        zoom: urlState.zoom,
+        lat: urlState.lat,
+        lng: urlState.lng,
+      };
+    }
+  });
 
   return (
     <>
@@ -222,8 +227,8 @@ export default function App({ data }: { data: AppData }) {
       <MapLibreMap
         containerId="map"
         containerClassName="maplibregl-map"
-        center={[initial.lng, initial.lat]}
-        zoom={initial.zoom}
+        center={[urlState.lng, urlState.lat]}
+        zoom={urlState.zoom}
         {...(externalView && { externalView })}
         onMapMove={handleMapMove}
       >
@@ -231,13 +236,7 @@ export default function App({ data }: { data: AppData }) {
         <AdminLevelFilter
           adminLevels={adminLevels}
           onChange={(levels) => {
-            setAdminLevels(levels);
-            writeHash(
-              yearRef.current,
-              currentIdsRef.current,
-              undefined,
-              levels,
-            );
+            updateUrl(year, urlIds, undefined, levels);
           }}
         />
         <AdminAreas
@@ -251,9 +250,7 @@ export default function App({ data }: { data: AppData }) {
       <FeaturePanel
         features={selectedFeatures}
         onClose={() => {
-          currentIdsRef.current = [];
-          setSelectedFeatures([]);
-          writeHash(yearRef.current, []);
+          updateUrl(year, []);
         }}
         onSetDate={handleDateChange}
         onSelectRelation={handleSelectRelation}

@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './app.css';
 import type { AppData } from './loader.ts';
@@ -38,8 +39,10 @@ function AppWithData() {
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <React.Suspense fallback={<div className="loading">Loading data…</div>}>
-      <AppWithData />
-    </React.Suspense>
+    <BrowserRouter>
+      <React.Suspense fallback={<div className="loading">Loading data…</div>}>
+        <AppWithData />
+      </React.Suspense>
+    </BrowserRouter>
   </React.StrictMode>,
 );
