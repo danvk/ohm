@@ -2,6 +2,7 @@ import React from 'react';
 import type {
   Feature,
   FeatureCollection,
+  MultiPoint,
   MultiPolygon,
   Position,
 } from 'geojson';
@@ -19,6 +20,7 @@ export interface AdminAreasProps {
 const SOURCE_ID = 'admin2';
 const FILL_LAYER_ID = 'admin2-fill';
 const LINE_LAYER_ID = 'admin2-line';
+const CIRCLE_LAYER_ID = 'admin2-circle';
 
 type FillPaintStyle = Exclude<
   maplibregl.FillLayerSpecification['paint'],
@@ -59,6 +61,32 @@ const LINE_STYLE: LinePaintStyle = {
   ],
 };
 
+type CirclePaintStyle = Exclude<
+  maplibregl.CircleLayerSpecification['paint'],
+  undefined
+>;
+const CIRCLE_STYLE: CirclePaintStyle = {
+  'circle-color': [
+    'case',
+    ['boolean', ['feature-state', 'selected'], false],
+    '#cc5500',
+    '#3050a0',
+  ],
+  'circle-radius': [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    2,
+    3,
+    // At zoom level 5 (or less), the circle radius will be 1 pixel
+    4,
+    5,
+    // At zoom level 10 (or greater), the circle radius will be 5 pixels
+    10,
+    16,
+  ],
+};
+
 function decodePositions(pos: number[]) {
   let x = pos[0];
   let y = pos[1];
@@ -89,20 +117,41 @@ function decodeRing(signedWayIds: number[]): Position[] {
   return segments.flat();
 }
 
-function buildFeature(id: string, relation: Relation): Feature<MultiPolygon> {
-  // relation.ways is a list of polygons; each polygon is [outerRing, ...holeRings]
-  const polygons: Position[][][] = relation.ways.map((polygon) =>
-    polygon.map((ring) => decodeRing(ring)),
-  );
-  return {
-    type: 'Feature',
-    id,
-    geometry: {
-      type: 'MultiPolygon',
-      coordinates: polygons,
-    },
-    properties: relation.tags,
-  };
+function buildFeature(
+  id: string,
+  relation: Relation,
+): Feature<MultiPolygon | MultiPoint> {
+  // if a relation doesn't contain any ways, then it might just have a label.
+  if (relation.ways.length === 0 && relation.nodes?.length) {
+    const points = relation.nodes.map((id) => nodes[id].loc);
+
+    return {
+      type: 'Feature',
+      id,
+      geometry: {
+        type: 'MultiPoint',
+        coordinates: points,
+      },
+      properties: {
+        ...relation.tags,
+        _relation_node: true,
+      },
+    };
+  } else {
+    // relation.ways is a list of polygons; each polygon is [outerRing, ...holeRings]
+    const polygons: Position[][][] = relation.ways.map((polygon) =>
+      polygon.map((ring) => decodeRing(ring)),
+    );
+    return {
+      type: 'Feature',
+      id,
+      geometry: {
+        type: 'MultiPolygon',
+        coordinates: polygons,
+      },
+      properties: relation.tags,
+    };
+  }
 }
 
 export function AdminAreas(props: AdminAreasProps) {
@@ -111,9 +160,9 @@ export function AdminAreas(props: AdminAreasProps) {
   // Cache built Feature objects by relation ID so that features whose
   // [start_date, end_date) interval spans the current *and* previous year
   // don't need to be recomputed.
-  const featureCache = React.useRef<Map<string, Feature<MultiPolygon>>>(
-    new Map(),
-  );
+  const featureCache = React.useRef<
+    Map<string, Feature<MultiPolygon | MultiPoint>>
+  >(new Map());
 
   // Build a map from relation ID (as string) to the full Relation object for O(1) lookup.
   const relationById = React.useMemo(
@@ -121,9 +170,11 @@ export function AdminAreas(props: AdminAreasProps) {
     [],
   );
 
-  const geojson = React.useMemo<FeatureCollection<MultiPolygon>>(() => {
-    const features: Feature<MultiPolygon>[] = [];
-    const nextCache = new Map<string, Feature<MultiPolygon>>();
+  const geojson = React.useMemo<
+    FeatureCollection<MultiPolygon | MultiPoint>
+  >(() => {
+    const features: Feature<MultiPolygon | MultiPoint>[] = [];
+    const nextCache = new Map<string, Feature<MultiPolygon | MultiPoint>>();
 
     for (const relation of relations) {
       const { id, tags } = relation;
@@ -195,10 +246,17 @@ export function AdminAreas(props: AdminAreasProps) {
       source: SOURCE_ID,
       paint: LINE_STYLE,
     });
+    map.addLayer({
+      id: CIRCLE_LAYER_ID,
+      type: 'circle',
+      source: SOURCE_ID,
+      paint: CIRCLE_STYLE,
+      filter: ['has', '_relation_node'],
+    });
 
     const handleLayerClick = (e: maplibregl.MapLayerMouseEvent) => {
       const features = map.queryRenderedFeatures(e.point, {
-        layers: [FILL_LAYER_ID],
+        layers: [FILL_LAYER_ID, CIRCLE_LAYER_ID],
       });
       onClickFeatureRef.current(
         features.map((f) => {
@@ -223,14 +281,17 @@ export function AdminAreas(props: AdminAreasProps) {
 
     map.on('click', FILL_LAYER_ID, handleLayerClick);
     map.on('click', LINE_LAYER_ID, handleLayerClick);
+    map.on('click', CIRCLE_LAYER_ID, handleLayerClick);
     map.on('click', handleMapClick);
 
     return () => {
       if (map.getLayer(FILL_LAYER_ID)) map.removeLayer(FILL_LAYER_ID);
       if (map.getLayer(LINE_LAYER_ID)) map.removeLayer(LINE_LAYER_ID);
+      if (map.getLayer(CIRCLE_LAYER_ID)) map.removeLayer(CIRCLE_LAYER_ID);
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
       map.off('click', FILL_LAYER_ID, handleLayerClick);
       map.off('click', LINE_LAYER_ID, handleLayerClick);
+      map.off('click', CIRCLE_LAYER_ID, handleLayerClick);
       map.off('click', handleMapClick);
     };
   }, [map]);
