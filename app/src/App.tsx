@@ -8,8 +8,10 @@ import { TimeSlider } from './TimeSlider';
 import { DEFAULT_YEAR, parseHash, serializeHash } from './useUrlState';
 import Logo from './ohm_logo.svg';
 import { yearFromDateStr } from './date-utils';
+import type { AppData } from './loader.ts';
 
-export default function App() {
+export default function App({ data }: { data: AppData }) {
+  const { relations } = data;
   const initial = React.useMemo(() => parseHash(window.location.hash), []);
 
   // year is the only piece of URL state that drives React re-renders.
@@ -104,7 +106,7 @@ export default function App() {
         ];
       });
     },
-    [],
+    [relations],
   );
 
   const handleClickFeature = React.useCallback(
@@ -117,8 +119,6 @@ export default function App() {
     [writeHash],
   );
 
-  // Build a map from relation ID (number) to Relation for O(1) lookup.
-  // relations is a global loaded asynchronously; we access it at call time.
   const handleSelectRelation = React.useCallback(
     (relationId: number) => {
       const relation = relations.find((r) => Number(r.id) === relationId);
@@ -138,48 +138,52 @@ export default function App() {
         },
       ]);
     },
-    [year, writeHash],
+    [relations, year, writeHash],
   );
 
-  // Hydrate selectedFeatures from URL ids on initial load (after data is ready).
+  // Hydrate selectedFeatures from URL ids on initial load.
   // Also update the year to the feature's start_date if no explicit date was in the URL.
   // If no admin levels were specified in the URL, infer them from the features' admin_level tags.
   React.useEffect(() => {
     if (initial.ids.length === 0) return;
-    dataReady.then(() => {
-      const features = resolveFeatureInfos(initial.ids);
-      setSelectedFeatures(features);
+    const features = resolveFeatureInfos(initial.ids);
+    setSelectedFeatures(features);
 
-      let nextLevels: Set<string> | undefined;
-      if (!initial.adminLevels) {
-        const levels = new Set(
-          features.map((f) => f.tags['admin_level']).filter(Boolean),
-        );
-        if (levels.size > 0) {
-          nextLevels = levels;
-          setAdminLevels(levels);
-          adminLevelsRef.current = levels;
-        }
+    let nextLevels: Set<string> | undefined;
+    if (!initial.adminLevels) {
+      const levels = new Set(
+        features.map((f) => f.tags['admin_level']).filter(Boolean),
+      );
+      if (levels.size > 0) {
+        nextLevels = levels;
+        setAdminLevels(levels);
+        adminLevelsRef.current = levels;
       }
+    }
 
-      const currentHash = window.location.hash;
-      const parsedYear = parseHash(currentHash).year;
-      const hasExplicitDate = parsedYear !== DEFAULT_YEAR;
-      if (!hasExplicitDate && features.length > 0) {
-        const firstId = initial.ids[0];
-        const relation = relations.find((r) => Number(r.id) === firstId);
-        const startDate = relation?.tags['start_date'];
-        if (startDate) {
-          setYear(startDate);
-          writeHash(startDate, initial.ids, undefined, nextLevels);
-        } else if (nextLevels) {
-          writeHash(yearRef.current, initial.ids, undefined, nextLevels);
-        }
+    const currentHash = window.location.hash;
+    const parsedYear = parseHash(currentHash).year;
+    const hasExplicitDate = parsedYear !== DEFAULT_YEAR;
+    if (!hasExplicitDate && features.length > 0) {
+      const firstId = initial.ids[0];
+      const relation = relations.find((r) => Number(r.id) === firstId);
+      const startDate = relation?.tags['start_date'];
+      if (startDate) {
+        setYear(startDate);
+        writeHash(startDate, initial.ids, undefined, nextLevels);
       } else if (nextLevels) {
         writeHash(yearRef.current, initial.ids, undefined, nextLevels);
       }
-    });
-  }, [initial.ids, initial.adminLevels, resolveFeatureInfos, writeHash]);
+    } else if (nextLevels) {
+      writeHash(yearRef.current, initial.ids, undefined, nextLevels);
+    }
+  }, [
+    initial.ids,
+    initial.adminLevels,
+    relations,
+    resolveFeatureInfos,
+    writeHash,
+  ]);
 
   // Respond to external hash edits (user typing in the URL bar).
   React.useEffect(() => {
@@ -193,10 +197,8 @@ export default function App() {
       if (parsed.adminLevels) {
         setAdminLevels(parsed.adminLevels);
       }
-      dataReady.then(() => {
-        const features = resolveFeatureInfos(parsed.ids);
-        setSelectedFeatures(features);
-      });
+      const features = resolveFeatureInfos(parsed.ids);
+      setSelectedFeatures(features);
     };
     window.addEventListener('hashchange', handler);
     return () => window.removeEventListener('hashchange', handler);
@@ -239,6 +241,7 @@ export default function App() {
           }}
         />
         <AdminAreas
+          data={data}
           year={year}
           adminLevels={adminLevels}
           selectedIds={selectedIds}

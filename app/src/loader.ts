@@ -1,33 +1,27 @@
-/** Data loader -- run before all other code */
-type Globals = typeof window & {
-  relations: typeof relations;
-  ways: typeof ways;
-  nodes: typeof nodes;
-  dataReady: typeof dataReady;
-};
+export interface AppData {
+  relations: Relation[];
+  ways: Record<string, number[]>;
+  nodes: Record<string, Node>;
+}
 
-async function loadData() {
-  const relationsR = fetch('relations.json');
-  const waysR = fetch('ways.json');
-  const nodesR = fetch('nodes.json');
-
-  const [relationsJSON, waysJSON, nodesJSON] = (await Promise.all([
-    (await relationsR).json(),
-    (await waysR).json(),
-    (await nodesR).json(),
-  ])) as [typeof relations, typeof ways, typeof nodes];
+export async function loadData(): Promise<AppData> {
+  const [relations, ways, nodes] = await Promise.all([
+    fetch('relations.json').then((r) => r.json() as Promise<Relation[]>),
+    fetch('ways.json').then(
+      (r) => r.json() as Promise<Record<string, number[]>>,
+    ),
+    fetch('nodes.json').then((r) => r.json() as Promise<Record<string, Node>>),
+  ]);
 
   console.log(
     'Loaded',
-    [...Object.keys(relationsJSON)].length,
+    relations.length,
     'relations,',
-    [...Object.keys(waysJSON)].length,
+    Object.keys(ways).length,
     'ways, and',
-    [...Object.keys(nodesJSON)].length,
+    Object.keys(nodes).length,
+    'nodes.',
   );
-  (window as Globals).relations = relationsJSON;
-  (window as Globals).ways = waysJSON;
-  (window as Globals).nodes = nodesJSON;
-}
 
-(window as Globals).dataReady = loadData();
+  return { relations, ways, nodes };
+}

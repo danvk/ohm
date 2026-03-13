@@ -24,13 +24,7 @@ interface Relation {
   nodes: number[];
   chronology: Chronology[];
 }
-let relations: Relation[];
-
-let ways: Record<string, number[]>;
-let dataReady: Promise<void>;
-
 interface Node {
   loc: [number, number];
   tags: Record<string, string>;
 }
-let nodes: Record<string, Node>;

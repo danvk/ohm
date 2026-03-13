@@ -9,8 +9,10 @@ import type {
 import maplibregl from 'maplibre-gl';
 import { useMap } from './MapLibreMap';
 import type { FeatureInfo } from './FeaturePanel';
+import type { AppData } from './loader.ts';
 
 export interface AdminAreasProps {
+  data: AppData;
   year: string;
   adminLevels: Set<string>;
   selectedIds: Set<string | number>;
@@ -108,7 +110,7 @@ function decodePositions(pos: number[]) {
   return coords;
 }
 
-function decodeRing(signedWayIds: number[]): Position[] {
+function decodeRing(signedWayIds: number[], ways: AppData['ways']): Position[] {
   const segments: Position[][] = [];
   for (const wayId of signedWayIds) {
     const encoded = ways[Math.abs(wayId)];
@@ -124,10 +126,12 @@ function decodeRing(signedWayIds: number[]): Position[] {
 function buildFeature(
   id: string,
   relation: Relation,
+  ways: AppData['ways'],
+  nodes: AppData['nodes'],
 ): Feature<MultiPolygon | MultiPoint> {
   // if a relation doesn't contain any ways, then it might just have a label.
   if (relation.ways.length === 0 && relation.nodes?.length) {
-    const points = relation.nodes.map((id) => nodes[id].loc);
+    const points = relation.nodes.map((nodeId) => nodes[nodeId].loc);
 
     return {
       type: 'Feature',
@@ -144,7 +148,7 @@ function buildFeature(
   } else {
     // relation.ways is a list of polygons; each polygon is [outerRing, ...holeRings]
     const polygons: Position[][][] = relation.ways.map((polygon) =>
-      polygon.map((ring) => decodeRing(ring)),
+      polygon.map((ring) => decodeRing(ring, ways)),
     );
     return {
       type: 'Feature',
@@ -159,7 +163,8 @@ function buildFeature(
 }
 
 export function AdminAreas(props: AdminAreasProps) {
-  const { year, adminLevels, onClickFeature } = props;
+  const { data, year, adminLevels, onClickFeature } = props;
+  const { relations, ways, nodes } = data;
 
   // Cache built Feature objects by relation ID so that features whose
   // [start_date, end_date) interval spans the current *and* previous year
@@ -171,7 +176,7 @@ export function AdminAreas(props: AdminAreasProps) {
   // Build a map from relation ID (as string) to the full Relation object for O(1) lookup.
   const relationById = React.useMemo(
     () => new Map<string, Relation>(relations.map((r) => [String(r.id), r])),
-    [],
+    [relations],
   );
 
   const geojson = React.useMemo<
@@ -192,7 +197,7 @@ export function AdminAreas(props: AdminAreasProps) {
       // Reuse cached feature if available, otherwise build and cache it.
       let feature = featureCache.current.get(id);
       if (!feature) {
-        feature = buildFeature(id, relation);
+        feature = buildFeature(id, relation, ways, nodes);
       }
       nextCache.set(id, feature);
       features.push(feature);
@@ -200,7 +205,7 @@ export function AdminAreas(props: AdminAreasProps) {
 
     featureCache.current = nextCache;
     return { type: 'FeatureCollection', features };
-  }, [year, adminLevels]);
+  }, [year, adminLevels, relations, ways, nodes]);
 
   const map = useMap();
 
