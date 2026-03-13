@@ -76,3 +76,72 @@ export const MINIMAL_STYLE: maplibregl.StyleSpecification = {
     },
   ],
 };
+
+type FillPaintStyle = Exclude<
+  maplibregl.FillLayerSpecification['paint'],
+  undefined
+>;
+
+export const PAINT_STYLE: FillPaintStyle = {
+  'fill-color': [
+    'case',
+    ['boolean', ['feature-state', 'selected'], false],
+    '#ff8c00',
+    '#6080c0',
+  ],
+  'fill-opacity': [
+    'case',
+    ['boolean', ['feature-state', 'selected'], false],
+    0.7,
+    0.5,
+  ],
+};
+
+type LinePaintStyle = Exclude<
+  maplibregl.LineLayerSpecification['paint'],
+  undefined
+>;
+export const LINE_STYLE: LinePaintStyle = {
+  'line-color': [
+    'case',
+    ['boolean', ['feature-state', 'selected'], false],
+    '#cc5500',
+    '#3050a0',
+  ],
+  'line-width': [
+    'case',
+    ['boolean', ['feature-state', 'selected'], false],
+    2,
+    ['match', ['get', 'admin_level'], '2', 1.5, '1', 2, '3', 1.25, 1],
+  ],
+};
+
+type CirclePaintStyle = Exclude<
+  maplibregl.CircleLayerSpecification['paint'],
+  undefined
+>;
+export const CIRCLE_STYLE: CirclePaintStyle = {
+  'circle-color': [
+    'case',
+    ['boolean', ['feature-state', 'selected'], false],
+    '#cc5500',
+    '#3050a0',
+  ],
+  'circle-radius': [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    2,
+    3,
+    // At zoom level 5 (or less), the circle radius will be 1 pixel
+    4,
+    5,
+    // At zoom level 10 (or greater), the circle radius will be 5 pixels
+    10,
+    16,
+  ],
+  // This increases the click target size, which makes it much easier
+  // to tap a dot with your finger on mobile.
+  'circle-stroke-width': 4,
+  'circle-stroke-opacity': 0.0,
+};
