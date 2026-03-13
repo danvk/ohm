@@ -41,16 +41,23 @@ export const MINIMAL_STYLE: maplibregl.StyleSpecification = {
       'source-layer': 'water_lines',
       paint: {
         'line-color': '#beddf3',
-        'line-width': {
-          stops: [
-            [9, 0],
-            [10, 3],
-            [15, 5],
-            [17, 9],
-            [18, 20],
-            [20, 60],
-          ],
-        },
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,
+          0,
+          10,
+          3,
+          15,
+          5,
+          17,
+          9,
+          18,
+          20,
+          20,
+          60,
+        ],
       },
       layout: {
         'line-cap': 'round',
@@ -64,12 +71,7 @@ export const MINIMAL_STYLE: maplibregl.StyleSpecification = {
       'source-layer': 'water_polygons',
       paint: {
         'fill-color': '#beddf3',
-        'fill-opacity': {
-          stops: [
-            [4, 0],
-            [6, 1],
-          ],
-        },
+        'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0, 6, 1],
       },
     },
   ],

@@ -10,6 +10,7 @@ import maplibregl from 'maplibre-gl';
 import { useMap } from './MapLibreMap';
 import type { FeatureInfo } from './FeaturePanel';
 import type { AppData } from './loader.ts';
+import type { Relation } from './ohm-data.ts';
 
 export interface AdminAreasProps {
   data: AppData;

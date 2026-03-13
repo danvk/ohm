@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Chronology } from './ohm-data';
 
 export interface FeatureInfo {
   id: string | number;

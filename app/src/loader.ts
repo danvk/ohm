@@ -1,3 +1,5 @@
+import type { Relation, Node } from './ohm-data';
+
 export interface AppData {
   relations: Relation[];
   ways: Record<string, number[]>;
