@@ -326,6 +326,16 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--graph",
+        metavar="GRAPH_JSON",
+        default=None,
+        help=(
+            "Path to a graph.json produced by build_connectivity_graph.py.  "
+            "When supplied, the script runs graph coloring and writes a "
+            "'color' integer property on every relation that appears in the graph."
+        ),
+    )
+    parser.add_argument(
         "--vw-tolerance-m2",
         type=float,
         default=_DEFAULT_VW_TOLERANCE_M2,
@@ -441,6 +451,43 @@ def main() -> None:
         chrono_entries = chrono_handler.by_member.get(rid)
         if chrono_entries:
             rel_data["chronology"] = chrono_entries
+
+    # --- Optional: graph coloring ---
+    rel_color: dict[int, int] = {}
+    if args.graph:
+        _log("Loading graph and computing coloring …")
+        with open(args.graph, encoding="utf-8") as _f:
+            _graph = json.load(_f)
+        # Build adjacency from edge list
+        _adj: dict[int, set[int]] = {}
+        for _nid_str in _graph["nodes"]:
+            _adj[int(_nid_str)] = set()
+        for _a, _b in _graph["edges"]:
+            _adj[_a].add(_b)
+            _adj[_b].add(_a)
+        # Welsh-Powell greedy coloring (descending degree order)
+        _coloring: dict[int, int] = {}
+        for _nid in sorted(_adj, key=lambda n: len(_adj[n]), reverse=True):
+            _used = {_coloring[nb] for nb in _adj[_nid] if nb in _coloring}
+            _c = 0
+            while _c in _used:
+                _c += 1
+            _coloring[_nid] = _c
+        _log(f"  {len(set(_coloring.values()))} colors used")
+        # Map every member and dropped relation ID to its color
+        for _nid_str, _node in _graph["nodes"].items():
+            _color = _coloring.get(int(_nid_str))
+            if _color is None:
+                continue
+            for _rid in _node.get("members", []):
+                rel_color[_rid] = _color
+            for _rid in _node.get("dropped", []):
+                rel_color[_rid] = _color
+
+    # Inject color into relations that have one
+    for rid, rel_data in rel_handler.relations.items():
+        if rid in rel_color:
+            rel_data["color"] = rel_color[rid]
 
     relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
     relations_out.sort(key=lambda r: parse_date_key(r["tags"].get("end_date", "2030")))

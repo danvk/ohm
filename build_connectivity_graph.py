@@ -411,6 +411,8 @@ def main() -> None:
         return _geom_cache[rid]
 
     contained_removed: set[int] = set()
+    # Maps absorbing node_id → list of dropped relation IDs
+    dropped_into: dict[int, list[int]] = defaultdict(list)
 
     # Only compare pairs that share at least one way (potential border neighbours)
     checked_pairs: set[frozenset] = set()
@@ -471,6 +473,8 @@ def main() -> None:
                         f"within {larger_id})"
                     )
                     contained_removed.add(smaller_id)
+                    absorbing_node = rel_to_node[larger_id]
+                    dropped_into[absorbing_node].append(smaller_id)
 
     for rid in contained_removed:
         del relations[rid]
@@ -550,8 +554,17 @@ def main() -> None:
     # ------------------------------------------------------------------
     # Output
     # ------------------------------------------------------------------
+    def _node_entry(nid: int, members: list[int]) -> dict:
+        entry: dict = {"members": members}
+        dropped = dropped_into.get(nid)
+        if dropped:
+            entry["dropped"] = dropped
+        return entry
+
     output = {
-        "nodes": {str(nid): {"members": members} for nid, members in nodes.items()},
+        "nodes": {
+            str(nid): _node_entry(nid, members) for nid, members in nodes.items()
+        },
         "edges": edges,
     }
 
