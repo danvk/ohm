@@ -18,8 +18,11 @@ Performs four passes over a planet.osm.pbf file:
     2. Group relations that share a chronology into a single graph node.
     3. Drop relations that are ≥90% geometrically contained within a
        co-temporal, border-sharing sibling (the larger absorbs the smaller).
-    4. Build the edge list: two nodes share an edge if any member way appears
-       in both.
+    4. Build the edge list: two nodes share an edge if they share a member
+       way AND have at least one pair of members whose date ranges overlap.
+       This prevents spurious edges from OSM ways that are reused across
+       very different historical eras (e.g. a modern border segment used
+       to approximate both an ancient empire and a 20th-century state).
 
 Output (written to --output, default: graph.json):
   {
@@ -485,10 +488,34 @@ def main() -> None:
 
     # ------------------------------------------------------------------
     # Step 4: Build the edge list from shared member ways
-    # Two nodes share an edge if any member relation from one shares a
-    # way with any member relation from the other.
+    # Two nodes share an edge if they share a member way AND have at least
+    # one pair of member relations with overlapping [start_date, end_date)
+    # ranges.  The temporal guard prevents spurious edges from OSM ways
+    # that are reused across different historical eras.
     # ------------------------------------------------------------------
     _log("Step 4: building edges …")
+
+    # Pre-compute date ranges for each relation (as parsed tuples)
+    rel_dates: dict[int, tuple] = {
+        rid: (
+            parse_date(rdata["start_date"]),
+            parse_date(rdata["end_date"]),
+        )
+        for rid, rdata in relations.items()
+    }
+
+    # node_id → list of (start, end) tuples for its member relations
+    node_date_ranges: dict[int, list[tuple]] = {}
+    for node_id, members in nodes.items():
+        node_date_ranges[node_id] = [rel_dates[m] for m in members if m in rel_dates]
+
+    def nodes_overlap_in_time(na: int, nb: int) -> bool:
+        """Return True if any member of na overlaps in time with any member of nb."""
+        for sa, ea in node_date_ranges.get(na, []):
+            for sb, eb in node_date_ranges.get(nb, []):
+                if dates_overlap(sa, ea, sb, eb):
+                    return True
+        return False
 
     # Rebuild way → node index after filtering
     way_to_nodes: dict[int, set[int]] = defaultdict(set)
@@ -498,16 +525,27 @@ def main() -> None:
             way_to_nodes[wid].add(node_id)
 
     edge_set: set[frozenset] = set()
+    skipped_temporal = 0
     for wid, node_set in way_to_nodes.items():
         node_list = list(node_set)
         for i in range(len(node_list)):
             for j in range(i + 1, len(node_list)):
-                edge_set.add(frozenset((node_list[i], node_list[j])))
+                na, nb = node_list[i], node_list[j]
+                pair = frozenset((na, nb))
+                if pair in edge_set:
+                    continue
+                if not nodes_overlap_in_time(na, nb):
+                    skipped_temporal += 1
+                    continue
+                edge_set.add(pair)
 
     edges = [sorted(e) for e in edge_set]
     edges.sort()
 
-    _log(f"  {len(edges):,} edges among {len(nodes):,} nodes")
+    _log(
+        f"  {len(edges):,} edges among {len(nodes):,} nodes "
+        f"({skipped_temporal:,} non-overlapping way-sharing pairs skipped)"
+    )
 
     # ------------------------------------------------------------------
     # Output
