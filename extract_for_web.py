@@ -487,7 +487,7 @@ def main() -> None:
     # Inject color into relations that have one
     for rid, rel_data in rel_handler.relations.items():
         if rid in rel_color:
-            rel_data["color"] = rel_color[rid]
+            rel_data["tags"]["color"] = rel_color[rid]
 
     relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
     relations_out.sort(key=lambda r: parse_date_key(r["tags"].get("end_date", "2030")))
