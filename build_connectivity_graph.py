@@ -45,6 +45,8 @@ import osmium.filter
 import osmium.osm
 from shapely.geometry import MultiPolygon, Polygon
 
+from geometry import build_polygon_rings, ring_coords
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -151,20 +153,23 @@ class RelationHandler(osmium.SimpleHandler):
 
 
 class WayHandler(osmium.SimpleHandler):
-    """Collect coordinates for all ways used by admin_level=2 relations."""
+    """Collect coordinates and node IDs for all ways used by admin_level=2 relations."""
 
     def __init__(self, way_ids: set[int]) -> None:
         super().__init__()
         self._way_ids = way_ids
         # way_id → list of (lon, lat) float tuples
         self.way_coords: dict[int, list[tuple[float, float]]] = {}
+        # way_id → list of node IDs (needed for ring assembly)
+        self.way_nodes: dict[int, list[int]] = {}
 
     def way(self, w: Any) -> None:
         if w.id not in self._way_ids:
             return
-        coords = [(n.lon, n.lat) for n in w.nodes if n.location.valid()]
-        if len(coords) >= 2:
-            self.way_coords[w.id] = coords
+        valid_nodes = [(n.ref, n.lon, n.lat) for n in w.nodes if n.location.valid()]
+        if len(valid_nodes) >= 2:
+            self.way_nodes[w.id] = [n[0] for n in valid_nodes]
+            self.way_coords[w.id] = [(n[1], n[2]) for n in valid_nodes]
 
 
 # ---------------------------------------------------------------------------
@@ -175,43 +180,37 @@ class WayHandler(osmium.SimpleHandler):
 def _build_shapely_polygon(
     outer_ways: list[int],
     inner_ways: list[int],
+    way_nodes: dict[int, list[int]],
     way_coords: dict[int, list[tuple[float, float]]],
 ) -> MultiPolygon | Polygon | None:
     """Build a Shapely geometry from outer/inner way lists.
 
-    Ways are concatenated naively (order within each group is unspecified at
-    this stage — we just need an approximate area for containment testing).
+    Uses build_polygon_rings (from geometry.py) to properly assemble ways into
+    closed, correctly-oriented rings before building the Shapely geometry.
     Returns None if not enough coordinate data is available.
     """
-
-    def _chain_ways(way_ids: list[int]) -> list[tuple[float, float]]:
-        coords: list[tuple[float, float]] = []
-        for wid in way_ids:
-            wc = way_coords.get(wid)
-            if wc:
-                # Skip the first coord if it duplicates the last already added
-                if coords and coords[-1] == wc[0]:
-                    coords.extend(wc[1:])
-                else:
-                    coords.extend(wc)
-        return coords
-
-    outer_coords = _chain_ways(outer_ways)
-    if len(outer_coords) < 3:
-        return None
-
     try:
-        outer_poly = Polygon(outer_coords)
-        if not outer_poly.is_valid:
-            outer_poly = outer_poly.buffer(0)
-        if inner_ways:
-            inner_coords = _chain_ways(inner_ways)
-            if len(inner_coords) >= 3:
-                inner_poly = Polygon(inner_coords)
-                if not inner_poly.is_valid:
-                    inner_poly = inner_poly.buffer(0)
-                outer_poly = outer_poly.difference(inner_poly)
-        return outer_poly
+        polygons = build_polygon_rings(outer_ways, inner_ways, way_nodes, way_coords)
+        if not polygons:
+            return None
+
+        shapely_polys = []
+        for polygon in polygons:
+            outer_ring = ring_coords(polygon[0], way_coords)
+            if len(outer_ring) < 3:
+                continue
+            holes = [ring_coords(r, way_coords) for r in polygon[1:]]
+            holes = [h for h in holes if len(h) >= 3]
+            shapely_polys.append(Polygon(outer_ring, holes))
+
+        if not shapely_polys:
+            return None
+        result = (
+            MultiPolygon(shapely_polys) if len(shapely_polys) > 1 else shapely_polys[0]
+        )
+        if not result.is_valid:
+            result = result.buffer(0)
+        return result
     except Exception:
         return None
 
@@ -300,6 +299,7 @@ def main() -> None:
         locations=True,
     )
     way_coords = way_handler.way_coords
+    way_nodes = way_handler.way_nodes
     _log(
         f"  Fetched coordinates for {len(way_coords):,} ways  "
         f"({time.monotonic() - t0:.1f}s)"
@@ -406,7 +406,7 @@ def main() -> None:
         if rid not in _geom_cache:
             rdata = relations[rid]
             _geom_cache[rid] = _build_shapely_polygon(
-                rdata["outer_ways"], rdata["inner_ways"], way_coords
+                rdata["outer_ways"], rdata["inner_ways"], way_nodes, way_coords
             )
         return _geom_cache[rid]
 
