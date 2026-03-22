@@ -221,3 +221,4 @@ data
 *.txt
 *.osm
 graph.json
+coloring.json
