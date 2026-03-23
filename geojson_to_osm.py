@@ -181,7 +181,6 @@ def split_ring_at_junctions(
     in ``junctions`` (or the ring is entirely non-junction and the single
     segment is closed).
     """
-    n = len(ring)
     junction_indices = [i for i, nid in enumerate(ring) if nid in junctions]
 
     if not junction_indices:

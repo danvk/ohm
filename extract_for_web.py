@@ -33,6 +33,7 @@ import osmium.filter
 import osmium.osm
 
 from geometry import build_polygon_rings, rdp_simplify, vw_simplify
+from graph_coloring import build_adjacency, dsatur_color, greedy_color
 
 
 def tags_to_dict(tags) -> dict[str, str]:
@@ -287,17 +288,17 @@ def main() -> None:
     parser.add_argument("osm_file", help="Path to the .osm.pbf file")
     parser.add_argument(
         "--relations-out",
-        default="relations.json",
+        default="app/public/relations.json",
         help="Output path for relations JSON (default: relations.json)",
     )
     parser.add_argument(
         "--ways-out",
-        default="ways.json",
+        default="app/public/ways.json",
         help="Output path for ways JSON (default: ways.json)",
     )
     parser.add_argument(
         "--nodes-out",
-        default="nodes.json",
+        default="app/public/nodes.json",
         help="Output path for nodes JSON (default: nodes.json)",
     )
     parser.add_argument(
@@ -324,6 +325,22 @@ def main() -> None:
             "Comma-separated list of admin_level values to include "
             "(default: 2). Example: --admin-levels 2,3,4"
         ),
+    )
+    parser.add_argument(
+        "--graph",
+        metavar="GRAPH_JSON",
+        default=None,
+        help=(
+            "Path to a graph.json produced by build_connectivity_graph.py.  "
+            "When supplied, the script runs graph coloring and writes a "
+            "'color' integer property on every relation that appears in the graph."
+        ),
+    )
+    parser.add_argument(
+        "--coloring",
+        choices=["welsh-powell", "dsatur"],
+        default="welsh-powell",
+        help="Graph coloring algorithm to use (default: welsh-powell)",
     )
     parser.add_argument(
         "--vw-tolerance-m2",
@@ -441,6 +458,42 @@ def main() -> None:
         chrono_entries = chrono_handler.by_member.get(rid)
         if chrono_entries:
             rel_data["chronology"] = chrono_entries
+
+    # --- Optional: graph coloring ---
+    rel_color: dict[int, int] = {}
+    canonical_id: dict[int, int] = {}
+    if args.graph:
+        _log("Loading graph and computing coloring …")
+        with open(args.graph, encoding="utf-8") as _f:
+            _graph = json.load(_f)
+        # Build adjacency and run coloring
+        _adj = build_adjacency(_graph)
+        if args.coloring == "dsatur":
+            _coloring = dsatur_color(_adj)
+        else:
+            _coloring = greedy_color(_adj)
+        _log(f"  {len(set(_coloring.values()))} colors used ({args.coloring})")
+        # Map every member and dropped relation ID to its color
+        for _nid_str, _node in _graph["nodes"].items():
+            _color = _coloring.get(int(_nid_str))
+            if _color is None:
+                continue
+            for _rid in _node.get("members", []) + _node.get("dropped", []):
+                rel_color[_rid] = _color
+                canonical_id[_rid] = _nid_str
+        canonical_id[_nid_str] = _nid_str
+        # Print per-color relation counts
+        _color_rel_counts: dict[int, int] = {}
+        for _c in rel_color.values():
+            _color_rel_counts[_c] = _color_rel_counts.get(_c, 0) + 1
+        for _c in sorted(_color_rel_counts):
+            _log(f"    color {_c}: {_color_rel_counts[_c]:,} relations")
+
+    # Inject color into relations that have one
+    for rid, rel_data in rel_handler.relations.items():
+        if rid in rel_color:
+            rel_data["tags"]["color"] = rel_color[rid]
+            rel_data["tags"]["color:id"] = canonical_id[rid]
 
     relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
     relations_out.sort(key=lambda r: parse_date_key(r["tags"].get("end_date", "2030")))

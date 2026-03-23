@@ -220,3 +220,5 @@ data
 *.geojson
 *.txt
 *.osm
+graph.json
+coloring.json

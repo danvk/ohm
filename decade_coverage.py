@@ -149,7 +149,9 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
         self.totals[admin_level] += 1
         total = sum(self.totals.values())
         if total % 100 == 0:
-            counts = ", ".join(f"L{l}={self.totals[l]}" for l in ADMIN_LEVELS)
+            counts = ", ".join(
+                f"L{level}={self.totals[level]}" for level in ADMIN_LEVELS
+            )
             print(f"  {total} features processed ({counts})...", file=sys.stderr)
 
 
@@ -172,7 +174,9 @@ def main() -> None:
         sys.exit(1)
 
     total = sum(handler.totals.values())
-    counts = ", ".join(f"admin_level={l}: {handler.totals[l]}" for l in ADMIN_LEVELS)
+    counts = ", ".join(
+        f"admin_level={level}: {handler.totals[level]}" for level in ADMIN_LEVELS
+    )
     print(
         f"Read {total} features ({counts}); "
         f"{handler.skipped_no_date} skipped — no decade year in range.",
@@ -237,7 +241,7 @@ def main() -> None:
         print(f"  admin_level={lvl} done in {elapsed:.0f}s.", file=sys.stderr)
 
     # Print tab-delimited table
-    print("\t".join(["year"] + [f"admin{l}_km2" for l in ADMIN_LEVELS]))
+    print("\t".join(["year"] + [f"admin{level}_km2" for level in ADMIN_LEVELS]))
     for decade in all_decades:
         vals = "\t".join(f"{results[decade].get(lvl, 0.0):.0f}" for lvl in ADMIN_LEVELS)
         print(f"{decade}\t{vals}")

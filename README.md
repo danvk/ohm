@@ -19,7 +19,13 @@ The viewer encodes ways and relations in a special format so that it can load th
 
 ```
 uv run extract_for_web.py planet-260214_0301.osm.pbf
-mv relations.json ways.json nodes.json app/static/
+```
+
+The exact commands for the live site were:
+
+```
+uv run build_connectivity_graph.py planet-260322_0301.osm.pbf
+uv run extract_for_web.py --simplify-tolerance-m 1000 --vw-tolerance-m2 100000 planet-260322_0301.osm.pbf --admin-levels 1,2,3,4 --graph graph.json --coloring welsh-powell
 ```
 
 ## Tools
@@ -60,5 +66,30 @@ uv run geojson_to_osm.py --filter='tag=val1,val2,...' input.geojson output.osm.p
 
 This file can be imported into JOSM for uploading to OSM/OHM. The filter is applied _after_ topology extraction, so features that get filtered out will still affect how a polygon is broken up into ways. (This is what you want.)
 
+### build_connectivity_graph.py
+
+This is an exploration of [map coloring for OHM][color].
+
+The idea is to create a color-coded political map where:
+
+1. A country stays the same color over time.
+2. Neighboring countries never have the same color.
+
+The general approach is to form a graph and then apply a greedy graph-coloring algorithm to it. See the GitHub thread for details. As of March 2026, the OHM planet file could be colored with nine colors.
+
+```
+# Writes graph.json
+$ uv run build_connectivity_graph.py
+
+# Colors the graph, either using Welsh-Powell or DSatur
+$ uv run python color_graph.py --coloring welsh-powell
+
+# Analyze the graph, coloring it and looking for the max clique
+$ uv run analyze_graph.py
+```
+
+See [Boundary Viewer](#boundary-viewer) for a command to use this coloring to create a political map.
+
 [shp2osm]: https://wiki.openstreetmap.org/wiki/Shp2osm
 [ogr2osm]: https://wiki.openstreetmap.org/wiki/Ogr2osm
+[color]: https://github.com/OpenHistoricalMap/issues/issues/700
