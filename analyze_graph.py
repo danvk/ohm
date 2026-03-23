@@ -164,7 +164,6 @@ def main():
     # --- Are the top-degree nodes mutually adjacent? ---
     print()
     print("Mutual adjacency among top-10 high-degree nodes:")
-    top_set = set(top)
     for i in range(len(top)):
         for j in range(i + 1, len(top)):
             a, b = top[i], top[j]
