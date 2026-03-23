@@ -100,13 +100,20 @@ def dates_overlap(
 
 
 class ChronologyHandler(osmium.SimpleHandler):
-    """Collect type=chronology relations."""
+    """Collect type=chronology relations.
+
+    After apply_file(), call merge_overlapping() to union-find any chronologies
+    that share member relations into a single merged chronology.  This handles
+    the case where OSM has multiple partially-overlapping chronology relations
+    for the same entity (e.g. a short legacy chronology that shares members with
+    a newer, more complete one).
+    """
 
     def __init__(self) -> None:
         super().__init__()
-        # chronology_id → ordered list of member relation IDs
+        # chronology_id → ordered list of member relation IDs (raw, pre-merge)
         self.chronologies: dict[int, list[int]] = {}
-        # member_relation_id → chronology_id
+        # member_relation_id → chronology_id (populated after merge_overlapping)
         self.member_to_chrono: dict[int, int] = {}
 
     def relation(self, r: Any) -> None:
@@ -114,8 +121,83 @@ class ChronologyHandler(osmium.SimpleHandler):
             return
         members = [m.ref for m in r.members if m.type == "r"]
         self.chronologies[r.id] = members
-        for mid in members:
-            self.member_to_chrono[mid] = r.id
+
+    def merge_overlapping(self) -> int:
+        """Merge chronologies that share any member relation.
+
+        Finds connected components of chronologies (edges = shared members),
+        then collapses each component into a single chronology whose canonical
+        ID is that of the largest (most members) chronology in the component.
+        All unique members across the component are gathered in their original
+        relative order.
+
+        Populates self.member_to_chrono and updates self.chronologies in place.
+        Returns the number of merges performed.
+        """
+        # Build member → set of chronology IDs index
+        member_to_chrono_ids: dict[int, list[int]] = defaultdict(list)
+        for cid, members in self.chronologies.items():
+            for m in members:
+                member_to_chrono_ids[m].append(cid)
+
+        # Union-Find over chronology IDs
+        parent: dict[int, int] = {cid: cid for cid in self.chronologies}
+
+        def find(x: int) -> int:
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        def union(a: int, b: int) -> None:
+            ra, rb = find(a), find(b)
+            if ra != rb:
+                parent[ra] = rb
+
+        for cids in member_to_chrono_ids.values():
+            for i in range(1, len(cids)):
+                union(cids[0], cids[i])
+
+        # Group chronologies by root
+        components: dict[int, list[int]] = defaultdict(list)
+        for cid in self.chronologies:
+            components[find(cid)].append(cid)
+
+        merges = 0
+        new_chronologies: dict[int, list[int]] = {}
+
+        for root, group in components.items():
+            if len(group) == 1:
+                # No merge needed; canonical ID is the single member
+                cid = group[0]
+                new_chronologies[cid] = self.chronologies[cid]
+                continue
+
+            merges += 1
+            # Canonical ID = the chronology with the most members (tie-break: smallest ID)
+            canonical = max(group, key=lambda c: (len(self.chronologies[c]), -c))
+            # Merge all members, preserving order and deduplicating
+            seen: set[int] = set()
+            merged: list[int] = []
+            for cid in sorted(group, key=lambda c: (-len(self.chronologies[c]), c)):
+                for m in self.chronologies[cid]:
+                    if m not in seen:
+                        seen.add(m)
+                        merged.append(m)
+            new_chronologies[canonical] = merged
+            _log(
+                f"  Merged chronologies {sorted(group)} → {canonical} "
+                f"({len(merged)} members)"
+            )
+
+        self.chronologies = new_chronologies
+        # Populate member_to_chrono from the merged chronologies
+        self.member_to_chrono = {}
+        for cid, members in self.chronologies.items():
+            for m in members:
+                self.member_to_chrono[m] = cid
+
+        return merges
 
 
 class RelationHandler(osmium.SimpleHandler):
@@ -268,8 +350,11 @@ def main() -> None:
     chrono_handler.apply_file(
         osm_file, filters=[osmium.filter.TagFilter(("type", "chronology"))]
     )
+    _log("  Merging overlapping chronologies …")
+    n_merges = chrono_handler.merge_overlapping()
     _log(
-        f"  Found {len(chrono_handler.chronologies):,} chronologies covering "
+        f"  Found {len(chrono_handler.chronologies):,} chronologies "
+        f"({n_merges} merged) covering "
         f"{len(chrono_handler.member_to_chrono):,} member relations  "
         f"({time.monotonic() - t0:.1f}s)"
     )
