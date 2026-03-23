@@ -33,7 +33,7 @@ import osmium.filter
 import osmium.osm
 
 from geometry import build_polygon_rings, rdp_simplify, vw_simplify
-from graph_coloring import build_adjacency, greedy_color
+from graph_coloring import build_adjacency, dsatur_color, greedy_color
 
 
 def tags_to_dict(tags) -> dict[str, str]:
@@ -337,6 +337,12 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--coloring",
+        choices=["welsh-powell", "dsatur"],
+        default="welsh-powell",
+        help="Graph coloring algorithm to use (default: welsh-powell)",
+    )
+    parser.add_argument(
         "--vw-tolerance-m2",
         type=float,
         default=_DEFAULT_VW_TOLERANCE_M2,
@@ -460,10 +466,13 @@ def main() -> None:
         _log("Loading graph and computing coloring …")
         with open(args.graph, encoding="utf-8") as _f:
             _graph = json.load(_f)
-        # Build adjacency and run greedy coloring
+        # Build adjacency and run coloring
         _adj = build_adjacency(_graph)
-        _coloring = greedy_color(_adj)
-        _log(f"  {len(set(_coloring.values()))} colors used")
+        if args.coloring == "dsatur":
+            _coloring = dsatur_color(_adj)
+        else:
+            _coloring = greedy_color(_adj)
+        _log(f"  {len(set(_coloring.values()))} colors used ({args.coloring})")
         # Map every member and dropped relation ID to its color
         for _nid_str, _node in _graph["nodes"].items():
             _color = _coloring.get(int(_nid_str))
@@ -473,6 +482,12 @@ def main() -> None:
                 rel_color[_rid] = _color
                 canonical_id[_rid] = _nid_str
         canonical_id[_nid_str] = _nid_str
+        # Print per-color relation counts
+        _color_rel_counts: dict[int, int] = {}
+        for _c in rel_color.values():
+            _color_rel_counts[_c] = _color_rel_counts.get(_c, 0) + 1
+        for _c in sorted(_color_rel_counts):
+            _log(f"    color {_c}: {_color_rel_counts[_c]:,} relations")
 
     # Inject color into relations that have one
     for rid, rel_data in rel_handler.relations.items():

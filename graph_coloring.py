@@ -27,3 +27,35 @@ def greedy_color(adj: dict[int, set[int]]) -> dict[int, int]:
             color += 1
         coloring[node] = color
     return coloring
+
+
+def dsatur_color(adj: dict[int, set[int]]) -> dict[int, int]:
+    """DSatur graph coloring.
+
+    Always colors the uncolored node with the highest saturation (most distinct
+    colors among its already-colored neighbors), breaking ties by degree then
+    node ID.  Often produces fewer colors than Welsh-Powell on sparse graphs.
+
+    Returns a dict mapping node_id (int) → color (int, 0-based).
+    """
+    coloring: dict[int, int] = {}
+    saturation: dict[int, int] = {n: 0 for n in adj}
+    degree: dict[int, int] = {n: len(adj[n]) for n in adj}
+    uncolored = set(adj)
+
+    while uncolored:
+        node = max(uncolored, key=lambda n: (saturation[n], degree[n], n))
+        uncolored.remove(node)
+
+        used = {coloring[nb] for nb in adj[node] if nb in coloring}
+        color = 0
+        while color in used:
+            color += 1
+        coloring[node] = color
+
+        # Update saturation of uncolored neighbors
+        for nb in adj[node]:
+            if nb in uncolored:
+                saturation[nb] = len({coloring[x] for x in adj[nb] if x in coloring})
+
+    return coloring

@@ -24,7 +24,7 @@ import argparse
 import json
 import sys
 
-from graph_coloring import build_adjacency, greedy_color
+from graph_coloring import build_adjacency, dsatur_color, greedy_color
 
 
 def _log(msg: str) -> None:
@@ -45,6 +45,12 @@ def main() -> None:
         default="coloring.json",
         help="Output coloring JSON file (default: coloring.json)",
     )
+    parser.add_argument(
+        "--coloring",
+        choices=["welsh-powell", "dsatur"],
+        default="welsh-powell",
+        help="Graph coloring algorithm to use (default: welsh-powell)",
+    )
     args = parser.parse_args()
 
     with open(args.graph, encoding="utf-8") as f:
@@ -55,7 +61,10 @@ def main() -> None:
     )
 
     adjacency = build_adjacency(graph)
-    coloring = greedy_color(adjacency)
+    if args.coloring == "dsatur":
+        coloring = dsatur_color(adjacency)
+    else:
+        coloring = greedy_color(adjacency)
 
     num_colors = max(coloring.values()) + 1 if coloring else 0
     color_counts = [0] * num_colors
