@@ -98,7 +98,8 @@ export const PAINT_STYLE: FillPaintStyle = {
       5, "#76B7B2",  // — teal
       6, "#EDC948",  // — yellow
       7, "#9C755F",  // — brown
-    'black' // '#FF9DA7',
+      8, '#FF9DA7',  // - pink
+     'black'
     ]
   ],
   'fill-opacity': [

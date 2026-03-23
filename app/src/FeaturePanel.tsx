@@ -15,6 +15,8 @@ const EXACT_TAGS = [
   'disputed',
   'wikidata',
   'wikipedia',
+  'color',
+  'color:id'
 ];
 const PREFIX_TAGS = [
   'start_date',
@@ -167,17 +169,11 @@ function TagValue({
   onSetDate,
 }: {
   tagKey: string;
-  value: string;
+  value: string | number;
   onSetDate: FeaturePanelProps['onSetDate'];
 }) {
-  if (tagKey === 'wikipedia') {
-    const [lang] = value.split(':', 1);
-    const url = `https://${lang}.wikipedia.org/wiki/${value}`;
-    return (
-      <a href={url} target="_blank">
-        {value}
-      </a>
-    );
+  if (typeof value === 'number') {
+    return value;
   }
   if ((tagKey === 'start_date' || tagKey === 'end_date') && value) {
     return (
@@ -185,17 +181,28 @@ function TagValue({
         href="#"
         onClick={(e) => {
           e.preventDefault();
-          onSetDate(value);
+          onSetDate(value as string);
         }}
       >
         {value}
       </a>
     );
   }
-  if (value.startsWith('https://')) {
+
+  let url;
+  if (tagKey === 'wikipedia') {
+    const [lang] = value.split(':', 1);
+    url = `https://${lang}.wikipedia.org/wiki/${value}`;
+  } else if (tagKey === 'color:id') {
+    url = `https://www.openhistoricalmap.org/relation/${value}`;
+  } else if (value.startsWith('https://')) {
+    url = value;
+    value = '(link)';
+  }
+  if (url) {
     return (
-      <a href={value} target="_blank">
-        (link)
+      <a href={url} target="_blank">
+        {value}
       </a>
     );
   }

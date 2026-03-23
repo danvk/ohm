@@ -454,6 +454,7 @@ def main() -> None:
 
     # --- Optional: graph coloring ---
     rel_color: dict[int, int] = {}
+    canonical_id: dict[int, int] = {}
     if args.graph:
         _log("Loading graph and computing coloring …")
         with open(args.graph, encoding="utf-8") as _f:
@@ -479,15 +480,16 @@ def main() -> None:
             _color = _coloring.get(int(_nid_str))
             if _color is None:
                 continue
-            for _rid in _node.get("members", []):
+            for _rid in _node.get("members", []) + _node.get("dropped", []):
                 rel_color[_rid] = _color
-            for _rid in _node.get("dropped", []):
-                rel_color[_rid] = _color
+                canonical_id[_rid] = _nid_str
+        canonical_id[_nid_str] = _nid_str
 
     # Inject color into relations that have one
     for rid, rel_data in rel_handler.relations.items():
         if rid in rel_color:
             rel_data["tags"]["color"] = rel_color[rid]
+            rel_data["tags"]["color:id"] = canonical_id[rid]
 
     relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
     relations_out.sort(key=lambda r: parse_date_key(r["tags"].get("end_date", "2030")))
