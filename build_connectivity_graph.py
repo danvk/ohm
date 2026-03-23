@@ -428,6 +428,9 @@ def main() -> None:
         dup_key[key].append(rid)
 
     removed: set[int] = set()
+    # Maps keeper relation ID → list of duplicate relation IDs that were removed.
+    # Used so that duplicates get the same color as the keeper in extract_for_web.py.
+    deduped_into: dict[int, list[int]] = defaultdict(list)
     for key, rids in dup_key.items():
         if len(rids) <= 1:
             continue
@@ -443,6 +446,7 @@ def main() -> None:
             to_remove = [r for r in rids if r != keep]
         for r in to_remove:
             removed.add(r)
+            deduped_into[keep].append(r)
         _log(f"  Duplicate group {rids}: keeping {keep}, removing {to_remove}")
 
     for r in removed:
@@ -523,6 +527,17 @@ def main() -> None:
     contained_removed: set[int] = set()
     # Maps absorbing node_id → list of dropped relation IDs
     dropped_into: dict[int, list[int]] = defaultdict(list)
+
+    # Fold Step 1 duplicates into dropped_into so they receive the keeper's color.
+    # We key by the keeper's node ID (from rel_to_node). If the keeper is later
+    # itself dropped by containment, the transitive BFS in _node_entry will still
+    # attribute the deduped relations to the ultimate absorbing node.
+    for keep_rid, dup_rids in deduped_into.items():
+        if keep_rid in rel_to_node:
+            dropped_into[rel_to_node[keep_rid]].extend(dup_rids)
+        else:
+            # keep_rid was not assigned to any node (shouldn't happen, but be safe)
+            dropped_into[keep_rid].extend(dup_rids)
     # Ways contributed by dropped relations, keyed by absorbing node_id.
     # Added to the absorber's way set for Step 4 adjacency checks so that
     # the absorber gains edges to any neighbours of the dropped sub-entity.
@@ -696,9 +711,17 @@ def main() -> None:
     # ------------------------------------------------------------------
     def _node_entry(nid: int, members: list[int]) -> dict:
         entry: dict = {"members": members}
-        dropped = dropped_into.get(nid)
-        if dropped:
-            entry["dropped"] = dropped
+        # Collect the transitive closure of dropped_into so that relations
+        # dropped into an intermediate relation (which itself got dropped into
+        # this node) are still attributed to this node.
+        all_dropped: list[int] = []
+        queue = list(dropped_into.get(nid, []))
+        while queue:
+            rid = queue.pop()
+            all_dropped.append(rid)
+            queue.extend(dropped_into.get(rid, []))
+        if all_dropped:
+            entry["dropped"] = all_dropped
         return entry
 
     output = {
