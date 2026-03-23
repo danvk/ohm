@@ -288,17 +288,17 @@ def main() -> None:
     parser.add_argument("osm_file", help="Path to the .osm.pbf file")
     parser.add_argument(
         "--relations-out",
-        default="relations.json",
+        default="app/public/relations.json",
         help="Output path for relations JSON (default: relations.json)",
     )
     parser.add_argument(
         "--ways-out",
-        default="ways.json",
+        default="app/public/ways.json",
         help="Output path for ways JSON (default: ways.json)",
     )
     parser.add_argument(
         "--nodes-out",
-        default="nodes.json",
+        default="app/public/nodes.json",
         help="Output path for nodes JSON (default: nodes.json)",
     )
     parser.add_argument(
