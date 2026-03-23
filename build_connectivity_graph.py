@@ -57,7 +57,15 @@ def _log(msg: str) -> None:
 
 
 def parse_date(date_str: str | None) -> tuple[int, int, int] | None:
-    """Parse an OSM date string into a (year, month, day) tuple, or None."""
+    """Parse an OSM date string into a (year, month, day) tuple, or None.
+
+    Missing month/day components are filled with their maximum values (12 and
+    31 respectively) so that a year-only date like "1971" sorts as
+    (1971, 12, 31).  This makes the half-open interval semantics in
+    dates_overlap() work correctly for partial dates: an entity that
+    ended "1971-09-03" does not overlap with one that started "1971",
+    because (1971, 12, 31) is not less than (1971, 9, 3).
+    """
     if not date_str:
         return None
     is_neg = date_str.startswith("-")
@@ -67,8 +75,8 @@ def parse_date(date_str: str | None) -> tuple[int, int, int] | None:
         year = int(parts[0])
         if is_neg:
             year = -year
-        month = int(parts[1]) if len(parts) > 1 else 0
-        day = int(parts[2]) if len(parts) > 2 else 0
+        month = int(parts[1]) if len(parts) > 1 else 12
+        day = int(parts[2]) if len(parts) > 2 else 31
         return (year, month, day)
     except (ValueError, IndexError):
         return None
@@ -215,6 +223,10 @@ class RelationHandler(osmium.SimpleHandler):
         if tags.get("boundary") != "administrative":
             return
         if tags.get("admin_level") != "2":
+            return
+        # Chronology relations act as containers; their boundary/admin_level tags
+        # are metadata about the sequence, not an actual polygon to color.
+        if tags.get("type") == "chronology":
             return
 
         outer_ways = [
