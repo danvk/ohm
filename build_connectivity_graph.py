@@ -523,6 +523,14 @@ def main() -> None:
     contained_removed: set[int] = set()
     # Maps absorbing node_id → list of dropped relation IDs
     dropped_into: dict[int, list[int]] = defaultdict(list)
+    # Ways contributed by dropped relations, keyed by absorbing node_id.
+    # Added to the absorber's way set for Step 4 adjacency checks so that
+    # the absorber gains edges to any neighbours of the dropped sub-entity.
+    absorbed_ways: dict[int, set[int]] = defaultdict(set)
+    # Date ranges of dropped relations, keyed by absorbing node_id.
+    # Augments node_date_ranges in Step 4 so the temporal overlap check
+    # considers the dropped entity's time span, not just the absorber's.
+    absorbed_dates: dict[int, list[tuple]] = defaultdict(list)
 
     # Only compare pairs that share at least one way (potential border neighbours)
     checked_pairs: set[frozenset] = set()
@@ -585,6 +593,17 @@ def main() -> None:
                     contained_removed.add(smaller_id)
                     absorbing_node = rel_to_node[larger_id]
                     dropped_into[absorbing_node].append(smaller_id)
+                    # Donate the dropped relation's ways to the absorber so
+                    # that Step 4 can find edges to its former neighbours.
+                    absorbed_ways[absorbing_node].update(
+                        relations[smaller_id]["all_ways"]
+                    )
+                    absorbed_dates[absorbing_node].append(
+                        (
+                            parse_date(relations[smaller_id]["start_date"]),
+                            parse_end_date(relations[smaller_id]["end_date"]),
+                        )
+                    )
 
     for rid in contained_removed:
         del relations[rid]
@@ -622,6 +641,11 @@ def main() -> None:
     node_date_ranges: dict[int, list[tuple]] = {}
     for node_id, members in nodes.items():
         node_date_ranges[node_id] = [rel_dates[m] for m in members if m in rel_dates]
+    # Also include date ranges from dropped (contained) relations so the
+    # temporal overlap check considers the sub-entity's time span.
+    for node_id, date_list in absorbed_dates.items():
+        if node_id in node_date_ranges:
+            node_date_ranges[node_id].extend(date_list)
 
     def nodes_overlap_in_time(na: int, nb: int) -> bool:
         """Return True if any member of na overlaps in time with any member of nb."""
@@ -631,12 +655,18 @@ def main() -> None:
                     return True
         return False
 
-    # Rebuild way → node index after filtering
+    # Rebuild way → node index after filtering.
+    # Also include ways donated by dropped (contained) relations so the
+    # absorbing node gains edges to any neighbours of the sub-entity.
     way_to_nodes: dict[int, set[int]] = defaultdict(set)
     for rid, rdata in relations.items():
         node_id = rel_to_node[rid]
         for wid in rdata["all_ways"]:
             way_to_nodes[wid].add(node_id)
+    for node_id, extra_ways in absorbed_ways.items():
+        if node_id in nodes:
+            for wid in extra_ways:
+                way_to_nodes[wid].add(node_id)
 
     edge_set: set[frozenset] = set()
     skipped_temporal = 0

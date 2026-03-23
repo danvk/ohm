@@ -150,9 +150,7 @@ def main():
     print()
     print("=== Clique lower bound (max 5s search) ===")
     clique_size, clique = find_cliques_bron_kerbosch(adj, node_ids, time_limit=5.0)
-    print(
-        f"Largest clique found: {clique_size}  (ids: {clique[:8]}{'...' if len(clique) > 8 else ''})"
-    )
+    print(f"Largest clique found: {clique_size}  (ids: {[int(x) for x in clique]})")
     print(f"Chromatic number >= {clique_size}")
 
     # --- Top-degree nodes ---
