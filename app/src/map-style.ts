@@ -86,7 +86,7 @@ export const PAINT_STYLE: FillPaintStyle = {
   'fill-color': [
     'case',
     ['boolean', ['feature-state', 'selected'], false],
-    '#ff8c00',
+    '#FF00FF',  // '#00E5FF',
     [
       'match',
       ['get', 'color'],
@@ -102,12 +102,7 @@ export const PAINT_STYLE: FillPaintStyle = {
      'black'
     ]
   ],
-  'fill-opacity': [
-    'case',
-    ['boolean', ['feature-state', 'selected'], false],
-    0.7,
-    0.5,
-  ],
+  'fill-opacity': 0.5
 };
 
 type LinePaintStyle = Exclude<
@@ -118,8 +113,21 @@ export const LINE_STYLE: LinePaintStyle = {
   'line-color': [
     'case',
     ['boolean', ['feature-state', 'selected'], false],
-    '#cc5500',
-    '#3050a0',
+    '#FF00FF',  // '#00E5FF',
+    [
+      'match',
+      ['get', 'color'],
+      0, "#6080C0",  // — blue
+      1, "#E15759",  // — red
+      2, "#4E9F3D",  // — green
+      3, "#F28E2B",  // — orange
+      4, "#B07AA1",  // — purple
+      5, "#76B7B2",  // — teal
+      6, "#EDC948",  // — yellow
+      7, "#9C755F",  // — brown
+      8, '#FF9DA7',  // - pink
+     'black'
+    ]
   ],
   'line-width': [
     'case',
