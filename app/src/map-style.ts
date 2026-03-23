@@ -82,8 +82,9 @@ type FillPaintStyle = Exclude<
   undefined
 >;
 
+const DFEAULT_COLOR = "#6080C0";  // — blue
 const PALETTE = [
-  "#6080C0",  // — blue
+  DFEAULT_COLOR,
   "#E15759",  // — red
   "#4E9F3D",  // — green
   "#F28E2B",  // — orange
@@ -106,7 +107,7 @@ export const PAINT_STYLE: FillPaintStyle = {
       'match',
       ['get', 'color'],
       ...ID_PALETTE,
-     'black'
+     DFEAULT_COLOR
     ]
   ],
   'fill-opacity': 0.5
@@ -125,7 +126,7 @@ export const LINE_STYLE: LinePaintStyle = {
       'match',
       ['get', 'color'],
       ...ID_PALETTE,
-     'black'
+     DFEAULT_COLOR
     ]
   ],
   'line-width': [
