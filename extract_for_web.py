@@ -33,6 +33,7 @@ import osmium.filter
 import osmium.osm
 
 from geometry import build_polygon_rings, rdp_simplify, vw_simplify
+from graph_coloring import build_adjacency, greedy_color
 
 
 def tags_to_dict(tags) -> dict[str, str]:
@@ -459,21 +460,9 @@ def main() -> None:
         _log("Loading graph and computing coloring …")
         with open(args.graph, encoding="utf-8") as _f:
             _graph = json.load(_f)
-        # Build adjacency from edge list
-        _adj: dict[int, set[int]] = {}
-        for _nid_str in _graph["nodes"]:
-            _adj[int(_nid_str)] = set()
-        for _a, _b in _graph["edges"]:
-            _adj[_a].add(_b)
-            _adj[_b].add(_a)
-        # Welsh-Powell greedy coloring (descending degree order)
-        _coloring: dict[int, int] = {}
-        for _nid in sorted(_adj, key=lambda n: len(_adj[n]), reverse=True):
-            _used = {_coloring[nb] for nb in _adj[_nid] if nb in _coloring}
-            _c = 0
-            while _c in _used:
-                _c += 1
-            _coloring[_nid] = _c
+        # Build adjacency and run greedy coloring
+        _adj = build_adjacency(_graph)
+        _coloring = greedy_color(_adj)
         _log(f"  {len(set(_coloring.values()))} colors used")
         # Map every member and dropped relation ID to its color
         for _nid_str, _node in _graph["nodes"].items():
