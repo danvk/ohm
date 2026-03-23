@@ -51,9 +51,9 @@ export function parseSearchParams(params: URLSearchParams): UrlState {
   }
 
   const levels = params.get('levels');
-  if (levels) {
+  if (levels !== null) {
     const parsed = levels.split(',').filter((l) => /^\d+$/.test(l));
-    if (parsed.length > 0) state.adminLevels = new Set(parsed);
+    state.adminLevels = new Set(parsed);
   }
 
   return state;
@@ -71,7 +71,7 @@ export function buildSearch(state: UrlState): string {
   if (ids && ids.length > 0) {
     parts.push(`ids=${ids.join(',')}`);
   }
-  if (adminLevels && adminLevels.size > 0) {
+  if (adminLevels) {
     parts.push(`levels=${[...adminLevels].sort().join(',')}`);
   }
   return parts.join('&');

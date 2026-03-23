@@ -85,7 +85,7 @@ export default function App({ data }: { data: AppData }) {
         lng,
         year: nextYear,
         ids,
-        adminLevels: levels ?? urlState.adminLevels ?? new Set(['2']),
+        adminLevels: levels ?? urlState.adminLevels,
       });
       lastWrittenSearch.current = `?${search}`;
       navigate({ search: `?${search}` }, { replace: true });
