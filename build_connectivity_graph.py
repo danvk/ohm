@@ -56,16 +56,9 @@ def _log(msg: str) -> None:
     print(msg, file=sys.stderr, flush=True)
 
 
-def parse_date(date_str: str | None) -> tuple[int, int, int] | None:
-    """Parse an OSM date string into a (year, month, day) tuple, or None.
-
-    Missing month/day components are filled with their maximum values (12 and
-    31 respectively) so that a year-only date like "1971" sorts as
-    (1971, 12, 31).  This makes the half-open interval semantics in
-    dates_overlap() work correctly for partial dates: an entity that
-    ended "1971-09-03" does not overlap with one that started "1971",
-    because (1971, 12, 31) is not less than (1971, 9, 3).
-    """
+def _parse_date_impl(
+    date_str: str | None, default_month: int, default_day: int
+) -> tuple[int, int, int] | None:
     if not date_str:
         return None
     is_neg = date_str.startswith("-")
@@ -75,11 +68,31 @@ def parse_date(date_str: str | None) -> tuple[int, int, int] | None:
         year = int(parts[0])
         if is_neg:
             year = -year
-        month = int(parts[1]) if len(parts) > 1 else 12
-        day = int(parts[2]) if len(parts) > 2 else 31
+        month = int(parts[1]) if len(parts) > 1 else default_month
+        day = int(parts[2]) if len(parts) > 2 else default_day
         return (year, month, day)
     except (ValueError, IndexError):
         return None
+
+
+def parse_date(date_str: str | None) -> tuple[int, int, int] | None:
+    """Parse an OSM start-date string.  Missing month/day fill to 12/31.
+
+    A year-only start like "1971" becomes (1971, 12, 31), so it does NOT
+    falsely overlap with an end_date of "1971-09-03" (which is < 1971-12-31).
+    Use parse_end_date() for end-date fields.
+    """
+    return _parse_date_impl(date_str, 12, 31)
+
+
+def parse_end_date(date_str: str | None) -> tuple[int, int, int] | None:
+    """Parse an OSM end-date string.  Missing month/day fill to 1/1.
+
+    A year-only end like "1960" becomes (1960, 1, 1), so it does NOT
+    falsely overlap with a start_date of "1960-11-28" (which is > 1960-01-01).
+    Use parse_date() for start-date fields.
+    """
+    return _parse_date_impl(date_str, 1, 1)
 
 
 def dates_overlap(
@@ -530,9 +543,9 @@ def main() -> None:
                 # Must have overlapping date ranges
                 if not dates_overlap(
                     parse_date(da["start_date"]),
-                    parse_date(da["end_date"]),
+                    parse_end_date(da["end_date"]),
                     parse_date(db["start_date"]),
-                    parse_date(db["end_date"]),
+                    parse_end_date(db["end_date"]),
                 ):
                     continue
 
@@ -600,7 +613,7 @@ def main() -> None:
     rel_dates: dict[int, tuple] = {
         rid: (
             parse_date(rdata["start_date"]),
-            parse_date(rdata["end_date"]),
+            parse_end_date(rdata["end_date"]),
         )
         for rid, rdata in relations.items()
     }
