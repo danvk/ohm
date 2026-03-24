@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<presets xmlns="http://josm.openstreetmap.de/tagging-preset-1.0" version="5.98.0" shortdescription="OHM Tagging Presets" description="Small tagging preset to show start_date / end_date where possible">
+
+<!--
+  This doen't help at all with tagging.
+  Its sole purpose is to show start_date/end_date where possible for OHM.
+  This is intended to be used with another tagging preset.
+-->
+
+  <group name="OHM">
+  <!-- For dates with dashes in them already, e.g. "1776-07-04 - 2026-03-24" -->
+  <item name="Start+End Date with Month/Day" type="node,way,relation"
+        name_template="?{'{name}' | ''}?{' [{start_date} – {end_date}]' | ' [{start_date} –]' | ' [– {end_date}]' | ''}"
+        name_template_filter="((start_date~&quot;.*-.*&quot;) | (end_date~&quot;.*-.*&quot;))"
+    />
+  <!-- For year-only dates, it looks better to drop the space: "1776-2026" -->
+  <item name="Start+End Date with Year" type="node,way,relation"
+        name_template="?{'{name}' | ''}?{' [{start_date}–{end_date}]' | ' [{start_date}–]' | ' [–{end_date}]' | ''}"
+        name_template_filter="(start_date | end_date)"
+    />
+  </group>
+</presets>
