@@ -6,6 +6,12 @@ import osmium
 import osmium.filter
 from osmium.osm.types import Relation
 
+IGNORE_KEY_PREFIXES = [
+    "wikipedia",
+    "source",
+    "fixme",
+]
+
 
 class DupeCandidateFinder(osmium.SimpleHandler):
     def __init__(self):
@@ -16,6 +22,8 @@ class DupeCandidateFinder(osmium.SimpleHandler):
         name = r.tags.get("name")
         if not name:
             return
+        if len(r.members) == 0:
+            return  # could remove this, but these are the more problematic ones
         self.name_to_relation[name].append(r.id)
 
 
@@ -30,7 +38,11 @@ class DupeFinder(osmium.SimpleHandler):
 
 
 def relation_key(r: Relation) -> tuple:
-    tags = [(tag.k, tag.v) for tag in r.tags]
+    tags = [
+        (tag.k, tag.v)
+        for tag in r.tags
+        if not any(tag.k.startswith(prefix) for prefix in IGNORE_KEY_PREFIXES)
+    ]
     tags.sort()
     members = [(m.role, m.type, m.ref) for m in r.members]
     members.sort()
@@ -81,7 +93,7 @@ def main() -> None:
         print(f"{name}: {len(ids)} dupes:")
 
         for id in ids:
-            print(f"  {id}")
+            print(f"  {id} https://www.openhistoricalmap.org/relation/{id}")
 
     print(f"Total dupes: {total_dupes}")
 
