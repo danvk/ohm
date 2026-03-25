@@ -1,4 +1,5 @@
 import argparse
+import math
 from collections import Counter, defaultdict
 from typing import Any
 
@@ -14,12 +15,13 @@ IGNORE_KEY_PREFIXES = [
     "fixme",
 ]
 
-# Round coordinates to this many decimal places for geometry comparison.
-# 3 decimal places ≈ 110 m at the equator, coarse enough to absorb slightly
-# misaligned duplicate nodes (traced separately but representing the same point,
-# differing by up to ~10 m) while still distinguishing genuinely different
-# administrative boundaries (which differ at a much larger scale).
-_COORD_PRECISION = 3
+# Tolerance fraction: max allowed node displacement as a fraction of total ring
+# perimeter. At 1%, a 5.8° Bundou boundary tolerates ~0.058° ≈ 6 km rounding,
+# giving precision=3 (110 m). A 0.006° short segment tolerates ~0.00006°,
+# giving precision=5 (1.1 m), so genuinely distinct short segments are kept
+# separate while duplicated large boundaries with ~10 m node displacement are
+# still detected as duplicates.
+_TOLERANCE_FRACTION = 0.01
 
 
 class DupeCandidateFinder(osmium.SimpleHandler):
@@ -96,15 +98,35 @@ def geometry_key(
     """Return a canonical frozenset of rounded (lon, lat) pairs for a relation's geometry.
 
     Two relations with identical underlying coordinates but different member
-    ways will produce the same key.
+    ways will produce the same key. Rounding precision scales with feature size:
+    larger features use coarser rounding to absorb small node-placement
+    differences, while small features use finer rounding to stay distinct.
     """
     polygons = build_polygon_rings(outer, inner, way_nodes, way_coords)
-    pts: set[tuple[float, float]] = set()
+
+    # Measure total perimeter in degrees across all rings.
+    total_length = 0.0
+    all_pts_per_ring: list[list[tuple[float, float]]] = []
     for polygon in polygons:
         for ring in polygon:
-            for lon, lat in ring_coords(ring, way_coords):
-                pts.add((round(lon, _COORD_PRECISION), round(lat, _COORD_PRECISION)))
-    return frozenset(pts)
+            pts = list(ring_coords(ring, way_coords))
+            all_pts_per_ring.append(pts)
+            for i in range(len(pts) - 1):
+                dx = pts[i + 1][0] - pts[i][0]
+                dy = pts[i + 1][1] - pts[i][1]
+                total_length += math.sqrt(dx * dx + dy * dy)
+
+    # Derive precision: round to the scale of _TOLERANCE_FRACTION * perimeter.
+    if total_length > 0:
+        precision = max(3, math.ceil(-math.log10(total_length * _TOLERANCE_FRACTION)))
+    else:
+        precision = 6
+
+    pts_set: set[tuple[float, float]] = set()
+    for pts in all_pts_per_ring:
+        for lon, lat in pts:
+            pts_set.add((round(lon, precision), round(lat, precision)))
+    return frozenset(pts_set)
 
 
 class DupeFinder(osmium.SimpleHandler):
@@ -149,9 +171,10 @@ def main() -> None:
         if len(ids) >= 2
     ]
 
-    target_ids = [2879823, 2879817, 2879806]
+    # target_ids = [2879823, 2879817, 2879806]
     # target_ids = [2795077, 2796058]
-    # target_ids = ids
+    # target_ids = [2902554, 2902565]
+    target_ids = ids
 
     print("Candidate IDs:", len(target_ids))
 
