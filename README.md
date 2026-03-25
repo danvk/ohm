@@ -42,6 +42,25 @@ This prints stats on how many square kilometers are covered by admin_level=2 and
 uv run decade_coverage.py planet.osm.pbf > admin.decade.txt
 ```
 
+### dupe_finder.py
+
+Find duplicate relations in a planet dump. Duplicates must:
+
+- share all tags (except a few non-semantic tags like `source` and `fixme`)
+- have the same underlying geometry
+
+There is a little bit of wiggle room in the geometry matching, proportional to the scale of the feature. Large features can be off by a few hundred meters, but small features must match within a meter or so. Takes 30s-1m to run on an OHM Planet file.
+
+```
+$ uv run dupe_finder.py planet-260322_0301.osm.pbf
+Candidate IDs: 7293
+(7) Bicocca Stadium
+  2797764 https://www.openhistoricalmap.org/relation/2797764
+  2797792 https://www.openhistoricalmap.org/relation/2797792
+  2797799 https://www.openhistoricalmap.org/relation/2797799
+  ...
+```
+
 ### find_by_name.py
 
 Search `name` tag in a planet file. The parameter is a regular expression matched at the start of the string.
