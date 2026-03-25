@@ -60,9 +60,13 @@ class RelGeomCollector(osmium.SimpleHandler):
             if not any(tag.k.startswith(prefix) for prefix in IGNORE_KEY_PREFIXES)
         ]
         tags.sort()
-        outer = [m.ref for m in r.members if m.type == "w" and m.role in ("outer", "")]
+        outer = [m.ref for m in r.members if m.type == "w" and m.role != "inner"]
         inner = [m.ref for m in r.members if m.type == "w" and m.role == "inner"]
-        self.relations[r.id] = {"tags": tuple(tags), "outer": outer, "inner": inner}
+        self.relations[r.id] = {
+            "tags": tuple(tags),
+            "outer": outer,
+            "inner": inner,
+        }
 
 
 class WayCoordCollector(osmium.SimpleHandler):
@@ -145,8 +149,9 @@ def main() -> None:
         if len(ids) >= 2
     ]
 
-    # target_ids = [2879823, 2879817, 2879806]
-    target_ids = ids
+    target_ids = [2879823, 2879817, 2879806]
+    # target_ids = [2795077, 2796058]
+    # target_ids = ids
 
     print("Candidate IDs:", len(target_ids))
 
@@ -155,6 +160,7 @@ def main() -> None:
     rel_collector.apply_file(
         args.osm_file, filters=[osmium.filter.IdFilter(target_ids)]
     )
+    # print(rel_collector.relations)
 
     # Gather all way IDs referenced by the target relations
     all_way_ids: set[int] = set()
@@ -178,6 +184,7 @@ def main() -> None:
             way_collector.way_coords,
         )
         geom_key_to_ids[(rel["tags"], gkey)].append(rel_id)
+        # print(f"{rel_id}\n{gkey}\n")
 
     by_count = Counter[int]()
     total_dupes = 0
