@@ -1,6 +1,6 @@
 import argparse
 from collections import Counter, defaultdict
-from typing import Any, Callable, Iterable
+from typing import Any
 
 import osmium
 import osmium.filter
@@ -25,7 +25,7 @@ _COORD_PRECISION = 3
 class DupeCandidateFinder(osmium.SimpleHandler):
     def __init__(self):
         super(DupeCandidateFinder, self).__init__()
-        self.name_to_relation = defaultdict[str, list[int]](list)
+        self.name_to_relation = defaultdict[tuple, list[int]](list)
 
     def relation(self, r: Relation) -> None:
         name = r.tags.get("name")
@@ -33,7 +33,13 @@ class DupeCandidateFinder(osmium.SimpleHandler):
             return
         if len(r.members) == 0:
             return  # could remove this, but these are the more problematic ones
-        self.name_to_relation[name].append(r.id)
+        tags = [
+            (tag.k, tag.v)
+            for tag in r.tags
+            if not any(tag.k.startswith(prefix) for prefix in IGNORE_KEY_PREFIXES)
+        ]
+        tags.sort()
+        self.name_to_relation[tuple(tags)].append(r.id)
 
 
 class RelGeomCollector(osmium.SimpleHandler):
@@ -119,15 +125,6 @@ def relation_key(r: Relation) -> tuple:
     return (tuple(tags), tuple(members))
 
 
-def group_by[T](xs: Iterable[T], fn: Callable[[T], Any]) -> dict[Any, T]:
-    out = {}
-    for x in xs:
-        key = fn(x)
-        out.setdefault(key, [])
-        out[key].append(x)
-    return out
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Find elements in an OSM PBF file by name."
@@ -136,21 +133,20 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if False:
-        candidate_handler = DupeCandidateFinder()
-        candidate_handler.apply_file(
-            args.osm_file, filters=[osmium.filter.KeyFilter("name")]
-        )
+    candidate_handler = DupeCandidateFinder()
+    candidate_handler.apply_file(
+        args.osm_file, filters=[osmium.filter.KeyFilter("name")]
+    )
 
-        ids = [
-            id
-            for ids in candidate_handler.name_to_relation.values()
-            for id in ids
-            if len(ids) >= 2
-        ]
+    ids = [
+        id
+        for ids in candidate_handler.name_to_relation.values()
+        for id in ids
+        if len(ids) >= 2
+    ]
 
-    target_ids = [2879823, 2879817, 2879806]
-    # target_ids = ids
+    # target_ids = [2879823, 2879817, 2879806]
+    target_ids = ids
 
     print("Candidate IDs:", len(target_ids))
 
