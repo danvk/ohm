@@ -80,7 +80,13 @@ def main() -> None:
 
     print("Candidate IDs:", len(ids))
     dupe_handler = DupeFinder()
-    dupe_handler.apply_file(args.osm_file, filters=[osmium.filter.IdFilter(ids)])
+    # dupe_handler.apply_file(args.osm_file, filters=[osmium.filter.IdFilter(ids)])
+    dupe_handler.apply_file(
+        args.osm_file, filters=[osmium.filter.IdFilter([2879823, 2879817, 2879806])]
+    )
+
+    for k, ids in dupe_handler.key_to_id.items():
+        print(f"  {ids}: {k}")
 
     by_count = Counter[int]()
     total_dupes = 0
