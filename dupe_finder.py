@@ -1,6 +1,6 @@
 import argparse
 import math
-from collections import Counter, defaultdict
+from collections import defaultdict
 from typing import Any
 
 import osmium
@@ -94,13 +94,14 @@ def geometry_key(
     inner: list[int],
     way_nodes: dict[int, list[int]],
     way_coords: dict[int, list[tuple[float, float]]],
-) -> frozenset[tuple[float, float]]:
-    """Return a canonical frozenset of rounded (lon, lat) pairs for a relation's geometry.
+) -> tuple[frozenset[tuple[float, float]], float]:
+    """Return (key, total_length) for a relation's geometry.
 
-    Two relations with identical underlying coordinates but different member
-    ways will produce the same key. Rounding precision scales with feature size:
-    larger features use coarser rounding to absorb small node-placement
-    differences, while small features use finer rounding to stay distinct.
+    The key is a canonical frozenset of rounded (lon, lat) pairs. Rounding
+    precision scales with feature size: larger features use coarser rounding
+    to absorb small node-placement differences, while small features use finer
+    rounding to stay distinct. total_length is the sum of all ring perimeters
+    in degrees.
     """
     polygons = build_polygon_rings(outer, inner, way_nodes, way_coords)
 
@@ -126,7 +127,7 @@ def geometry_key(
     for pts in all_pts_per_ring:
         for lon, lat in pts:
             pts_set.add((round(lon, precision), round(lat, precision)))
-    return frozenset(pts_set)
+    return frozenset(pts_set), total_length
 
 
 class DupeFinder(osmium.SimpleHandler):
@@ -199,25 +200,31 @@ def main() -> None:
 
     # Build geometry keys and group relations
     geom_key_to_ids: dict = defaultdict(list)
+    geom_key_to_length: dict = {}
     for rel_id, rel in rel_collector.relations.items():
-        gkey = geometry_key(
+        gkey, total_length = geometry_key(
             rel["outer"],
             rel["inner"],
             way_collector.way_nodes,
             way_collector.way_coords,
         )
-        geom_key_to_ids[(rel["tags"], gkey)].append(rel_id)
+        key = (rel["tags"], gkey)
+        geom_key_to_ids[key].append(rel_id)
+        geom_key_to_length[key] = total_length
         # print(f"{rel_id}\n{gkey}\n")
 
-    by_count = Counter[int]()
+    dupe_groups = [
+        (tags, rel_ids, geom_key_to_length[(tags, gkey)])
+        for (tags, gkey), rel_ids in geom_key_to_ids.items()
+        if len(rel_ids) >= 2
+    ]
+    dupe_groups.sort(key=lambda x: (-len(x[1]), -x[2]))
+
     total_dupes = 0
-    for (tags, _gkey), rel_ids in geom_key_to_ids.items():
-        if len(rel_ids) < 2:
-            continue
-        by_count[len(rel_ids)] += 1
+    for tags, rel_ids, _length in dupe_groups:
         total_dupes += len(rel_ids) - 1
         name = next((v for k, v in tags if k == "name"), "<unknown>")
-        print(f"{name}: {len(rel_ids)} dupes:")
+        print(f"({len(rel_ids)}) {name}")
         for rel_id in rel_ids:
             print(f"  {rel_id} https://www.openhistoricalmap.org/relation/{rel_id}")
 
