@@ -1,4 +1,5 @@
-import React from 'react';
+import Slider from 'rc-slider';
+import 'rc-slider/assets/index.css';
 import { yearFromDateStr } from './date-utils';
 
 export interface TimeSliderProps {
@@ -15,32 +16,22 @@ export function TimeSlider({
   onChange,
 }: TimeSliderProps) {
   const numericYear = yearFromDateStr(year);
-  const thumbFraction = (numericYear - minYear) / (maxYear - minYear);
 
   return (
     <div id="time-slider">
-      <div id="time-slider-track-row">
-        <div
-          id="time-slider-input-wrap"
-          style={{ '--thumb-fraction': thumbFraction } as React.CSSProperties}
-        >
-          <span id="year-display">{year}</span>
-          <input
-            id="year"
-            type="range"
-            min={minYear}
-            max={maxYear}
-            value={numericYear}
-            onChange={(e) => onChange(e.currentTarget.valueAsNumber)}
-          />
-        </div>
-        <span className="time-slider-label time-slider-label-min">
-          {minYear}
-        </span>
-        <span className="time-slider-label time-slider-label-max">
-          {maxYear}
-        </span>
-      </div>
+      <Slider
+        min={minYear}
+        max={maxYear}
+        value={numericYear}
+        onChange={(v) => onChange(v as number)}
+        marks={{ [minYear]: minYear, [maxYear]: maxYear }}
+        handleRender={(node, props) => (
+          <div className="rc-slider-handle-wrap">
+            {node}
+            <span className="rc-slider-handle-label">{props.value}</span>
+          </div>
+        )}
+      />
     </div>
   );
 }
