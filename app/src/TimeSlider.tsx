@@ -16,22 +16,22 @@ export function TimeSlider({
   onChange,
 }: TimeSliderProps) {
   const numericYear = yearFromDateStr(year);
+  const pct = ((numericYear - minYear) / (maxYear - minYear)) * 100;
 
   return (
     <div id="time-slider">
-      <Slider
-        min={minYear}
-        max={maxYear}
-        value={numericYear}
-        onChange={(v) => onChange(v as number)}
-        marks={{ [minYear]: minYear, [maxYear]: maxYear }}
-        handleRender={(node, props) => (
-          <div className="rc-slider-handle-wrap">
-            {node}
-            <span className="rc-slider-handle-label">{props.value}</span>
-          </div>
-        )}
-      />
+      <div className="rc-slider-wrap">
+        <span className="rc-slider-handle-label" style={{ left: `${pct}%` }}>
+          {numericYear}
+        </span>
+        <Slider
+          min={minYear}
+          max={maxYear}
+          value={numericYear}
+          onChange={(v) => onChange(v as number)}
+          marks={{ 0: 0, 500: 500, 1000: 1000, 1500: 1500, 2000: 2000 }}
+        />
+      </div>
     </div>
   );
 }
