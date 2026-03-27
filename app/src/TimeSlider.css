@@ -8,6 +8,8 @@
   /* subtle frosted background so map doesn't bleed through */
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(4px);
+
+  --slider-color: rgb(181, 193, 225);
 }
 
 /* rc-slider handle label (value bubble above thumb) */
@@ -20,7 +22,14 @@
 }
 
 .time-slider-range .rc-slider-track {
-  background-color: #6080c077;
+  background-color: var(--slider-color);
+  cursor: grab;
+}
+.time-slider-linear .rc-slider-rail {
+  background-color: var(--slider-color);
+}
+.time-slider-linear .rc-slider-track {
+  background-color: rgba(0, 0, 0, 0);
 }
 
 .rc-slider-handle {
@@ -115,21 +124,21 @@
   left: 0;
   right: 0;
   height: 0;
-  border-top: 2px solid #6080c0;
+  border-top: 2px solid var(--slider-color);
 }
 
 /* left connector: handle is at right, label is at left */
 .rc-slider-connector-left .rc-slider-connector-v-bottom {
   right: 0;
   bottom: 0; /* grows upward from bottom of connector */
-  background: #6080c0;
+  background: var(--slider-color);
   border-top-left-radius: 8px;
 }
 
 .rc-slider-connector-left .rc-slider-connector-v-top {
   left: 2em;
   top: 0; /* grows downward from top of connector */
-  background: #6080c0;
+  background: var(--slider-color);
 }
 .rc-slider-connector-left .rc-slider-connector-h {
   left: 2em;
@@ -142,11 +151,11 @@
 .rc-slider-connector-right .rc-slider-connector-v-bottom {
   left: 0;
   bottom: 0;
-  background: #6080c0;
+  background: var(--slider-color);
 }
 
 .rc-slider-connector-right .rc-slider-connector-v-top {
   right: 2em;
   top: 0;
-  background: #6080c0;
+  background: var(--slider-color);
 }
