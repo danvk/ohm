@@ -218,6 +218,11 @@ export default function App({ data }: { data: AppData }) {
   const handleChangeRange = (newMinYear: number, newMaxYear: number) => {
     setMinYear(newMinYear);
     setMaxYear(newMaxYear);
+    if (yearFromDateStr(year) < newMinYear) {
+      handleDateChange(String(newMinYear));
+    } else if (yearFromDateStr(year) > newMaxYear) {
+      handleDateChange(String(newMaxYear));
+    }
   };
 
   return (

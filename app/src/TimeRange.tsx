@@ -66,7 +66,7 @@ export function TimeRange({
           min={0}
           max={SLIDER_MAX}
           value={sliderValues}
-          range
+          range={{ draggableTrack: true }}
           styles={{
             track: { height: 8 },
             rail: { height: 8 },
