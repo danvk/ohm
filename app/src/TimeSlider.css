@@ -127,10 +127,15 @@
 }
 
 .rc-slider-connector-left .rc-slider-connector-v-top {
-  left: 0;
+  left: 2em;
   top: 0; /* grows downward from top of connector */
   background: #6080c0;
-  border-bottom-right-radius: 8px;
+}
+.rc-slider-connector-left .rc-slider-connector-h {
+  left: 2em;
+}
+.rc-slider-connector-right .rc-slider-connector-h {
+  right: 2em;
 }
 
 /* right connector: handle is at left, label is at right */
@@ -138,12 +143,10 @@
   left: 0;
   bottom: 0;
   background: #6080c0;
-  border-top-right-radius: 8px;
 }
 
 .rc-slider-connector-right .rc-slider-connector-v-top {
-  right: 0;
+  right: 2em;
   top: 0;
   background: #6080c0;
-  border-bottom-left-radius: 8px;
 }
