@@ -1,6 +1,8 @@
 import React from 'react';
 import type { Chronology } from './ohm-data';
 
+import './FeaturePanel.css';
+
 export interface FeatureInfo {
   id: string | number;
   tags: Record<string, string>;
@@ -16,7 +18,7 @@ const EXACT_TAGS = [
   'wikidata',
   'wikipedia',
   'color',
-  'color:id'
+  'color:id',
 ];
 const PREFIX_TAGS = [
   'start_date',

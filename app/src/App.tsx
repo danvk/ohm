@@ -225,6 +225,7 @@ export default function App({ data }: { data: AppData }) {
         year={year}
         minYear={0}
         maxYear={2030}
+        isRange
         onChange={handleYearChange}
       />
       <MapLibreMap
