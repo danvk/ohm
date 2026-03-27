@@ -5,7 +5,7 @@ import { ZoomControl } from './ZoomControl';
 import { AdminAreas } from './AdminAreas';
 import { AdminLevelFilter } from './AdminLevelFilter';
 import { FeaturePanel, type FeatureInfo } from './FeaturePanel';
-import { TimeSlider } from './TimeSlider';
+import { TimeControl } from './TimeControl';
 import {
   DEFAULT_YEAR,
   DEFAULT_STATE,
@@ -30,6 +30,9 @@ export default function App({ data }: { data: AppData }) {
   const year = urlState.year;
   const adminLevels = urlState.adminLevels ?? new Set(['2']);
   const urlIds = urlState.ids;
+
+  const [minYear, setMinYear] = React.useState(0);
+  const [maxYear, setMaxYear] = React.useState(2030);
 
   // Viewport (zoom/lat/lng) is kept in a ref so map moves don't cause re-renders
   // and don't feed back into setCenter.
@@ -212,6 +215,11 @@ export default function App({ data }: { data: AppData }) {
     }
   });
 
+  const handleChangeRange = (newMinYear: number, newMaxYear: number) => {
+    setMinYear(newMinYear);
+    setMaxYear(newMaxYear);
+  };
+
   return (
     <>
       <div className="title">
@@ -221,12 +229,14 @@ export default function App({ data }: { data: AppData }) {
           About
         </a>
       </div>
-      <TimeSlider
+      <TimeControl
         year={year}
-        minYear={0}
-        maxYear={2030}
-        isRange
+        minYear={minYear}
+        maxYear={maxYear}
         onChange={handleYearChange}
+        onChangeRange={handleChangeRange}
+        isRange
+        onChangeIsRange={() => {}}
       />
       <MapLibreMap
         containerId="map"

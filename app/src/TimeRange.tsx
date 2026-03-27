@@ -1,14 +1,13 @@
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
-import { yearFromDateStr } from './date-utils';
 
 import './TimeSlider.css';
 
-export interface TimeSliderProps {
-  year: string;
+export interface TimeRangeProps {
+  years: [number, number];
   minYear: number;
   maxYear: number;
-  onChange: (year: number, handle: number) => void;
+  onChange: (a: number, b: number) => void;
 }
 
 // Square-root scale: gives more resolution near maxYear without being as extreme
@@ -36,33 +35,46 @@ function makeMarks(minYear: number, maxYear: number): Record<number, number> {
   );
 }
 
-export function TimeSlider({
-  year,
+export function TimeRange({
+  years,
   minYear,
   maxYear,
   onChange,
-}: TimeSliderProps) {
-  const numericYear = yearFromDateStr(year);
-  const sliderValue = yearToSlider(numericYear, minYear, maxYear);
-  const pct = (sliderValue / SLIDER_MAX) * 100;
+}: TimeRangeProps) {
+  const sliderValues = years.map((y) => yearToSlider(y, minYear, maxYear));
+  const pcts = sliderValues.map((v) => (v / SLIDER_MAX) * 100);
 
   return (
-    <div id="time-slider">
+    <div className="time-slider-range">
       <div className="rc-slider-wrap">
-        <span className="rc-slider-handle-label" style={{ left: `${pct}%` }}>
-          {numericYear}
-        </span>
+        {sliderValues.map((_, i) => (
+          <span
+            key={i}
+            className="rc-slider-handle-label"
+            style={{ left: `${pcts[i]}%` }}
+          >
+            {years[i]}
+          </span>
+        ))}
         <Slider
           min={0}
           max={SLIDER_MAX}
-          value={sliderValue}
+          value={sliderValues}
+          range
           styles={{
             track: { height: 8 },
             rail: { height: 8 },
           }}
-          onChange={(v) =>
-            onChange(sliderToYear(v as number, minYear, maxYear), 0)
-          }
+          onChange={(vs) => {
+            if (!Array.isArray(vs)) {
+              throw new Error('blah');
+            }
+            const [v1, v2] = vs;
+            onChange(
+              sliderToYear(v1, minYear, maxYear),
+              sliderToYear(v2, minYear, maxYear),
+            );
+          }}
           marks={makeMarks(minYear, maxYear)}
         />
       </div>
