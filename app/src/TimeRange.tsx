@@ -42,20 +42,10 @@ export function TimeRange({
   onChange,
 }: TimeRangeProps) {
   const sliderValues = years.map((y) => yearToSlider(y, minYear, maxYear));
-  const pcts = sliderValues.map((v) => (v / SLIDER_MAX) * 100);
 
   return (
     <div className="time-slider-range">
       <div className="rc-slider-wrap">
-        {sliderValues.map((_, i) => (
-          <span
-            key={i}
-            className="rc-slider-handle-label"
-            style={{ left: `${pcts[i]}%` }}
-          >
-            {years[i]}
-          </span>
-        ))}
         <Slider
           min={0}
           max={SLIDER_MAX}

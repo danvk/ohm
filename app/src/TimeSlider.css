@@ -59,3 +59,20 @@
 .rc-slider-mark-text {
   color: #666;
 }
+
+.rc-slider-range-label {
+  position: absolute;
+}
+.rc-slider-range-label-left {
+  left: 0.5em;
+}
+.rc-slider-range-label-right {
+  right: 0.5em;
+}
+.time-slider-linear .rc-slider {
+  width: auto;
+}
+.time-slider-linear .rc-slider-wrap {
+  margin-left: 2em;
+  margin-right: 2em;
+}

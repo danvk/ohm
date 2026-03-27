@@ -23,6 +23,12 @@ export function LinearTimeSlider({
 
   return (
     <div className="time-slider-linear">
+      <span className="rc-slider-range-label rc-slider-range-label-left">
+        {minYear}
+      </span>
+      <span className="rc-slider-range-label rc-slider-range-label-right">
+        {maxYear}
+      </span>
       <div className="rc-slider-wrap">
         <span className="rc-slider-handle-label" style={{ left: `${pct}%` }}>
           {numericYear}
