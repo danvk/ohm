@@ -77,17 +77,14 @@
   margin-right: 2em;
 }
 
-/* S-curve SVG connectors linking TimeRange handles to LinearTimeSlider.
-   Height = TOP_OVERHANG + BOTTOM_OVERHANG = 29 + 9 = 38px (must match constants in TimeRange.tsx) */
+/* Bracket connectors linking TimeRange handles to LinearTimeSlider.
+   The outer div spans the full height; two child divs draw the top and bottom halves.
+   Total height = 38px (29px above + 9px below the rc-slider-wrap top). */
 .rc-slider-connector {
   position: absolute;
   top: -29px;
   height: 38px;
   pointer-events: none;
-  overflow: visible;
-  fill: none;
-  stroke: #6080c0;
-  stroke-width: 2;
 }
 
 .rc-slider-connector-left {
@@ -96,4 +93,57 @@
 
 .rc-slider-connector-right {
   right: 0;
+}
+
+/* Three children build the bracket shape:
+   v-bottom: vertical stub on the handle side, bottom half
+   h:        horizontal bar across the middle
+   v-top:    vertical stub on the label side, top half
+   Rounded corners where each stub meets the horizontal bar. */
+
+.rc-slider-connector-v-bottom,
+.rc-slider-connector-v-top {
+  position: absolute;
+  width: 2px;
+  height: 50%;
+}
+
+/* horizontal bar sits exactly at 50% height, zero height with a top-border */
+.rc-slider-connector-h {
+  position: absolute;
+  top: calc(50% - 1px);
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px solid #6080c0;
+}
+
+/* left connector: handle is at right, label is at left */
+.rc-slider-connector-left .rc-slider-connector-v-bottom {
+  right: 0;
+  bottom: 0; /* grows upward from bottom of connector */
+  background: #6080c0;
+  border-top-left-radius: 8px;
+}
+
+.rc-slider-connector-left .rc-slider-connector-v-top {
+  left: 0;
+  top: 0; /* grows downward from top of connector */
+  background: #6080c0;
+  border-bottom-right-radius: 8px;
+}
+
+/* right connector: handle is at left, label is at right */
+.rc-slider-connector-right .rc-slider-connector-v-bottom {
+  left: 0;
+  bottom: 0;
+  background: #6080c0;
+  border-top-right-radius: 8px;
+}
+
+.rc-slider-connector-right .rc-slider-connector-v-top {
+  right: 0;
+  top: 0;
+  background: #6080c0;
+  border-bottom-left-radius: 8px;
 }

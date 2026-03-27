@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 
@@ -36,75 +35,16 @@ function makeMarks(minYear: number, maxYear: number): Record<number, number> {
   );
 }
 
-// Height above the range rc-slider-wrap top that the linear slider handle sits at.
-// (measured: linear handle center is 29px above the range wrap top)
-const TOP_OVERHANG = 29;
-// How far below the range wrap top the range handle center sits.
-// (measured: range handle center is 9px below the range wrap top)
-const BOTTOM_OVERHANG = 9;
-
-function ConnectorSvg({ side, pct }: { side: 'left' | 'right'; pct: number }) {
-  const H = TOP_OVERHANG + BOTTOM_OVERHANG; // total height in px
-  const midY = H / 2;
-  // Corner radius for the two bends (in px). Adjust to taste.
-  const R = Math.min(midY, 8);
-
-  const svgRef = useRef<SVGSVGElement>(null);
-  const [W, setW] = useState(0);
-
-  useEffect(() => {
-    const el = svgRef.current;
-    if (!el) return;
-    const obs = new ResizeObserver(() => setW(el.getBoundingClientRect().width));
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  // Path description:
-  // For 'left': handle is bottom-right (W, H), label edge is top-left (0, 0).
-  //   Down from handle: M W H → vertical up to midY on right side (with rounded corner)
-  //   Horizontal left across middle
-  //   Vertical up to top-left (with rounded corner)
-  //
-  // Using SVG arc commands for the rounded corners:
-  //   arc syntax: A rx ry x-rotation large-arc-flag sweep-flag x y
-
-  let d = '';
-  if (W > 0) {
-    if (side === 'left') {
-      // Start: bottom-right (handle)
-      // End: top-left (label edge)
-      // Path: up from (W, H) → bend → left → bend → up to (0, 0)
-      d = [
-        `M ${W} ${H}`,
-        `L ${W} ${midY + R}`,
-        `A ${R} ${R} 0 0 0 ${W - R} ${midY}`,
-        `L ${R} ${midY}`,
-        `A ${R} ${R} 0 0 1 0 ${midY - R}`,
-        `L 0 0`,
-      ].join(' ');
-    } else {
-      // Start: bottom-left (handle)
-      // End: top-right (label edge)
-      d = [
-        `M 0 ${H}`,
-        `L 0 ${midY + R}`,
-        `A ${R} ${R} 0 0 1 ${R} ${midY}`,
-        `L ${W - R} ${midY}`,
-        `A ${R} ${R} 0 0 0 ${W} ${midY - R}`,
-        `L ${W} 0`,
-      ].join(' ');
-    }
-  }
-
+function Connector({ side, pct }: { side: 'left' | 'right'; pct: number }) {
   return (
-    <svg
-      ref={svgRef}
+    <div
       className={`rc-slider-connector rc-slider-connector-${side}`}
       style={side === 'left' ? { width: `${pct}%` } : { left: `${pct}%` }}
     >
-      <path d={d} />
-    </svg>
+      <div className="rc-slider-connector-v-bottom" />
+      <div className="rc-slider-connector-h" />
+      <div className="rc-slider-connector-v-top" />
+    </div>
   );
 }
 
@@ -120,8 +60,8 @@ export function TimeRange({
   return (
     <div className="time-slider-range">
       <div className="rc-slider-wrap">
-        <ConnectorSvg side="left" pct={pcts[0]} />
-        <ConnectorSvg side="right" pct={pcts[1]} />
+        <Connector side="left" pct={pcts[0]} />
+        <Connector side="right" pct={pcts[1]} />
         <Slider
           min={0}
           max={SLIDER_MAX}
