@@ -76,3 +76,24 @@
   margin-left: 2em;
   margin-right: 2em;
 }
+
+/* S-curve SVG connectors linking TimeRange handles to LinearTimeSlider.
+   Height = TOP_OVERHANG + BOTTOM_OVERHANG = 29 + 9 = 38px (must match constants in TimeRange.tsx) */
+.rc-slider-connector {
+  position: absolute;
+  top: -29px;
+  height: 38px;
+  pointer-events: none;
+  overflow: visible;
+  fill: none;
+  stroke: #6080c0;
+  stroke-width: 2;
+}
+
+.rc-slider-connector-left {
+  left: 0;
+}
+
+.rc-slider-connector-right {
+  right: 0;
+}

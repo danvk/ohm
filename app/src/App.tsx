@@ -31,8 +31,8 @@ export default function App({ data }: { data: AppData }) {
   const adminLevels = urlState.adminLevels ?? new Set(['2']);
   const urlIds = urlState.ids;
 
-  const [minYear, setMinYear] = React.useState(0);
-  const [maxYear, setMaxYear] = React.useState(2030);
+  const [minYear, setMinYear] = React.useState(1500);
+  const [maxYear, setMaxYear] = React.useState(1900);
 
   // Viewport (zoom/lat/lng) is kept in a ref so map moves don't cause re-renders
   // and don't feed back into setCenter.
