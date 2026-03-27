@@ -1,9 +1,9 @@
 .time-control {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 1.5rem;
+  bottom: 1em;
+  left: 1em;
+  right: 1em;
+  padding: 0 1.5rem;
   z-index: 1;
   /* subtle frosted background so map doesn't bleed through */
   background: rgba(255, 255, 255, 0.85);
@@ -13,9 +13,14 @@
 /* rc-slider handle label (value bubble above thumb) */
 .rc-slider-wrap {
   position: relative;
+  margin: 1.5em 0;
 }
 .rc-slider-track {
   background-color: #e9e9e9; /* #6080c077; */
+}
+
+.time-slider-range .rc-slider-track {
+  background-color: #6080c077;
 }
 
 .rc-slider-handle {
