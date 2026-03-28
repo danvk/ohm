@@ -103,7 +103,9 @@ def main() -> None:
     args = parser.parse_args()
 
     handler = DateExtractor()
-    handler.apply_file(args.osm_file, filters=[osmium.filter.KeyFilter("start_date")])
+    handler.apply_file(
+        args.osm_file, filters=[osmium.filter.KeyFilter("start_date", "end_date")]
+    )
     print(f"Read {len(handler.id_to_dates)} dated relations.")
     print(f"Found {handler.invalid} invalid dates.")
 
