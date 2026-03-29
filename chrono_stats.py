@@ -13,28 +13,37 @@ from dates import parse_ohm_date, parse_ohm_range
 class DateExtractor(osmium.SimpleHandler):
     def __init__(self):
         super(DateExtractor, self).__init__()
-        self.id_to_dates = dict[int, tuple]()
+        self.id_to_dates = dict[tuple[str, int], tuple]()
         self.invalid = 0
         self.invalid_dates = []
 
-    def relation(self, r) -> None:
-        start_date = r.tags.get("start_date")
-        end_date = r.tags.get("end_date")
+    def handle_object(self, typ: str, f):
+        start_date = f.tags.get("start_date")
+        end_date = f.tags.get("end_date")
         if start_date:
             start_tup = parse_ohm_date(start_date)
             if not start_tup:
                 self.invalid += 1
-                self.invalid_dates.append(start_date)
+                self.invalid_dates.append((typ, f.id, start_date))
                 return
 
         if end_date:
             end_tup = parse_ohm_date(end_date)
             if not end_tup:
                 self.invalid += 1
-                self.invalid_dates.append(end_date)
+                self.invalid_dates.append((typ, f.id, end_date))
                 return
 
-        self.id_to_dates[r.id] = parse_ohm_range(start_date, end_date)
+        self.id_to_dates[(typ, f.id)] = parse_ohm_range(start_date, end_date)
+
+    def relation(self, r) -> None:
+        self.handle_object("r", r)
+
+    def way(self, w) -> None:
+        self.handle_object("w", w)
+
+    def node(self, n) -> None:
+        self.handle_object("n", n)
 
 
 def overlaps(a: tuple[float, float], b: tuple[float, float]):
@@ -51,13 +60,12 @@ class ChronologyHandler(osmium.SimpleHandler):
     one entry per chronology the member belongs to.
     """
 
-    def __init__(self, rid_to_dates) -> None:
+    def __init__(self, tid_to_dates) -> None:
         super().__init__()
         self.chronology_count = 0
         self.undated_members = []
         self.overlapping_members = []
-        self.non_relation_members = []
-        self.rid_to_dates = rid_to_dates
+        self.tid_to_dates = tid_to_dates
 
     def relation(self, r: Relation) -> None:
         if r.tags.get("type") != "chronology":
@@ -65,20 +73,14 @@ class ChronologyHandler(osmium.SimpleHandler):
         self.chronology_count += 1
 
         has_undated = False
-        has_non_rel = False
         member_dates = []
         for m in r.members:
-            if m.type != "r":
-                has_non_rel = True
-                continue
-            dates = self.rid_to_dates.get(m.ref)
+            dates = self.tid_to_dates.get((m.type, m.ref))
             if not dates:
                 has_undated = True
                 continue
             member_dates.append(dates)
 
-        if has_non_rel:
-            self.non_relation_members.append(r.id)
         if has_undated:
             self.undated_members.append(r.id)
 
@@ -109,7 +111,12 @@ def main() -> None:
     print(f"Read {len(handler.id_to_dates)} dated relations.")
     print(f"Found {handler.invalid} invalid dates.")
 
-    print(", ".join(random.sample(handler.invalid_dates, 20)))
+    print(
+        ", ".join(
+            f'{typ}/{id}: "{date}"'
+            for typ, id, date in random.sample(handler.invalid_dates, 20)
+        )
+    )
 
     ch = ChronologyHandler(handler.id_to_dates)
     ch.apply_file(
@@ -117,8 +124,6 @@ def main() -> None:
     )
 
     print(f"n_chronologies: {ch.chronology_count}")
-    print(f"  w/ non-relation members: {len(ch.non_relation_members)}")
-    print_links(random.sample(ch.non_relation_members, 10))
     print(f"  w/ undated members: {len(ch.undated_members)}")
     print_links(random.sample(ch.undated_members, 10))
     print(f"  w/ overlapping members: {len(ch.overlapping_members)}")
