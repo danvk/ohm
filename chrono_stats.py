@@ -78,6 +78,7 @@ class ChronologyHandler(osmium.SimpleHandler):
         self.overlapping_members = []
         self.tid_to_dates = tid_to_dates
         self.invalid_tids = invalid_tids
+        self.date_outside_ranges = []
 
     def relation(self, r: Relation) -> None:
         if r.tags.get("type") != "chronology":
@@ -104,6 +105,15 @@ class ChronologyHandler(osmium.SimpleHandler):
         ]
         if fails:
             self.overlapping_members.append(r.id)
+
+        start_date = r.tags.get("start_date")
+        end_date = r.tags.get("end_date")
+        if start_date or end_date:
+            ch_a, ch_b = parse_ohm_range(start_date, end_date)
+            for mem_a, mem_b in member_dates:
+                if mem_a < ch_a or mem_b > ch_b:
+                    self.date_outside_ranges.append(r.id)
+                    break
 
 
 def print_links(ids: Iterable[int]):
@@ -151,6 +161,8 @@ def main() -> None:
     print_links(random.sample(ch.undated_members, 10))
     print(f"  w/ overlapping members: {len(ch.overlapping_members)}")
     print_links(random.sample(ch.overlapping_members, 10))
+    print(f"  w/ members outside chronology date range: {len(ch.date_outside_ranges)}")
+    print_links(random.sample(ch.date_outside_ranges, 10))
 
 
 if __name__ == "__main__":
