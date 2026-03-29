@@ -14,6 +14,7 @@ class DateExtractor(osmium.SimpleHandler):
     def __init__(self):
         super(DateExtractor, self).__init__()
         self.id_to_dates = dict[tuple[str, int], tuple]()
+        self.invalid_ids = set[tuple[str, int]]()
         self.invalid = 0
         self.invalid_dates = []
 
@@ -25,6 +26,7 @@ class DateExtractor(osmium.SimpleHandler):
             if not start_tup:
                 self.invalid += 1
                 self.invalid_dates.append((typ, f.id, start_date))
+                self.invalid_ids.add((typ, f.id))
                 return
 
         if end_date:
@@ -32,6 +34,7 @@ class DateExtractor(osmium.SimpleHandler):
             if not end_tup:
                 self.invalid += 1
                 self.invalid_dates.append((typ, f.id, end_date))
+                self.invalid_ids.add((typ, f.id))
                 return
 
         self.id_to_dates[(typ, f.id)] = parse_ohm_range(start_date, end_date)
@@ -60,12 +63,13 @@ class ChronologyHandler(osmium.SimpleHandler):
     one entry per chronology the member belongs to.
     """
 
-    def __init__(self, tid_to_dates) -> None:
+    def __init__(self, tid_to_dates, invalid_tids: set[tuple[str, int]]) -> None:
         super().__init__()
         self.chronology_count = 0
         self.undated_members = []
         self.overlapping_members = []
         self.tid_to_dates = tid_to_dates
+        self.invalid_tids = invalid_tids
 
     def relation(self, r: Relation) -> None:
         if r.tags.get("type") != "chronology":
@@ -75,6 +79,9 @@ class ChronologyHandler(osmium.SimpleHandler):
         has_undated = False
         member_dates = []
         for m in r.members:
+            if (m.type, m.ref) in self.invalid_tids:
+                continue
+
             dates = self.tid_to_dates.get((m.type, m.ref))
             if not dates:
                 has_undated = True
@@ -118,7 +125,7 @@ def main() -> None:
         )
     )
 
-    ch = ChronologyHandler(handler.id_to_dates)
+    ch = ChronologyHandler(handler.id_to_dates, handler.invalid_ids)
     ch.apply_file(
         args.osm_file, filters=[osmium.filter.TagFilter(("type", "chronology"))]
     )
