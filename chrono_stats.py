@@ -1,6 +1,7 @@
 import argparse
 import itertools
 import random
+import re
 from typing import Iterable
 
 import osmium
@@ -8,6 +9,8 @@ import osmium.filter
 from osmium.osm import Relation
 
 from dates import parse_ohm_date, parse_ohm_range
+
+NAME_RANGE_PAT = r"\(-?\d{3,}--?\d{3,}\)"
 
 
 class DateExtractor(osmium.SimpleHandler):
@@ -17,8 +20,13 @@ class DateExtractor(osmium.SimpleHandler):
         self.invalid_ids = set[tuple[str, int]]()
         self.invalid = 0
         self.invalid_dates = []
+        self.year_names = []
 
     def handle_object(self, typ: str, f):
+        name = f.tags.get("name")
+        if name and re.search(NAME_RANGE_PAT, name):
+            self.year_names.append((typ, f.id, name))
+
         start_date = f.tags.get("start_date")
         end_date = f.tags.get("end_date")
         if start_date:
@@ -122,6 +130,14 @@ def main() -> None:
         ", ".join(
             f'{typ}/{id}: "{date}"'
             for typ, id, date in random.sample(handler.invalid_dates, 20)
+        )
+    )
+
+    print(f"Found {len(handler.year_names)} date ranges in names.")
+    print(
+        ", ".join(
+            f'{typ}/{id}: "{name}"'
+            for typ, id, name in random.sample(handler.year_names, 20)
         )
     )
 
