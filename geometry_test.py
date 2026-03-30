@@ -389,7 +389,7 @@ def test_build_rings_missing_way_skipped():
 
 
 def test_build_rings_open_ring_warns():
-    """An open way with no matching endpoint emits an OpenRingWarning with the stuck node ID."""
+    """Disconnected ways emit OpenRingWarnings with both stuck endpoint node IDs."""
     # Two ways that don't connect: 0→1 and 2→3 (nodes 1 and 2 are different)
     nodes = {
         0: [0, 1],
@@ -401,8 +401,11 @@ def test_build_rings_open_ring_warns():
     }
     warnings = []
     build_rings([0, 1], nodes, coords, warn=warnings.append)
-    assert any(isinstance(w, OpenRingWarning) for w in warnings)
-    assert warnings[0].node_id == 1  # stuck at the tail of way 0
+    open_warnings = [w for w in warnings if isinstance(w, OpenRingWarning)]
+    assert len(open_warnings) == 2
+    # Both endpoints of each disconnected segment appear across the warnings
+    all_nodes = {w.node_id_start for w in open_warnings} | {w.node_id_end for w in open_warnings}
+    assert all_nodes == {0, 1, 2, 3}
 
 
 def test_build_rings_empty():

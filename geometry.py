@@ -1,14 +1,15 @@
 """Geometry helpers for OSM ring-building and orientation."""
 
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass
 
 
 @dataclass
 class OpenRingWarning:
-    """Emitted when a ring cannot be closed because no way connects to the current tail node."""
+    """Emitted when a ring cannot be closed: both ends are stuck with no connectable way."""
 
-    node_id: int
+    node_id_start: int  # head of the open chain
+    node_id_end: int  # tail of the open chain
 
 
 @dataclass
@@ -320,29 +321,45 @@ def build_rings(
         while remaining:
             seed = next(iter(remaining))
             remaining.remove(seed)
-            ring: list[int] = [seed]
+            chain: deque[int] = deque([seed])
             seed_nodes = way_nodes[seed]
-            ring_start = seed_nodes[0]
-            current_tail = seed_nodes[-1]
+            ring_head = seed_nodes[0]
+            ring_tail = seed_nodes[-1]
 
-            while current_tail != ring_start:
-                candidates = [
-                    wid for wid in endpoint_index[current_tail] if wid in remaining
-                ]
-                if not candidates:
-                    warn(OpenRingWarning(node_id=current_tail))
-                    break
-                next_wid = candidates[0]
-                remaining.remove(next_wid)
-                next_nodes = way_nodes[next_wid]
-                if next_nodes[0] == current_tail:
-                    ring.append(next_wid)
-                    current_tail = next_nodes[-1]
-                else:
-                    ring.append(-next_wid)
-                    current_tail = next_nodes[0]
+            while ring_tail != ring_head:
+                # Try extending from the tail
+                tail_cands = [wid for wid in endpoint_index[ring_tail] if wid in remaining]
+                if tail_cands:
+                    next_wid = tail_cands[0]
+                    remaining.remove(next_wid)
+                    next_nodes = way_nodes[next_wid]
+                    if next_nodes[0] == ring_tail:
+                        chain.append(next_wid)
+                        ring_tail = next_nodes[-1]
+                    else:
+                        chain.append(-next_wid)
+                        ring_tail = next_nodes[0]
+                    continue
 
-            rings.append(ring)
+                # Tail stuck; try extending from the head
+                head_cands = [wid for wid in endpoint_index[ring_head] if wid in remaining]
+                if head_cands:
+                    next_wid = head_cands[0]
+                    remaining.remove(next_wid)
+                    next_nodes = way_nodes[next_wid]
+                    if next_nodes[-1] == ring_head:
+                        chain.appendleft(next_wid)
+                        ring_head = next_nodes[0]
+                    else:
+                        chain.appendleft(-next_wid)
+                        ring_head = next_nodes[-1]
+                    continue
+
+                # Both ends stuck — this is a genuine open ring
+                warn(OpenRingWarning(node_id_start=ring_head, node_id_end=ring_tail))
+                break
+
+            rings.append(list(chain))
 
     # Apply right-hand rule: each ring should be CCW in geographic coordinates
     oriented: list[list[int]] = []
