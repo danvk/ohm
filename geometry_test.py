@@ -434,19 +434,20 @@ ALL_COORDS = {**OUTER_COORDS, **INNER_COORDS}
 
 def test_build_polygon_rings_one_polygon_one_hole():
     """One outer ring + one inner ring → one polygon with one hole."""
-    polygons = build_polygon_rings(
+    polygons, warnings = build_polygon_rings(
         list(OUTER_NODES), list(INNER_NODES), ALL_NODES, ALL_COORDS
     )
     assert len(polygons) == 1
     poly = polygons[0]
     assert len(poly) == 2  # outer + one hole
+    assert warnings == []
 
 
 def test_build_polygon_rings_outer_ccw_inner_cw():
     """Outer ring must be CCW; inner (hole) ring must be CW."""
     from geometry import ring_coords, ring_is_ccw
 
-    polygons = build_polygon_rings(
+    polygons, _ = build_polygon_rings(
         list(OUTER_NODES), list(INNER_NODES), ALL_NODES, ALL_COORDS
     )
     poly = polygons[0]
@@ -461,7 +462,7 @@ def test_build_polygon_rings_outer_ccw_inner_cw():
 
 def test_build_polygon_rings_no_holes():
     """No inner ways → each outer way becomes a polygon with no holes."""
-    polygons = build_polygon_rings(list(OUTER_NODES), [], ALL_NODES, ALL_COORDS)
+    polygons, _ = build_polygon_rings(list(OUTER_NODES), [], ALL_NODES, ALL_COORDS)
     assert len(polygons) == 1
     assert len(polygons[0]) == 1  # outer ring only
 
@@ -491,7 +492,7 @@ def test_build_polygon_rings_two_outers_one_hole():
 
     outer_ids = list(OUTER_NODES) + list(BIG_OUTER_NODES)
     inner_ids = list(INNER_NODES)
-    polygons = build_polygon_rings(
+    polygons, _ = build_polygon_rings(
         outer_ids, inner_ids, combined_nodes, combined_coords
     )
 
@@ -527,7 +528,6 @@ def test_build_polygon_rings_two_outers_one_hole():
 
 def test_build_polygon_rings_uncontained_inner_warns():
     """An inner ring with no containing outer ring triggers a warning."""
-    warnings = []
     # Inner ring is far outside the outer ring
     FAR_INNER_NODES = {
         40: [400, 401],
@@ -544,12 +544,11 @@ def test_build_polygon_rings_uncontained_inner_warns():
     combined_nodes = {**OUTER_NODES, **FAR_INNER_NODES}
     combined_coords = {**OUTER_COORDS, **FAR_INNER_COORDS}
 
-    polygons = build_polygon_rings(
+    polygons, warnings = build_polygon_rings(
         list(OUTER_NODES),
         list(FAR_INNER_NODES),
         combined_nodes,
         combined_coords,
-        warn=warnings.append,
     )
     assert any("no containing outer ring" in w for w in warnings)
     # The polygon has only its outer ring; the orphan inner is discarded

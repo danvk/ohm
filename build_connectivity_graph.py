@@ -45,7 +45,7 @@ import osmium.filter
 import osmium.osm
 from shapely.geometry import MultiPolygon, Polygon
 
-from geometry import build_polygon_rings, ring_coords
+from geometry import build_polygon_rings_quiet, ring_coords
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -297,7 +297,7 @@ def _build_shapely_polygon(
     Returns None if not enough coordinate data is available.
     """
     try:
-        polygons = build_polygon_rings(outer_ways, inner_ways, way_nodes, way_coords)
+        polygons = build_polygon_rings_quiet(outer_ways, inner_ways, way_nodes, way_coords)
         if not polygons:
             return None
 

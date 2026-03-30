@@ -352,26 +352,25 @@ def build_polygon_rings(
     inner_way_ids: list[int],
     way_nodes: dict[int, list[int]],
     way_coords: dict[int, list[tuple[float, float]]],
-    warn=None,
-) -> list[list[list[int]]]:
+) -> tuple[list[list[list[int]]], list[str]]:
     """Build a MultiPolygon ring structure from outer and inner (hole) ways.
 
-    Returns a list of polygons. Each polygon is a list whose first element is
-    the outer ring (list of signed way IDs) and whose subsequent elements are
-    inner rings (holes).  Inner rings are oriented CW (clockwise) to follow the
-    GeoJSON right-hand rule for holes.
+    Returns ``(polygons, warnings)`` where *polygons* is a list of polygons and
+    *warnings* is a list of diagnostic strings.  Each polygon is a list whose
+    first element is the outer ring (list of signed way IDs) and whose
+    subsequent elements are inner rings (holes).  Inner rings are oriented CW
+    (clockwise) to follow the GeoJSON right-hand rule for holes.
 
     Containment is determined geometrically: each inner ring is assigned to the
     smallest outer ring that contains it.
     """
-    if warn is None:
-        warn = lambda msg: None  # noqa: E731
+    warnings: list[str] = []
 
     # Build outer rings (CCW)
-    outer_rings = build_rings(outer_way_ids, way_nodes, way_coords, warn=warn)
+    outer_rings = build_rings(outer_way_ids, way_nodes, way_coords, warn=warnings.append)
 
     # Build inner rings, then flip to CW (negate each way and reverse list)
-    raw_inner = build_rings(inner_way_ids, way_nodes, way_coords, warn=warn)
+    raw_inner = build_rings(inner_way_ids, way_nodes, way_coords, warn=warnings.append)
     inner_rings: list[list[int]] = [[-wid for wid in reversed(r)] for r in raw_inner]
 
     # Pre-compute a representative point (first coord of first way) for each inner ring
@@ -403,8 +402,19 @@ def build_polygon_rings(
         if best_idx is not None:
             polygons[best_idx].append(inner_ring)
         else:
-            warn(
+            warnings.append(
                 f"inner ring starting at way {abs(inner_ring[0])} has no containing outer ring"
             )
 
+    return polygons, warnings
+
+
+def build_polygon_rings_quiet(
+    outer_way_ids: list[int],
+    inner_way_ids: list[int],
+    way_nodes: dict[int, list[int]],
+    way_coords: dict[int, list[tuple[float, float]]],
+) -> list[list[list[int]]]:
+    """Wrapper around :func:`build_polygon_rings` that silently drops warnings."""
+    polygons, _ = build_polygon_rings(outer_way_ids, inner_way_ids, way_nodes, way_coords)
     return polygons

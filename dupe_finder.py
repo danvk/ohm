@@ -7,7 +7,7 @@ import osmium
 import osmium.filter
 from osmium.osm.types import Relation
 
-from geometry import build_polygon_rings, ring_coords
+from geometry import build_polygon_rings_quiet, ring_coords
 
 IGNORE_KEY_PREFIXES = [
     "wikipedia",
@@ -103,7 +103,7 @@ def geometry_key(
     rounding to stay distinct. total_length is the sum of all ring perimeters
     in degrees.
     """
-    polygons = build_polygon_rings(outer, inner, way_nodes, way_coords)
+    polygons = build_polygon_rings_quiet(outer, inner, way_nodes, way_coords)
 
     # Measure total perimeter in degrees across all rings.
     total_length = 0.0
