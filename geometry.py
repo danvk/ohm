@@ -3,6 +3,8 @@
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
+from shapely import MultiPolygon, Polygon
+
 
 @dataclass
 class OpenRingWarning:
@@ -35,7 +37,10 @@ class SelfIntersectingRingWarning:
 
 
 GeometryWarning = (
-    OpenRingWarning | UncontainedInnerRingWarning | MissingWayWarning | SelfIntersectingRingWarning
+    OpenRingWarning
+    | UncontainedInnerRingWarning
+    | MissingWayWarning
+    | SelfIntersectingRingWarning
 )
 
 
@@ -396,7 +401,9 @@ def build_rings(
 
             while ring_tail != ring_head:
                 # Try extending from the tail
-                tail_cands = [wid for wid in endpoint_index[ring_tail] if wid in remaining]
+                tail_cands = [
+                    wid for wid in endpoint_index[ring_tail] if wid in remaining
+                ]
                 if tail_cands:
                     next_wid = tail_cands[0]
                     remaining.remove(next_wid)
@@ -410,7 +417,9 @@ def build_rings(
                     continue
 
                 # Tail stuck; try extending from the head
-                head_cands = [wid for wid in endpoint_index[ring_head] if wid in remaining]
+                head_cands = [
+                    wid for wid in endpoint_index[ring_head] if wid in remaining
+                ]
                 if head_cands:
                     next_wid = head_cands[0]
                     remaining.remove(next_wid)
@@ -435,9 +444,6 @@ def build_rings(
         coords = ring_coords(ring, way_coords)
         if not ring_is_ccw(coords):
             ring = [-wid for wid in reversed(ring)]
-        crossing = _find_ring_self_intersection(ring, way_coords)
-        if crossing is not None:
-            warn(SelfIntersectingRingWarning(way_id_a=crossing[0], way_id_b=crossing[1]))
         oriented.append(ring)
 
     return oriented
@@ -534,3 +540,21 @@ def build_polygon_rings_quiet(
         outer_way_ids, inner_way_ids, way_nodes, way_coords
     )
     return polygons
+
+
+def shapely_polygon_from_rings(
+    rings: list[list[list[int]]],
+    way_coords: dict[int, list[tuple[float, float]]],
+) -> MultiPolygon | Polygon | None:
+    shapely_polys = []
+    for polygon in rings:
+        outer_ring = ring_coords(polygon[0], way_coords)
+        if len(outer_ring) < 3:
+            continue
+        holes = [ring_coords(r, way_coords) for r in polygon[1:]]
+        holes = [h for h in holes if len(h) >= 3]
+        shapely_polys.append(Polygon(outer_ring, holes))
+
+    if not shapely_polys:
+        return None
+    return MultiPolygon(shapely_polys) if len(shapely_polys) > 1 else shapely_polys[0]

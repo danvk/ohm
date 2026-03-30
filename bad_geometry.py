@@ -3,12 +3,15 @@
 
 import argparse
 import random
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
 import osmium
 import osmium.filter
 from osmium.osm.types import Relation
+from shapely.validation import explain_validity
+from tqdm import tqdm
 
 import geometry
 
@@ -100,9 +103,15 @@ def main() -> None:
         geometry.MissingWayWarning: [],
         geometry.SelfIntersectingRingWarning: [],
     }
+    no_shapely = []
+    shapely_error = defaultdict(list)
+    n_valid = 0
     n_invalid = 0
-    for rid, geom in rel_collector.relations.items():
-        poly, warnings = geometry.build_polygon_rings(
+    rids = [*rel_collector.relations.keys()]
+    random.shuffle(rids)
+    for rid in tqdm(rids, smoothing=0):
+        geom = rel_collector.relations[rid]
+        rings, warnings = geometry.build_polygon_rings(
             geom.outer, geom.inner, way_nodes, way_coords
         )
         if warnings:
@@ -110,12 +119,36 @@ def main() -> None:
             for typ in types:
                 by_type[typ].append((rid, [w for w in warnings if isinstance(w, typ)]))
             n_invalid += 1
+        else:
+            poly = geometry.shapely_polygon_from_rings(rings, way_coords)
+            if not poly:
+                no_shapely.append(rid)
+                n_invalid += 1
+            elif not poly.is_valid:
+                reason = explain_validity(poly)
+                error_type = reason.split("[")[0]  # strip out coords
+                shapely_error[error_type].append((rid, reason))
+                n_invalid += 1
+            else:
+                n_valid += 1
 
-    print(f"{n_invalid=}")
+    print(f"{n_invalid=} {n_valid=}")
     for typ, bad_geoms in by_type.items():
         print(f"{typ.__name__}: {len(bad_geoms)}")
         for rid, warnings in random.sample(bad_geoms, min(len(bad_geoms), 15)):
             print(f"  {rid}: {', '.join(str(w) for w in warnings)}")
+    print(f"{len(no_shapely)=}")
+    print(f"{len(shapely_error)=}")
+    print(
+        ", ".join(
+            str(rid) for rid in random.sample(no_shapely, min(20, len(no_shapely)))
+        )
+    )
+
+    for typ, bad_geoms in shapely_error.items():
+        print(f"{typ}: {len(bad_geoms)}")
+        for rid, warning in random.sample(bad_geoms, min(len(bad_geoms), 15)):
+            print(f"  {rid}: {warning}")
 
 
 if __name__ == "__main__":
