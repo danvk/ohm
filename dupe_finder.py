@@ -154,35 +154,38 @@ def relation_key(r: Relation) -> tuple:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Find elements in an OSM PBF file by name."
+        description="Find likely duplicates in an OSM PBF file."
     )
     parser.add_argument("osm_file", help="Path to the .osm.pbf file")
-
-    args = parser.parse_args()
-
-    candidate_handler = DupeCandidateFinder()
-    candidate_handler.apply_file(
-        args.osm_file, filters=[osmium.filter.KeyFilter("name")]
+    parser.add_argument(
+        "--ids",
+        type=str,
+        help="Comma-separated list of relation IDs to consider "
+        "(default is all relations with name collisions)",
     )
 
-    ids = [
-        id
-        for ids in candidate_handler.name_to_relation.values()
-        for id in ids
-        if len(ids) >= 2
-    ]
+    args = parser.parse_args()
+    if args.ids:
+        candidate_ids = [int(id) for id in args.ids.split(",")]
+    else:
+        candidate_handler = DupeCandidateFinder()
+        candidate_handler.apply_file(
+            args.osm_file, filters=[osmium.filter.KeyFilter("name")]
+        )
 
-    # target_ids = [2879823, 2879817, 2879806]
-    # target_ids = [2795077, 2796058]
-    # target_ids = [2902554, 2902565]
-    target_ids = ids
+        candidate_ids = [
+            id
+            for ids in candidate_handler.name_to_relation.values()
+            for id in ids
+            if len(ids) >= 2
+        ]
 
-    print("Candidate IDs:", len(target_ids))
+    print("Candidate IDs:", len(candidate_ids))
 
     # Pass 1: collect relation tags and member way IDs
-    rel_collector = RelGeomCollector(set(target_ids))
+    rel_collector = RelGeomCollector(set(candidate_ids))
     rel_collector.apply_file(
-        args.osm_file, filters=[osmium.filter.IdFilter(target_ids)]
+        args.osm_file, filters=[osmium.filter.IdFilter(candidate_ids)]
     )
     # print(rel_collector.relations)
 
