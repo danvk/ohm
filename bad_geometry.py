@@ -2,9 +2,11 @@
 """Find relations with geometries that are broken in various ways."""
 
 import argparse
+import csv
 import random
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import osmium
@@ -64,6 +66,7 @@ def main() -> None:
         help="Comma-separated list of relation IDs to consider "
         "(default is all named relations)",
     )
+    parser.add_argument("--output_dir", default=".")
 
     args = parser.parse_args()
     target_ids = []
@@ -97,14 +100,17 @@ def main() -> None:
 
     way_nodes = way_collector.way_nodes
     way_coords = way_collector.way_coords
-    by_type = {
-        geometry.OpenRingWarning: [],
-        geometry.UncontainedInnerRingWarning: [],
-        geometry.MissingWayWarning: [],
-        geometry.SelfIntersectingRingWarning: [],
+
+    warning_map = {
+        geometry.OpenRingWarning: "nonclosed-ring",
+        geometry.UncontainedInnerRingWarning: "uncontained-inner-ring",
+        geometry.MissingWayWarning: "invalid-way-reference",
+        "Nested shells": "nested-shells",
+        "Ring Self-intersection": "ring-self-intersect",
+        "Self-intersection": "self-intersect",
     }
-    no_shapely = []
-    shapely_error = defaultdict(list)
+
+    by_type = defaultdict[str, list[tuple[int, str]]](list)
     n_valid = 0
     n_invalid = 0
     rids = [*rel_collector.relations.keys()]
@@ -117,38 +123,40 @@ def main() -> None:
         if warnings:
             types = {type(warning) for warning in warnings}
             for typ in types:
-                by_type[typ].append((rid, [w for w in warnings if isinstance(w, typ)]))
+                by_type[warning_map[typ]].append(
+                    (rid, ", ".join(str(w) for w in warnings if isinstance(w, typ)))
+                )
             n_invalid += 1
-        else:
-            poly = geometry.shapely_polygon_from_rings(rings, way_coords)
-            if not poly:
-                no_shapely.append(rid)
-                n_invalid += 1
-            elif not poly.is_valid:
-                reason = explain_validity(poly)
-                error_type = reason.split("[")[0]  # strip out coords
-                shapely_error[error_type].append((rid, reason))
-                n_invalid += 1
-            else:
-                n_valid += 1
+            continue
+        poly = geometry.shapely_polygon_from_rings(rings, way_coords)
+        if not poly:
+            by_type["no-shapely"].append((rid, ""))
+            n_invalid += 1
+            continue
 
-    print(f"{n_invalid=} {n_valid=}")
-    for typ, bad_geoms in by_type.items():
-        print(f"{typ.__name__}: {len(bad_geoms)}")
-        for rid, warnings in random.sample(bad_geoms, min(len(bad_geoms), 15)):
-            print(f"  {rid}: {', '.join(str(w) for w in warnings)}")
-    print(f"{len(no_shapely)=}")
-    print(f"{len(shapely_error)=}")
-    print(
-        ", ".join(
-            str(rid) for rid in random.sample(no_shapely, min(20, len(no_shapely)))
-        )
-    )
+        if not poly.is_valid:
+            reason = explain_validity(poly)
+            error_type = reason.split("[")[0]  # strip out any coords
+            error_code = warning_map.get(error_type, "other")
+            by_type[error_code].append((rid, reason))
+            n_invalid += 1
+            continue
 
-    for typ, bad_geoms in shapely_error.items():
-        print(f"{typ}: {len(bad_geoms)}")
-        for rid, warning in random.sample(bad_geoms, min(len(bad_geoms), 15)):
-            print(f"  {rid}: {warning}")
+        n_valid += 1
+
+    out_dir = Path(args.output_dir)
+
+    with open(out_dir / "bad_geometry.summary.csv", "w") as f:
+        out = csv.DictWriter(f, fieldnames=["type", "count"])
+        out.writeheader()
+        out.writerow({"type": "valid", "count": n_valid})  # is str() needed?
+        out.writerow({"type": "invalid", "count": n_invalid})
+        out.writerows({"type": typ, "count": len(rs)} for typ, rs in by_type.items())
+
+    for typ, rs in by_type.items():
+        with open(out_dir / f"{typ}.examples.txt", "w") as f:
+            examples = rs if len(rs) < 1_000 else random.sample(rs, 1_000)
+            f.writelines(f"{rid}: {problems}\n" for rid, problems in examples)
 
 
 if __name__ == "__main__":

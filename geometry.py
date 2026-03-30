@@ -28,20 +28,7 @@ class MissingWayWarning:
     way_id: int
 
 
-@dataclass
-class SelfIntersectingRingWarning:
-    """Emitted when a closed ring's edges cross each other."""
-
-    way_id_a: int
-    way_id_b: int
-
-
-GeometryWarning = (
-    OpenRingWarning
-    | UncontainedInnerRingWarning
-    | MissingWayWarning
-    | SelfIntersectingRingWarning
-)
+GeometryWarning = OpenRingWarning | UncontainedInnerRingWarning | MissingWayWarning
 
 
 def rdp_simplify(
