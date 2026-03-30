@@ -10,7 +10,7 @@ import osmium
 import osmium.filter
 from osmium.osm.types import Relation
 
-from geometry import build_polygon_rings
+import geometry
 
 
 @dataclass
@@ -27,7 +27,7 @@ class RelGeomCollector(osmium.SimpleHandler):
         self.relations: dict[int, RelationGeom] = {}
 
     def relation(self, r: Relation) -> None:
-        outer = [m.ref for m in r.members if m.type == "w" and m.role == "outer"]
+        outer = [m.ref for m in r.members if m.type == "w" and m.role in ("", "outer")]
         inner = [m.ref for m in r.members if m.type == "w" and m.role == "inner"]
         self.relations[r.id] = RelationGeom(outer=outer, inner=inner)
 
@@ -45,7 +45,7 @@ class WayCoordCollector(osmium.SimpleHandler):
         if w.id not in self._way_ids:
             return
         valid = [(n.ref, n.lon, n.lat) for n in w.nodes if n.location.valid()]
-        if len(valid) >= 2:
+        if valid:
             self.way_nodes[w.id] = [v[0] for v in valid]
             self.way_coords[w.id] = [(v[1], v[2]) for v in valid]
 
@@ -67,15 +67,13 @@ def main() -> None:
     if args.ids:
         target_ids = [int(id) for id in args.ids.split(",")]
 
-    print("Candidate IDs:", len(target_ids))
-
     # Pass 1: collect relation tags and member way IDs
     rel_collector = RelGeomCollector()
     rel_collector.apply_file(
         args.osm_file,
         filters=[osmium.filter.IdFilter(target_ids)]
         if target_ids
-        else [osmium.filter.KeyFilter("name")],
+        else [osmium.filter.KeyFilter("boundary")],
     )
 
     # Gather all way IDs referenced by the target relations
@@ -83,6 +81,10 @@ def main() -> None:
     for rel in rel_collector.relations.values():
         all_way_ids.update(rel.outer)
         all_way_ids.update(rel.inner)
+
+    print(
+        f"Loaded {len(rel_collector.relations)} relation(s) referencing {len(all_way_ids)} ways."
+    )
 
     # Pass 2: collect way coordinates (requires locations=True)
     way_collector = WayCoordCollector(all_way_ids)
@@ -92,17 +94,27 @@ def main() -> None:
 
     way_nodes = way_collector.way_nodes
     way_coords = way_collector.way_coords
-    invalids = []
+    by_type = {
+        geometry.OpenRingWarning: [],
+        geometry.UncontainedInnerRingWarning: [],
+        geometry.MissingWayWarning: [],
+    }
+    n_invalid = 0
     for rid, geom in rel_collector.relations.items():
-        poly, warnings = build_polygon_rings(
+        poly, warnings = geometry.build_polygon_rings(
             geom.outer, geom.inner, way_nodes, way_coords
         )
         if warnings:
-            invalids.append((rid, warnings))
+            types = {type(warning) for warning in warnings}
+            for typ in types:
+                by_type[typ].append((rid, [w for w in warnings if isinstance(w, typ)]))
+            n_invalid += 1
 
-    print(f"{len(invalids)=}")
-    for rid, warnings in random.sample(invalids, min(len(invalids), 20)):
-        print(f"  {rid}: {', '.join(str(w) for w in warnings)}")
+    print(f"{n_invalid=}")
+    for typ, bad_geoms in by_type.items():
+        print(f"{typ.__name__}: {len(bad_geoms)}")
+        for rid, warnings in random.sample(bad_geoms, min(len(bad_geoms), 15)):
+            print(f"  {rid}: {', '.join(str(w) for w in warnings)}")
 
 
 if __name__ == "__main__":
