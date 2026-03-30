@@ -26,7 +26,17 @@ class MissingWayWarning:
     way_id: int
 
 
-GeometryWarning = OpenRingWarning | UncontainedInnerRingWarning | MissingWayWarning
+@dataclass
+class SelfIntersectingRingWarning:
+    """Emitted when a closed ring's edges cross each other."""
+
+    way_id_a: int
+    way_id_b: int
+
+
+GeometryWarning = (
+    OpenRingWarning | UncontainedInnerRingWarning | MissingWayWarning | SelfIntersectingRingWarning
+)
 
 
 def rdp_simplify(
@@ -269,6 +279,64 @@ def ring_coords(
     return coords
 
 
+def _cross2d(
+    o: tuple[float, float],
+    a: tuple[float, float],
+    b: tuple[float, float],
+) -> float:
+    """2D cross product (a−o) × (b−o). Positive means b is left of the ray o→a."""
+    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+
+def _segments_cross(
+    p1: tuple[float, float],
+    p2: tuple[float, float],
+    p3: tuple[float, float],
+    p4: tuple[float, float],
+) -> bool:
+    """Return True if segment p1→p2 and p3→p4 properly cross (not just touch at an endpoint)."""
+    d1 = _cross2d(p1, p2, p3)
+    d2 = _cross2d(p1, p2, p4)
+    d3 = _cross2d(p3, p4, p1)
+    d4 = _cross2d(p3, p4, p2)
+    return (d1 * d2 < 0) and (d3 * d4 < 0)
+
+
+def _find_ring_self_intersection(
+    ring: list[int],
+    way_coords: dict[int, list[tuple[float, float]]],
+) -> tuple[int, int] | None:
+    """Return (way_id_a, way_id_b) for the first pair of crossing edges, or None.
+
+    Only checks properly closed rings. O(n²) in the total number of edges.
+    """
+    # Build one edge entry per node-pair within each way, tagged with the way ID.
+    # Each edge is (start_coord, end_coord, abs_way_id).
+    edges: list[tuple[tuple[float, float], tuple[float, float], int]] = []
+    for signed_wid in ring:
+        wid = abs(signed_wid)
+        wcoords = way_coords_forward(signed_wid, way_coords)
+        for k in range(len(wcoords) - 1):
+            edges.append((wcoords[k], wcoords[k + 1], wid))
+
+    n = len(edges)
+    if n < 3:
+        return None
+    # Only check properly closed rings (last edge ends where the first edge starts)
+    if edges[-1][1] != edges[0][0]:
+        return None
+
+    for i in range(n):
+        for j in range(i + 2, n):
+            if i == 0 and j == n - 1:
+                continue  # first and last edges share the closing node — adjacent
+            p1, p2, w1 = edges[i]
+            p3, p4, w2 = edges[j]
+            if _segments_cross(p1, p2, p3, p4):
+                return (w1, w2)
+    return None
+
+
 def build_rings(
     way_ids: list[int],
     way_nodes: dict[int, list[int]],
@@ -361,12 +429,15 @@ def build_rings(
 
             rings.append(list(chain))
 
-    # Apply right-hand rule: each ring should be CCW in geographic coordinates
+    # Apply right-hand rule and check for self-intersections
     oriented: list[list[int]] = []
     for ring in rings:
         coords = ring_coords(ring, way_coords)
         if not ring_is_ccw(coords):
             ring = [-wid for wid in reversed(ring)]
+        crossing = _find_ring_self_intersection(ring, way_coords)
+        if crossing is not None:
+            warn(SelfIntersectingRingWarning(way_id_a=crossing[0], way_id_b=crossing[1]))
         oriented.append(ring)
 
     return oriented

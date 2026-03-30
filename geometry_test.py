@@ -5,6 +5,7 @@ import math
 from extract_for_web import _kept_indices
 from geometry import (
     OpenRingWarning,
+    SelfIntersectingRingWarning,
     UncontainedInnerRingWarning,
     build_polygon_rings,
     build_rings,
@@ -411,6 +412,47 @@ def test_build_rings_open_ring_warns():
 def test_build_rings_empty():
     rings = build_rings([], {}, {})
     assert rings == []
+
+
+# Bowtie (figure-8) shape — way 11 crosses way 13:
+#
+#  (0,2) -------- (2,2)
+#      \          /
+#       \        /   ← crossing at (1,1)
+#        \      /
+#  (0,0) -------- (2,0)
+#
+# Ways: 11:(0,0)→(2,2), 12:(2,2)→(2,0), 13:(2,0)→(0,2), 14:(0,2)→(0,0)
+# Edge 11 and edge 13 cross at (1,1).
+
+BOWTIE_NODES = {
+    11: [110, 111],  # (0,0) → (2,2)
+    12: [111, 112],  # (2,2) → (2,0)
+    13: [112, 113],  # (2,0) → (0,2)
+    14: [113, 110],  # (0,2) → (0,0)
+}
+BOWTIE_COORDS = {
+    11: [(0.0, 0.0), (2.0, 2.0)],
+    12: [(2.0, 2.0), (2.0, 0.0)],
+    13: [(2.0, 0.0), (0.0, 2.0)],
+    14: [(0.0, 2.0), (0.0, 0.0)],
+}
+
+
+def test_build_rings_no_self_intersection():
+    """A valid convex ring produces no SelfIntersectingRingWarning."""
+    warnings = []
+    build_rings([0, 1, 2, 3], SQUARE_NODES, SQUARE_COORDS, warn=warnings.append)
+    assert not any(isinstance(w, SelfIntersectingRingWarning) for w in warnings)
+
+
+def test_build_rings_self_intersecting_ring_warns():
+    """A bowtie ring emits SelfIntersectingRingWarning naming the two crossing ways."""
+    warnings = []
+    build_rings(list(BOWTIE_NODES), BOWTIE_NODES, BOWTIE_COORDS, warn=warnings.append)
+    si = [w for w in warnings if isinstance(w, SelfIntersectingRingWarning)]
+    assert len(si) == 1
+    assert {si[0].way_id_a, si[0].way_id_b} == {11, 13}
 
 
 # ---------------------------------------------------------------------------

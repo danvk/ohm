@@ -98,6 +98,7 @@ def main() -> None:
         geometry.OpenRingWarning: [],
         geometry.UncontainedInnerRingWarning: [],
         geometry.MissingWayWarning: [],
+        geometry.SelfIntersectingRingWarning: [],
     }
     n_invalid = 0
     for rid, geom in rel_collector.relations.items():
