@@ -1,6 +1,5 @@
 import argparse
 import itertools
-import random
 import re
 from typing import Iterable
 
@@ -9,6 +8,7 @@ import osmium.filter
 from osmium.osm import Relation
 
 from dates import parse_ohm_date, parse_ohm_range
+from stats import write_stats
 
 NAME_RANGE_PAT = r"\(-?\d{3,}--?\d{3,}\)"
 
@@ -85,7 +85,7 @@ class ChronologyHandler(osmium.SimpleHandler):
             return
         self.chronology_count += 1
 
-        has_undated = False
+        undated = []
         member_dates = []
         for m in r.members:
             if (m.type, m.ref) in self.invalid_tids:
@@ -93,18 +93,22 @@ class ChronologyHandler(osmium.SimpleHandler):
 
             dates = self.tid_to_dates.get((m.type, m.ref))
             if not dates:
-                has_undated = True
+                undated.append((m.type, m.ref))
                 continue
             member_dates.append(dates)
 
-        if has_undated:
-            self.undated_members.append(r.id)
+        if undated:
+            self.undated_members.append(
+                ("r", r.id, ",".join(f"{typ}/{id}" for typ, id in undated))
+            )
 
         fails = [
             (a, b) for a, b in itertools.combinations(member_dates, 2) if overlaps(a, b)
         ]
         if fails:
-            self.overlapping_members.append(r.id)
+            self.overlapping_members.append(
+                ("r", r.id, ", ".join(f"{a}+{b}" for a, b in fails[:10]))
+            )
 
         start_date = r.tags.get("start_date")
         end_date = r.tags.get("end_date")
@@ -112,7 +116,7 @@ class ChronologyHandler(osmium.SimpleHandler):
             ch_a, ch_b = parse_ohm_range(start_date, end_date)
             for mem_a, mem_b in member_dates:
                 if mem_a < ch_a or mem_b > ch_b:
-                    self.date_outside_ranges.append(r.id)
+                    self.date_outside_ranges.append(("r", r.id, f"{mem_a}-{mem_b}"))
                     break
 
 
@@ -126,6 +130,7 @@ def main() -> None:
         description="Find elements in an OSM PBF file by name."
     )
     parser.add_argument("osm_file", help="Path to the .osm.pbf file")
+    parser.add_argument("--output_dir", default=".")
 
     args = parser.parse_args()
 
@@ -133,36 +138,30 @@ def main() -> None:
     handler.apply_file(
         args.osm_file, filters=[osmium.filter.KeyFilter("start_date", "end_date")]
     )
-    print(f"Read {len(handler.id_to_dates)} dated relations.")
-    print(f"Found {handler.invalid} invalid dates.")
 
-    print(
-        ", ".join(
-            f'{typ}/{id}: "{date}"'
-            for typ, id, date in random.sample(handler.invalid_dates, 20)
-        )
-    )
-
-    print(f"Found {len(handler.year_names)} date ranges in names.")
-    print(
-        ", ".join(
-            f'{typ}/{id}: "{name}"'
-            for typ, id, name in random.sample(handler.year_names, 20)
-        )
-    )
+    n_dated_rels = len(handler.id_to_dates)
 
     ch = ChronologyHandler(handler.id_to_dates, handler.invalid_ids)
     ch.apply_file(
         args.osm_file, filters=[osmium.filter.TagFilter(("type", "chronology"))]
     )
 
-    print(f"n_chronologies: {ch.chronology_count}")
-    print(f"  w/ undated members: {len(ch.undated_members)}")
-    print_links(random.sample(ch.undated_members, 10))
-    print(f"  w/ overlapping members: {len(ch.overlapping_members)}")
-    print_links(random.sample(ch.overlapping_members, 10))
-    print(f"  w/ members outside chronology date range: {len(ch.date_outside_ranges)}")
-    print_links(random.sample(ch.date_outside_ranges, 10))
+    by_type = {
+        "invalid-date": handler.invalid_dates,
+        "dates-in-names": handler.year_names,
+        "chronology-undated-member": ch.undated_members,
+        "chronology-overlapping-members": ch.overlapping_members,
+        "chronology-member-outside-range": ch.date_outside_ranges,
+    }
+
+    write_stats(
+        args.output_dir,
+        "chronology",
+        by_type,
+        {
+            "dated-relations": n_dated_rels,
+        },
+    )
 
 
 if __name__ == "__main__":

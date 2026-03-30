@@ -2,11 +2,9 @@
 """Find relations with geometries that are broken in various ways."""
 
 import argparse
-import csv
 import random
 from collections import defaultdict
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import osmium
@@ -16,6 +14,7 @@ from shapely.validation import explain_validity
 from tqdm import tqdm
 
 import geometry
+from stats import write_stats
 
 
 @dataclass
@@ -110,7 +109,7 @@ def main() -> None:
         "Self-intersection": "self-intersect",
     }
 
-    by_type = defaultdict[str, list[tuple[int, str]]](list)
+    by_type = defaultdict[str, list[tuple[str, int, str]]](list)
     n_valid = 0
     n_invalid = 0
     rids = [*rel_collector.relations.keys()]
@@ -124,13 +123,17 @@ def main() -> None:
             types = {type(warning) for warning in warnings}
             for typ in types:
                 by_type[warning_map[typ]].append(
-                    (rid, ", ".join(str(w) for w in warnings if isinstance(w, typ)))
+                    (
+                        "r",
+                        rid,
+                        ", ".join(str(w) for w in warnings if isinstance(w, typ)),
+                    )
                 )
             n_invalid += 1
             continue
         poly = geometry.shapely_polygon_from_rings(rings, way_coords)
         if not poly:
-            by_type["no-shapely"].append((rid, ""))
+            by_type["no-shapely"].append(("r", rid, ""))
             n_invalid += 1
             continue
 
@@ -138,25 +141,21 @@ def main() -> None:
             reason = explain_validity(poly)
             error_type = reason.split("[")[0]  # strip out any coords
             error_code = warning_map.get(error_type, "other")
-            by_type[error_code].append((rid, reason))
+            by_type[error_code].append(("r", rid, reason))
             n_invalid += 1
             continue
 
         n_valid += 1
 
-    out_dir = Path(args.output_dir)
-
-    with open(out_dir / "bad_geometry.summary.csv", "w") as f:
-        out = csv.DictWriter(f, fieldnames=["type", "count"])
-        out.writeheader()
-        out.writerow({"type": "valid", "count": n_valid})  # is str() needed?
-        out.writerow({"type": "invalid", "count": n_invalid})
-        out.writerows({"type": typ, "count": len(rs)} for typ, rs in by_type.items())
-
-    for typ, rs in by_type.items():
-        with open(out_dir / f"{typ}.examples.txt", "w") as f:
-            examples = rs if len(rs) < 1_000 else random.sample(rs, 1_000)
-            f.writelines(f"{rid}: {problems}\n" for rid, problems in examples)
+    write_stats(
+        args.out_dir,
+        "bad_geometry",
+        by_type,
+        {
+            "geom-valid": n_valid,
+            "geom-invalid": n_invalid,
+        },
+    )
 
 
 if __name__ == "__main__":
