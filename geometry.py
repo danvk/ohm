@@ -367,7 +367,9 @@ def build_polygon_rings(
     warnings: list[str] = []
 
     # Build outer rings (CCW)
-    outer_rings = build_rings(outer_way_ids, way_nodes, way_coords, warn=warnings.append)
+    outer_rings = build_rings(
+        outer_way_ids, way_nodes, way_coords, warn=warnings.append
+    )
 
     # Build inner rings, then flip to CW (negate each way and reverse list)
     raw_inner = build_rings(inner_way_ids, way_nodes, way_coords, warn=warnings.append)
@@ -416,5 +418,7 @@ def build_polygon_rings_quiet(
     way_coords: dict[int, list[tuple[float, float]]],
 ) -> list[list[list[int]]]:
     """Wrapper around :func:`build_polygon_rings` that silently drops warnings."""
-    polygons, _ = build_polygon_rings(outer_way_ids, inner_way_ids, way_nodes, way_coords)
+    polygons, _ = build_polygon_rings(
+        outer_way_ids, inner_way_ids, way_nodes, way_coords
+    )
     return polygons
