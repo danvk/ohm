@@ -4,6 +4,8 @@ import math
 
 from extract_for_web import _kept_indices
 from geometry import (
+    OpenRingWarning,
+    UncontainedInnerRingWarning,
     build_polygon_rings,
     build_rings,
     rdp_simplify,
@@ -386,6 +388,23 @@ def test_build_rings_missing_way_skipped():
     assert len(rings) == 1  # still one ring; 999 is simply ignored
 
 
+def test_build_rings_open_ring_warns():
+    """An open way with no matching endpoint emits an OpenRingWarning with the stuck node ID."""
+    # Two ways that don't connect: 0→1 and 2→3 (nodes 1 and 2 are different)
+    nodes = {
+        0: [0, 1],
+        1: [2, 3],
+    }
+    coords = {
+        0: [(0.0, 0.0), (1.0, 0.0)],
+        1: [(2.0, 0.0), (3.0, 0.0)],
+    }
+    warnings = []
+    build_rings([0, 1], nodes, coords, warn=warnings.append)
+    assert any(isinstance(w, OpenRingWarning) for w in warnings)
+    assert warnings[0].node_id == 1  # stuck at the tail of way 0
+
+
 def test_build_rings_empty():
     rings = build_rings([], {}, {})
     assert rings == []
@@ -550,7 +569,9 @@ def test_build_polygon_rings_uncontained_inner_warns():
         combined_nodes,
         combined_coords,
     )
-    assert any("no containing outer ring" in w for w in warnings)
+    assert any(isinstance(w, UncontainedInnerRingWarning) for w in warnings)
+    uncontained = [w for w in warnings if isinstance(w, UncontainedInnerRingWarning)]
+    assert uncontained[0].way_id in {40, 41, 42, 43}
     # The polygon has only its outer ring; the orphan inner is discarded
     assert len(polygons) == 1
     assert len(polygons[0]) == 1

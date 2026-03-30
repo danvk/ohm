@@ -102,7 +102,7 @@ def main() -> None:
 
     print(f"{len(invalids)=}")
     for rid, warnings in random.sample(invalids, min(len(invalids), 20)):
-        print(f"  {rid}: {', '.join(warnings)}")
+        print(f"  {rid}: {', '.join(str(w) for w in warnings)}")
 
 
 if __name__ == "__main__":

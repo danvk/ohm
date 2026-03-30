@@ -1,6 +1,31 @@
 """Geometry helpers for OSM ring-building and orientation."""
 
 from collections import defaultdict
+from dataclasses import dataclass
+
+
+@dataclass
+class OpenRingWarning:
+    """Emitted when a ring cannot be closed because no way connects to the current tail node."""
+
+    node_id: int
+
+
+@dataclass
+class UncontainedInnerRingWarning:
+    """Emitted when an inner ring has no outer ring that contains it."""
+
+    way_id: int
+
+
+@dataclass
+class MissingWayWarning:
+    """Emitted when a referenced way wasn't in the data."""
+
+    way_id: int
+
+
+GeometryWarning = OpenRingWarning | UncontainedInnerRingWarning | MissingWayWarning
 
 
 def rdp_simplify(
@@ -257,17 +282,18 @@ def build_rings(
     Ways that are already closed (first node == last node) form their own rings.
     Open ways are chained by shared endpoints until each ring closes.
 
-    *warn* is an optional callable(str) used to emit warnings; defaults to no-op.
+    *warn* is an optional callable(GeometryWarning) used to emit warnings; defaults to no-op.
     """
     if warn is None:
-        warn = lambda msg: None  # noqa: E731
+        warn = lambda _: None  # noqa: E731
 
     # Separate closed and open ways; skip ways we failed to collect
     closed: list[int] = []
     open_ways: list[int] = []
     for wid in way_ids:
         if wid not in way_nodes:
-            continue  # missing way – skip
+            warn(MissingWayWarning(wid))
+            continue
         nodes = way_nodes[wid]
         if len(nodes) >= 2 and nodes[0] == nodes[-1]:
             closed.append(wid)
@@ -304,7 +330,7 @@ def build_rings(
                     wid for wid in endpoint_index[current_tail] if wid in remaining
                 ]
                 if not candidates:
-                    warn(f"could not close ring (stuck at node {current_tail})")
+                    warn(OpenRingWarning(node_id=current_tail))
                     break
                 next_wid = candidates[0]
                 remaining.remove(next_wid)
@@ -352,11 +378,11 @@ def build_polygon_rings(
     inner_way_ids: list[int],
     way_nodes: dict[int, list[int]],
     way_coords: dict[int, list[tuple[float, float]]],
-) -> tuple[list[list[list[int]]], list[str]]:
+) -> tuple[list[list[list[int]]], list[GeometryWarning]]:
     """Build a MultiPolygon ring structure from outer and inner (hole) ways.
 
     Returns ``(polygons, warnings)`` where *polygons* is a list of polygons and
-    *warnings* is a list of diagnostic strings.  Each polygon is a list whose
+    *warnings* is a list of :class:`GeometryWarning` objects.  Each polygon is a list whose
     first element is the outer ring (list of signed way IDs) and whose
     subsequent elements are inner rings (holes).  Inner rings are oriented CW
     (clockwise) to follow the GeoJSON right-hand rule for holes.
@@ -364,7 +390,7 @@ def build_polygon_rings(
     Containment is determined geometrically: each inner ring is assigned to the
     smallest outer ring that contains it.
     """
-    warnings: list[str] = []
+    warnings: list[GeometryWarning] = []
 
     # Build outer rings (CCW)
     outer_rings = build_rings(
@@ -404,9 +430,7 @@ def build_polygon_rings(
         if best_idx is not None:
             polygons[best_idx].append(inner_ring)
         else:
-            warnings.append(
-                f"inner ring starting at way {abs(inner_ring[0])} has no containing outer ring"
-            )
+            warnings.append(UncontainedInnerRingWarning(way_id=abs(inner_ring[0])))
 
     return polygons, warnings
 
