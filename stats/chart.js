@@ -65,6 +65,10 @@ function dataForSeries(...series) {
   return text;
 }
 
+function formatExample(txt) {
+  return txt.replaceAll(/r\/(\d+)/g, '<a href="https://www.openhistoricalmap.org/relation/$1" target="_blank">r/$1</a>');
+}
+
 function makeChart(container, ...series) {
   const chartEl = container.querySelector(".chart");
   const labelsEl = container.querySelector(".chart-labels");
@@ -100,11 +104,24 @@ function makeChart(container, ...series) {
     const a = e.target;
     const date = a.getAttribute('data-date');
     const metric = a.getAttribute('data-series');
-    console.log(date, metric);
+    if (!date || !metric) return;
+    const value = a.textContent;
+    const {label, help} = METRIC_DOCS[metric];
     const r = await fetch(`./${date}/${metric}.examples.txt`);
     const text = await r.text();
-    console.log(text);
-    examplesEl.textContent = text;
+    const examples = text.split('\n');
+    const lis = examples.map(txt => `<li>${formatExample(txt)}</li>`);
+    examplesEl.innerHTML = `
+      <div class="close-example">&times;</div>
+      <div class="example-header">${label}: ${value} on ${date}</div>
+      <div class="example-explanation">${help} (${metric})</div>
+      <ul>
+        ${lis.join('')}
+      </ul>
+    `;
+    examplesEl.querySelector('.close-example').addEventListener('click', () => {
+      examplesEl.textContent = '';
+    });
   })
 }
 

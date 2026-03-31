@@ -14,9 +14,25 @@
             height: 300px;
         }
         .examples {
-            white-space: pre-line;
+            position: relative;
+            margin-top: 1em;
+            width: 800px;
+        }
+        .examples ul {
             max-height: 400px;
             overflow: auto;
+            font-family: monospace;
+        }
+        .example-header {
+            font-weight: bold;
+        }
+        .close-example {
+            position: absolute;
+            top: 0.5em;
+            right: 0.5em;
+        }
+        .close-example:hover {
+            cursor: pointer;
         }
     </style>
   </head>
