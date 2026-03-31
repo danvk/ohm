@@ -1,8 +1,15 @@
-const response = await fetch("stats.csv");
-const data = await response.text();
-const [headerRow, ...rowStrs] = data.split("\r\n").slice(0, -1);
-const header = headerRow.split(",");
-const rows = rowStrs.map((rs) => rs.split(","));
+const DFEAULT_COLOR = "#6080C0";  // — blue
+const PALETTE = [
+  DFEAULT_COLOR,
+  "#E15759",  // — red
+  "#4E9F3D",  // — green
+  "#F28E2B",  // — orange
+  "#B07AA1",  // — purple
+  "#76B7B2",  // — teal
+  "#EDC948",  // — yellow
+  "#9C755F",  // — brown
+  '#FF9DA7',  // - pink
+];
 
 const METRIC_DOCS = {
   date: { label: "Date", help: "Date of planet dump file" },
@@ -54,6 +61,12 @@ const METRIC_DOCS = {
     help: "Either start_date or end_date cannot be parsed as ISO.",
   },
 };
+
+const response = await fetch("stats.csv");
+const data = await response.text();
+const [headerRow, ...rowStrs] = data.split("\r\n").slice(0, -1);
+const header = headerRow.split(",");
+const rows = rowStrs.map((rs) => rs.split(","));
 
 function dataForSeries(...series) {
   const idxs = [];
@@ -108,6 +121,7 @@ function makeChart(container, ...series) {
     xRangePad: 5,
     labelsKMB: true,
     hideOverlayOnMouseOut: false,
+    colors: PALETTE,
     legendFormatter: (data) => {
       if (data.x == null) {
         // This should only be a temporary state, until the setSelection() kicks in.
@@ -119,7 +133,7 @@ function makeChart(container, ...series) {
       data.series.forEach(function (series) {
         if (!series.isVisible) return;
         const { label, help } = METRIC_DOCS[series.label];
-        const labelHtml = `<span style="color: ${series.color}" title="${help}">${label}</span>: <a data-date="${rawDate}" data-series="${series.label}" class="count" href="#">${series.y}</a>`;
+        const labelHtml = `<span class="series-name" style="color: ${series.color}" title="${help}">${label}</span>: <a data-date="${rawDate}" data-series="${series.label}" class="count" href="#">${series.y}</a>`;
         html += `<br>${series.dashHTML} ${labelHtml}`;
       });
       return html;
