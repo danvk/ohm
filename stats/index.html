@@ -5,10 +5,15 @@
     <title>OpenHistoricalMap Quality and Coverage Stats</title>
     <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/dygraph/2.2.1/dygraph.min.css" />
     <style type="text/css">
+        .chart-container {
+            display: flex;
+            flex-direction: row;
+        }
         .chart {
-            display: block;
             width: 800px;
             height: 300px;
+        }
+        .chart-labels {
         }
     </style>
   </head>
@@ -17,12 +22,21 @@
 
     <h2>Data Quality</h2>
     <h3>Geometry Errors</h3>
-    <div class="chart" id="geometry-errors"></div>
+    <div id="geometry-errors" class="chart-container">
+        <div class="chart"></div>
+        <div class="chart-labels"></div>
+    </div>
     <h3>Chronology Errors</h3>
-    <div class="chart" id="chronology-errors"></div>
+    <div id="chronology-errors" class="chart-container">
+        <div class="chart"></div>
+        <div class="chart-labels"></div>
+    </div>
     <h3>Duplicate Features</h3>
     <h3>Tag Errors</h3>
-    <div class="chart" id="tag-errors"></div>
+    <div id="tag-errors" class="chart-container">
+        <div class="chart"></div>
+        <div class="chart-labels"></div>
+    </div>
 
     <h2>Coverage</h2>
     <h3>Area*Time by admin_level=2</h3>
