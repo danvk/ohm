@@ -37,3 +37,22 @@ const gGeom = new Dygraph(
   ),
   {},
 );
+
+const gChron = new Dygraph(
+  document.getElementById("chronology-errors"),
+  dataForSeries(
+    "chronology-member-outside-range",
+    "chronology-overlapping-members",
+    "chronology-undated-member",
+  ),
+  {},
+);
+
+const gTags = new Dygraph(
+  document.getElementById("tag-errors"),
+  dataForSeries(
+    "dates-in-names",
+    "invalid-date"
+  ),
+  {},
+);
