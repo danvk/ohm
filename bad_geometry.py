@@ -148,7 +148,7 @@ def main() -> None:
         n_valid += 1
 
     write_stats(
-        args.out_dir,
+        args.output_dir,
         "bad_geometry",
         by_type,
         {

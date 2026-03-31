@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -o errexit
+set -x
 
-date=2026-03-01
-planet=planet-260301_0301.osm.pbf
+date=$1  # 2026-03-01
+yymmdd=${date//-/}
+yymmdd=${yymmdd/#20/}  # 260301
+planet=planet-${yymmdd}_*.osm.pbf
 
 dir=stats/$date
 mkdir -p $dir
