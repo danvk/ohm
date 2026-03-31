@@ -31,11 +31,28 @@ const METRIC_DOCS = {
     help: "Shapely was unable to create a geometry for this relation.",
   },
   other: { label: "Other", help: "A grab bag of all other geometry errors." },
-  "chronology-member-outside-range": { label: "Member Outside Parent Range" },
-  "chronology-overlapping-members": { label: "Overlapping Members" },
-  "chronology-undated-member": { label: "Undated Members" },
-  "dates-in-names": { label: "Date Ranges in name" },
-  "invalid-date": { label: "Invalid Dates" },
+
+  "chronology-member-outside-range": {
+    label: "Member Outside Parent Range",
+    help: "The chronology itself has start_date/end_date, but one of its members has a date range outside of that.",
+  },
+  "chronology-overlapping-members": {
+    label: "Overlapping Members",
+    help: "Two members of the chronology have overlapping date ranges. One of them likely needs to be adjusted.",
+  },
+  "chronology-undated-member": {
+    label: "Undated Members",
+    help: "Chronologies that contain undated members (no start_date or end_date).",
+  },
+
+  "dates-in-names": {
+    label: "Date Ranges in name",
+    help: "The feature's name tag contains a date range.",
+  },
+  "invalid-date": {
+    label: "Invalid Dates",
+    help: "Either start_date or end_date cannot be parsed as ISO.",
+  },
 };
 
 function dataForSeries(...series) {
@@ -66,7 +83,19 @@ function dataForSeries(...series) {
 }
 
 function formatExample(txt) {
-  return txt.replaceAll(/r\/(\d+)/g, '<a href="https://www.openhistoricalmap.org/relation/$1" target="_blank">r/$1</a>');
+  return txt
+    .replaceAll(
+      /\br\/(\d+)/g,
+      '<a href="https://www.openhistoricalmap.org/relation/$1" target="_blank">r/$1</a>',
+    )
+    .replaceAll(
+      /\bw\/(\d+)/g,
+      '<a href="https://www.openhistoricalmap.org/way/$1" target="_blank">w/$1</a>',
+    )
+    .replaceAll(
+      /\bn\/(\d+)/g,
+      '<a href="https://www.openhistoricalmap.org/node/$1" target="_blank">n/$1</a>',
+    );
 }
 
 function makeChart(container, ...series) {
@@ -82,15 +111,14 @@ function makeChart(container, ...series) {
     legendFormatter: (data) => {
       if (data.x == null) {
         // This should only be a temporary state, until the setSelection() kicks in.
-        return '';
+        return "";
       }
 
-      console.log(data);
       var html = data.xHTML;
       const rawDate = rows[data.i][0];
       data.series.forEach(function (series) {
         if (!series.isVisible) return;
-        const {label, help} = METRIC_DOCS[series.label];
+        const { label, help } = METRIC_DOCS[series.label];
         const labelHtml = `<span style="color: ${series.color}" title="${help}">${label}</span>: <a data-date="${rawDate}" data-series="${series.label}" class="count" href="#">${series.y}</a>`;
         html += `<br>${series.dashHTML} ${labelHtml}`;
       });
@@ -99,30 +127,32 @@ function makeChart(container, ...series) {
   });
   g.setSelection(rows.length - 1);
 
-  const examplesEl = document.querySelector('.examples');
-  labelsEl.addEventListener('click', async e => {
+  const examplesEl = container.querySelector(".examples");
+  labelsEl.addEventListener("click", async (e) => {
     const a = e.target;
-    const date = a.getAttribute('data-date');
-    const metric = a.getAttribute('data-series');
+    const date = a.getAttribute("data-date");
+    const metric = a.getAttribute("data-series");
     if (!date || !metric) return;
+    e.preventDefault();
+    e.stopPropagation();
     const value = a.textContent;
-    const {label, help} = METRIC_DOCS[metric];
+    const { label, help } = METRIC_DOCS[metric];
     const r = await fetch(`./${date}/${metric}.examples.txt`);
     const text = await r.text();
-    const examples = text.split('\n');
-    const lis = examples.map(txt => `<li>${formatExample(txt)}</li>`);
+    const examples = text.split("\n");
+    const lis = examples.map((txt) => `<li>${formatExample(txt)}</li>`);
     examplesEl.innerHTML = `
       <div class="close-example">&times;</div>
       <div class="example-header">${label}: ${value} on ${date}</div>
       <div class="example-explanation">${help} (${metric})</div>
       <ul>
-        ${lis.join('')}
+        ${lis.join("")}
       </ul>
     `;
-    examplesEl.querySelector('.close-example').addEventListener('click', () => {
-      examplesEl.textContent = '';
+    examplesEl.querySelector(".close-example").addEventListener("click", () => {
+      examplesEl.textContent = "";
     });
-  })
+  });
 }
 
 makeChart(
