@@ -4,6 +4,22 @@ const [headerRow, ...rowStrs] = data.split("\r\n").slice(0, -1);
 const header = headerRow.split(",");
 const rows = rowStrs.map((rs) => rs.split(","));
 
+const METRIC_DOCS = {
+  'date': {label: 'Date', help: 'Date of planet dump file'},
+  "nonclosed-ring": {label: 'Non-closed Rings', help: 'At least one ring (inner or outer) in the relation could not be closed. It\'s likely that a way is missing.'},
+  "ring-self-intersect": {label: 'Ring Self-intersects', help: 'At least one ring (inner or outer) in the relation intersects itself.'},
+  "self-intersect": {label: 'Self-intersects', help: 'Two rings in the relation cross each other.'},
+  "uncontained-inner-ring": {label: 'Uncontainer inner', help: 'A role=inner ring is not contained in any outer ring.'},
+  "nested-shells": {label: 'Nested Rings', help: 'One ring is contained inside another without role=inner.'},
+  "no-shapely": {label: 'Shapely Error', help: 'Shapely was unable to create a geometry for this relation.'},
+  "other": {label: 'Other', help: 'A grab bag of all other geometry errors.'},
+  "chronology-member-outside-range": {label: 'Member Outside Parent Range'},
+  "chronology-overlapping-members": {label: 'Overlapping Members'},
+  "chronology-undated-member": {label: 'Undated Members'},
+  "dates-in-names": {label: 'Date Ranges in name'},
+  "invalid-date": {label: 'Invalid Dates'}
+};
+
 function dataForSeries(...series) {
   const idxs = [];
   for (const s of series) {
@@ -17,8 +33,10 @@ function dataForSeries(...series) {
   idxs.sort((a, b) => lastRow[b] - lastRow[a]);
   const allIdxs = [0].concat(idxs);  // always include the date
 
-  const sliceRows = [];
-  for (const fullRow of [header].concat(rows)) {
+  const sliceRows = [
+    allIdxs.map(idx => METRIC_DOCS[header[idx]].label)
+  ];
+  for (const fullRow of rows) {
     const row = allIdxs.map((idx) => fullRow[idx]);
     sliceRows.push(row);
   }
@@ -53,7 +71,8 @@ makeChart(document.getElementById('geometry-errors'),
  "uncontained-inner-ring",
  "nested-shells",
  "no-shapely",
- "other");
+ "other"
+);
 
 makeChart(
   document.getElementById("chronology-errors"),
