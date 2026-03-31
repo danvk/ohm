@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>OpenHistoricalMap Quality and Coverage Stats</title>
+    <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/dygraph/2.2.1/dygraph.min.css" />
+    <style type="text/css">
+        .chart {
+            display: block;
+            width: 800px;
+            height: 300px;
+        }
+    </style>
+  </head>
+  <body>
+    <h1>OpenHistoricalMap Quality and Coverage Stats</h1>
+
+    <h2>Data Quality</h2>
+    <h3>Geometry Errors</h3>
+    <div class="chart" id="geometry-errors"></div>
+    <h3>Chronology Errors</h3>
+    <h3>Duplicate Features</h3>
+    <h3>Tag Errors</h3>
+
+    <h2>Coverage</h2>
+    <h3>Area*Time by admin_level=2</h3>
+
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/dygraph/2.2.1/dygraph.min.js"></script>
+    <script type="text/javascript">
+        const gGeom = new Dygraph(document.getElementById('geometry-errors'), 'stats.csv', {
+        })
+    </script>
+  </body>
+</html>
