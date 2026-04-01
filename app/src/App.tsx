@@ -15,9 +15,9 @@ import {
 import Logo from './ohm_logo.svg';
 import { yearFromDateStr } from './date-utils';
 import type { AppData } from './loader.ts';
-import { loadDataForLevels } from './loader.ts';
 
-export default function App() {
+export default function App({ data }: { data: AppData }) {
+  const { relations } = data;
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -29,28 +29,6 @@ export default function App() {
 
   const year = urlState.year;
   const adminLevels = urlState.adminLevels ?? new Set(['2']);
-
-  // Data loading: fetch only the files needed for the selected admin levels.
-  const [data, setData] = React.useState<AppData | null>(null);
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
-    loadDataForLevels(adminLevels).then((newData) => {
-      if (!cancelled) {
-        setData(newData);
-        setIsLoading(false);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-    // adminLevels is a Set; stringify for stable comparison
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [[...adminLevels].sort().join(',')]);
-
-  const relations = data?.relations ?? [];
   const urlIds = urlState.ids;
 
   // Viewport (zoom/lat/lng) is kept in a ref so map moves don't cause re-renders
@@ -236,7 +214,6 @@ export default function App() {
 
   return (
     <>
-      {isLoading && <div className="loading">Loading…</div>}
       <div className="title">
         <img src={Logo} width={30} height={30} className="logo" />
         <h3>Boundary Viewer</h3>
@@ -266,7 +243,7 @@ export default function App() {
           }}
         />
         <AdminAreas
-          data={data ?? { relations: [], ways: {}, nodes: {} }}
+          data={data}
           year={year}
           adminLevels={adminLevels}
           selectedIds={selectedIds}
