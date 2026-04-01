@@ -124,7 +124,7 @@ function formatExample(txt) {
     );
 }
 
-function makeChart(container, ...series) {
+function makeChart(container, series, options) {
   const chartEl = container.querySelector(".chart");
   const labelsEl = container.querySelector(".chart-labels");
   const g = new Dygraph(chartEl, dataForSeries(...series), {
@@ -146,78 +146,108 @@ function makeChart(container, ...series) {
       data.series.forEach(function (series) {
         if (!series.isVisible) return;
         const { label, help } = METRIC_DOCS[series.label];
-        const labelHtml = `<span class="series-name" style="color: ${series.color}" title="${help}">${label}</span>: <a data-date="${rawDate}" data-series="${series.label}" class="count" href="#">${series.y}</a>`;
+        let nameOrLink = `${series.yHTML}`;
+        if (options.examples) {
+          nameOrLink = `<a data-date="${rawDate}" data-series="${series.label}" class="count" href="#">${nameOrLink}</a>`;
+        }
+        const labelHtml = `<span class="series-name" style="color: ${series.color}" title="${help}">${label}</span>: ${nameOrLink}`;
         html += `<br>${series.dashHTML} ${labelHtml}`;
       });
       return html;
     },
+    ...options,
   });
   g.setSelection(rows.length - 1);
 
-  const examplesEl = container.querySelector(".examples");
-  labelsEl.addEventListener("click", async (e) => {
-    const a = e.target;
-    const date = a.getAttribute("data-date");
-    const metric = a.getAttribute("data-series");
-    if (!date || !metric) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const value = a.textContent;
-    const { label, help } = METRIC_DOCS[metric];
-    const r = await fetch(`/daily/${date}/${metric}.examples.txt`);
-    const text = await r.text();
-    const examples = text.split("\n");
-    const lis = examples.map((txt) => `<li>${formatExample(txt)}</li>`);
-    examplesEl.innerHTML = `
-      <div class="close-example">&times;</div>
-      <div class="example-header">${label}: ${value} on ${date}</div>
-      <div class="example-explanation">${help} (${metric})</div>
-      <ul>
-        ${lis.join("")}
-      </ul>
-    `;
-    examplesEl.querySelector(".close-example").addEventListener("click", () => {
-      examplesEl.textContent = "";
+  if (options.examples) {
+    const examplesEl = container.querySelector(".examples");
+    labelsEl.addEventListener("click", async (e) => {
+      const a = e.target;
+      const date = a.getAttribute("data-date");
+      const metric = a.getAttribute("data-series");
+      if (!date || !metric) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const value = a.textContent;
+      const { label, help } = METRIC_DOCS[metric];
+      const r = await fetch(`/daily/${date}/${metric}.examples.txt`);
+      const text = await r.text();
+      const examples = text.split("\n");
+      const lis = examples.map((txt) => `<li>${formatExample(txt)}</li>`);
+      examplesEl.innerHTML = `
+        <div class="close-example">&times;</div>
+        <div class="example-header">${label}: ${value} on ${date}</div>
+        <div class="example-explanation">${help} (${metric})</div>
+        <ul>
+          ${lis.join("")}
+        </ul>
+      `;
+      examplesEl.querySelector(".close-example").addEventListener("click", () => {
+        examplesEl.textContent = "";
+      });
     });
-  });
+  }
 }
 
 makeChart(
   document.getElementById("geometry-errors"),
+  [
   "nonclosed-ring",
   "ring-self-intersect",
   "self-intersect",
   "uncontained-inner-ring",
   "nested-shells",
   "no-shapely",
-  "other",
+  "other"],
+  {
+    examples: true,
+    axes: { y: { valueFormatter: x => String(x) } },
+  }
 );
 
 makeChart(
   document.getElementById("chronology-errors"),
-  "chronology-member-outside-range",
+  ["chronology-member-outside-range",
   "chronology-overlapping-members",
-  "chronology-undated-member",
+  "chronology-undated-member"],
+  {
+    examples: true,
+    axes: { y: { valueFormatter: x => String(x) } },
+  }
 );
 
 makeChart(
   document.getElementById("tag-errors"),
-  "date-in-name",
+  ["date-in-name",
   "date-invalid",
-  "date-end-no-start",
+  "date-end-no-start"],
+  {
+    examples: true,
+    axes: { y: { valueFormatter: x => String(x) } },
+  }
 );
 
 makeChart(
   document.getElementById('earth-coverage'),
-  "earth-years-admin-1",
+  ["earth-years-admin-1",
   "earth-years-admin-2",
   "earth-years-admin-3",
-  "earth-years-admin-4",
+  "earth-years-admin-4"],
+  {
+    ylabel: 'Earth Years',
+    examples: false,
+  }
 );
 
 makeChart(
   document.getElementById('raw-features'),
-  "num-nodes",
-  "num-ways",
-  "num-relations",
+  [
+    "num-nodes",
+    "num-ways",
+    "num-relations"
+  ],
+  {
+    logscale: true,
+    examples: false,
+  }
 );
