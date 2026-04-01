@@ -8,6 +8,7 @@ start_date/end_date tags.
 import argparse
 import functools
 import json
+import re
 import sys
 from collections import defaultdict
 
@@ -117,8 +118,16 @@ def main() -> None:
     with osmium.io.Reader(args.osm_file) as r:
         h = r.header()
         timestamp = h.get("timestamp")
-        assert timestamp
-        print(f"{timestamp=}", file=sys.stderr)
+
+    if not timestamp:
+        # try to get it from the file name, e.g. planet-250701_0002.osm.pbf
+        m = re.search(r"planet-(\d\d)(\d\d)(\d\d)", args.osm_file)
+        if m:
+            (yy, mm, dd) = m.groups()
+            timestamp = f"20{yy}-{mm}-{dd}"
+
+    assert timestamp, "Unable to get timestamp from PBF header or file name."
+    print(f"{timestamp=}", file=sys.stderr)
 
     handler = CoverageHandler(timestamp)
     handler.apply_file(
