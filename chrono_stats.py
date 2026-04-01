@@ -22,11 +22,14 @@ class DateExtractor(osmium.SimpleHandler):
         self.invalid = 0
         self.invalid_dates = []
         self.year_names = []
+        self.end_no_start = list[tuple[str, int]]()
 
     def handle_object(self, typ: str, f):
         name = f.tags.get("name")
         if name and re.search(NAME_RANGE_PAT, name):
             self.year_names.append((typ, f.id, name))
+
+        key = (typ, f.id)
 
         start_date = f.tags.get("start_date")
         end_date = f.tags.get("end_date")
@@ -35,7 +38,7 @@ class DateExtractor(osmium.SimpleHandler):
             if not start_tup:
                 self.invalid += 1
                 self.invalid_dates.append((typ, f.id, start_date))
-                self.invalid_ids.add((typ, f.id))
+                self.invalid_ids.add(key)
                 return
 
         if end_date:
@@ -43,11 +46,14 @@ class DateExtractor(osmium.SimpleHandler):
             if not end_tup:
                 self.invalid += 1
                 self.invalid_dates.append((typ, f.id, end_date))
-                self.invalid_ids.add((typ, f.id))
+                self.invalid_ids.add(key)
                 return
 
-        self.id_to_dates[(typ, f.id)] = parse_ohm_range(start_date, end_date)
-        self.id_to_raw_dates[(typ, f.id)] = (start_date or "", end_date or "")
+        if end_date and not start_date:
+            self.end_no_start.append(key)
+
+        self.id_to_dates[key] = parse_ohm_range(start_date, end_date)
+        self.id_to_raw_dates[key] = (start_date or "", end_date or "")
 
     def relation(self, r) -> None:
         self.handle_object("r", r)

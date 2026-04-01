@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 DateTuple = Tuple[int, int, int]  # (year, month, day)
 Range = Tuple[DateTuple, DateTuple]
 
-NEG_INF: DateTuple = (-10**12, 1, 1)
+NEG_INF: DateTuple = (-(10**12), 1, 1)
 POS_INF: DateTuple = (10**12, 1, 1)
 
 # Matches:
@@ -40,7 +40,9 @@ def normalize_ohm_date(s: Optional[str]) -> Optional[str]:
 # ----------------------------
 # Parsing
 # ----------------------------
-def parse_ohm_date(s: Optional[str]) -> Optional[Tuple[int, Optional[int], Optional[int]]]:
+def parse_ohm_date(
+    s: Optional[str],
+) -> Optional[Tuple[int, Optional[int], Optional[int]]]:
     s = normalize_ohm_date(s)
     if not s:
         return None
@@ -86,6 +88,28 @@ def parse_ohm_range(start: Optional[str], end: Optional[str]) -> Range:
     end_point = start_of_date(end_parsed) if end_parsed else POS_INF
 
     return start_point, end_point
+
+
+# ----------------------------
+# Duration
+# ----------------------------
+def to_fractional_year(d: DateTuple) -> float:
+    year, month, day = d
+    return year + (month - 1) / 12 + (day - 1) / 365
+
+
+def duration_years(r: Range) -> float:
+    """Return the duration of a date range in fractional years.
+
+    Uses month-precision arithmetic (months / 12) plus day offset (days / 365).
+    Returns inf if either bound is unbounded (NEG_INF / POS_INF).
+    """
+    start, end = r
+
+    if start == NEG_INF or end == POS_INF:
+        return float("inf")
+
+    return to_fractional_year(end) - to_fractional_year(start)
 
 
 # ----------------------------

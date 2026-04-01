@@ -1,11 +1,14 @@
+import pytest
+
 from dates import (
-    parse_ohm_date,
-    parse_ohm_range,
-    overlaps,
-    normalize_ohm_date,
-    start_of_date,
     NEG_INF,
     POS_INF,
+    duration_years,
+    normalize_ohm_date,
+    overlaps,
+    parse_ohm_date,
+    parse_ohm_range,
+    start_of_date,
 )
 
 
@@ -123,6 +126,42 @@ class TestParseOhmRange:
     def test_messy_input(self):
         result = parse_ohm_range("c. 1900?", "1910 (est.)")
         assert result == ((1900, 1, 1), (1910, 1, 1))
+
+
+class TestDurationYears:
+    def test_whole_years(self):
+        r = parse_ohm_range("2021", "2026")
+        assert duration_years(r) == 5.0
+
+    def test_months_only(self):
+        # 2020-01 to 2020-10 is 9 months = 0.75 years
+        r = parse_ohm_range("2020-01", "2020-10")
+        assert duration_years(r) == pytest.approx(0.75)
+
+    def test_cross_year_months(self):
+        # 2019-07 to 2020-01 is 6 months = 0.5 years
+        r = parse_ohm_range("2019-07", "2020-01")
+        assert duration_years(r) == pytest.approx(0.5)
+
+    def test_single_year(self):
+        r = parse_ohm_range("2000", "2001")
+        assert duration_years(r) == pytest.approx(1.0)
+
+    def test_open_end_is_inf(self):
+        r = parse_ohm_range("2000", None)
+        assert duration_years(r) == float("inf")
+
+    def test_open_start_is_inf(self):
+        r = parse_ohm_range(None, "2000")
+        assert duration_years(r) == float("inf")
+
+    def test_both_open_is_inf(self):
+        r = parse_ohm_range(None, None)
+        assert duration_years(r) == float("inf")
+
+    def test_century(self):
+        r = parse_ohm_range("1900", "2000")
+        assert duration_years(r) == pytest.approx(100.0)
 
 
 class TestOverlaps:
