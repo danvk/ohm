@@ -90,13 +90,6 @@ class CoverageHandler(osmium.SimpleHandler):
         if admin_level is None:
             return
 
-        # orig_type = "way" if a.from_way() else "relation"
-        # orig_id = a.orig_id()
-        try:
-            geometry_str = self.geojson.create_multipolygon(a)
-        except Exception:
-            return
-
         start_date = parse_ohm_date(a.tags.get("start_date"))
         end_date = parse_ohm_date(a.tags.get("end_date"))
 
@@ -116,6 +109,13 @@ class CoverageHandler(osmium.SimpleHandler):
         duration_y = duration_years(
             (start_of_date(start_date), start_of_date(end_date))
         )
+
+        # orig_type = "way" if a.from_way() else "relation"
+        # orig_id = a.orig_id()
+        try:
+            geometry_str = self.geojson.create_multipolygon(a)
+        except Exception:
+            return
 
         geom = shape(json.loads(geometry_str))
         if not geom.is_valid:
@@ -144,7 +144,6 @@ def main() -> None:
 
     handler.apply_file(
         args.osm_file,
-        locations=True,
         filters=[
             osmium.filter.KeyFilter("admin_level"),
             osmium.filter.KeyFilter("start_date", "end_date"),

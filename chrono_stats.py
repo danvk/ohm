@@ -174,8 +174,9 @@ def main() -> None:
     )
 
     by_type = {
-        "invalid-date": handler.invalid_dates,
-        "dates-in-names": handler.year_names,
+        "date-invalid": handler.invalid_dates,
+        "date-in-name": handler.year_names,
+        "date-end-no-start": handler.end_no_start,
         "chronology-undated-member": ch.undated_members,
         "chronology-overlapping-members": ch.overlapping_members,
         "chronology-member-outside-range": ch.date_outside_ranges,
