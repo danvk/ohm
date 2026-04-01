@@ -236,6 +236,7 @@ makeChart(
   {
     ylabel: 'Earth Years',
     examples: false,
+    labelsKMB: false,
   }
 );
 
