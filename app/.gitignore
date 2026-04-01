@@ -1,2 +1,5 @@
 node_modules
 dist
+public/nodes*.json
+public/relations*.json
+public/ways*.json

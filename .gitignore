@@ -222,3 +222,5 @@ data
 *.osm
 graph.json
 coloring.json
+.claude/settings.local.json
+daily
