@@ -17,6 +17,7 @@ class DateExtractor(osmium.SimpleHandler):
     def __init__(self):
         super(DateExtractor, self).__init__()
         self.id_to_dates = dict[tuple[str, int], tuple]()
+        self.id_to_raw_dates = dict[tuple[str, int], tuple[str, str]]()
         self.invalid_ids = set[tuple[str, int]]()
         self.invalid = 0
         self.invalid_dates = []
@@ -46,6 +47,7 @@ class DateExtractor(osmium.SimpleHandler):
                 return
 
         self.id_to_dates[(typ, f.id)] = parse_ohm_range(start_date, end_date)
+        self.id_to_raw_dates[(typ, f.id)] = (start_date or "", end_date or "")
 
     def relation(self, r) -> None:
         self.handle_object("r", r)
@@ -71,12 +73,15 @@ class ChronologyHandler(osmium.SimpleHandler):
     one entry per chronology the member belongs to.
     """
 
-    def __init__(self, tid_to_dates, invalid_tids: set[tuple[str, int]]) -> None:
+    def __init__(
+        self, tid_to_dates, tid_to_raw_dates, invalid_tids: set[tuple[str, int]]
+    ) -> None:
         super().__init__()
         self.chronology_count = 0
         self.undated_members = []
         self.overlapping_members = []
         self.tid_to_dates = tid_to_dates
+        self.tid_to_raw_dates = tid_to_raw_dates
         self.invalid_tids = invalid_tids
         self.date_outside_ranges = []
 
@@ -95,7 +100,7 @@ class ChronologyHandler(osmium.SimpleHandler):
             if not dates:
                 undated.append((m.type, m.ref))
                 continue
-            member_dates.append(dates)
+            member_dates.append((m.type, m.ref, dates))
 
         if undated:
             self.undated_members.append(
@@ -103,18 +108,32 @@ class ChronologyHandler(osmium.SimpleHandler):
             )
 
         fails = [
-            (a, b) for a, b in itertools.combinations(member_dates, 2) if overlaps(a, b)
+            (a, b)
+            for a, b in itertools.combinations(member_dates, 2)
+            if overlaps(a[2], b[2])
         ]
         if fails:
+
+            def fmt_member(typ, ref, *_):
+                raw_start, raw_end = self.tid_to_raw_dates.get((typ, ref), ("", ""))
+                sep = " - " if "-" in f"{raw_start}{raw_end}" else "-"
+                return f"{typ}/{ref} ({raw_start}{sep}{raw_end})"
+
             self.overlapping_members.append(
-                ("r", r.id, ", ".join(f"{a}+{b}" for a, b in fails[:10]))
+                (
+                    "r",
+                    r.id,
+                    ", ".join(
+                        fmt_member(*a) + " + " + fmt_member(*b) for a, b in fails[:10]
+                    ),
+                )
             )
 
         start_date = r.tags.get("start_date")
         end_date = r.tags.get("end_date")
         if start_date or end_date:
             ch_a, ch_b = parse_ohm_range(start_date, end_date)
-            for mem_a, mem_b in member_dates:
+            for _, _, (mem_a, mem_b) in member_dates:
                 if mem_a < ch_a or mem_b > ch_b:
                     self.date_outside_ranges.append(("r", r.id, f"{mem_a}-{mem_b}"))
                     break
@@ -141,7 +160,9 @@ def main() -> None:
 
     n_dated_rels = len(handler.id_to_dates)
 
-    ch = ChronologyHandler(handler.id_to_dates, handler.invalid_ids)
+    ch = ChronologyHandler(
+        handler.id_to_dates, handler.id_to_raw_dates, handler.invalid_ids
+    )
     ch.apply_file(
         args.osm_file, filters=[osmium.filter.TagFilter(("type", "chronology"))]
     )
