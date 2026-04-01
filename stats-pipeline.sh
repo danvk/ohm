@@ -6,10 +6,10 @@ date=$1  # 2026-03-01
 yymmdd=${date//-/}
 yymmdd=${yymmdd/#20/}  # 260301
 
-s3cmd get s3://planet.openhistoricalmap.org/planet/planet-260331*
+s3cmd get --force s3://planet.openhistoricalmap.org/planet/planet-${yymmdd}*
 planet=planet-${yymmdd}_*.osm.pbf
 
-dir=stats/$date
+dir=daily/$date
 mkdir -p $dir
 uv run feature_stats.py $planet --output_dir $dir
 uv run chrono_stats.py $planet --output_dir $dir

@@ -52,17 +52,30 @@ const METRIC_DOCS = {
     help: "Chronologies that contain undated members (no start_date or end_date).",
   },
 
-  "dates-in-names": {
+  "date-in-name": {
     label: "Date Ranges in name",
     help: "The feature's name tag contains a date range.",
   },
-  "invalid-date": {
+  "date-invalid": {
     label: "Invalid Dates",
     help: "Either start_date or end_date cannot be parsed as ISO.",
   },
+  "date-end-no-start": {
+    label: "end_date w/o start_date",
+    help: "If a feature has end_date, then it should have start_date. Nothing is timeless.",
+  },
+
+  "earth-years-admin-1": { label: "admin1" },
+  "earth-years-admin-2": { label: "admin2" },
+  "earth-years-admin-3": { label: "admin3" },
+  "earth-years-admin-4": { label: "admin4" },
+
+  "num-nodes": { label: "Nodes" },
+  "num-ways": { label: "Ways" },
+  "num-relations": { label: "Relations" },
 };
 
-const response = await fetch("stats.csv");
+const response = await fetch("/dashboard/stats.csv");
 const data = await response.text();
 const [headerRow, ...rowStrs] = data.split("\r\n").slice(0, -1);
 const header = headerRow.split(",");
@@ -151,7 +164,7 @@ function makeChart(container, ...series) {
     e.stopPropagation();
     const value = a.textContent;
     const { label, help } = METRIC_DOCS[metric];
-    const r = await fetch(`./${date}/${metric}.examples.txt`);
+    const r = await fetch(`/daily/${date}/${metric}.examples.txt`);
     const text = await r.text();
     const examples = text.split("\n");
     const lis = examples.map((txt) => `<li>${formatExample(txt)}</li>`);
@@ -189,6 +202,22 @@ makeChart(
 
 makeChart(
   document.getElementById("tag-errors"),
-  "dates-in-names",
-  "invalid-date",
+  "date-in-name",
+  "date-invalid",
+  "date-end-no-start",
+);
+
+makeChart(
+  document.getElementById('earth-coverage'),
+  "earth-years-admin-1",
+  "earth-years-admin-2",
+  "earth-years-admin-3",
+  "earth-years-admin-4",
+);
+
+makeChart(
+  document.getElementById('raw-features'),
+  "num-nodes",
+  "num-ways",
+  "num-relations",
 );

@@ -114,7 +114,7 @@ def main() -> None:
 
     print(f"Reading {args.osm_file} ...", file=sys.stderr)
 
-    with osmium.io.Reader("planet-260326_0301.osm.pbf") as r:
+    with osmium.io.Reader(args.osm_file) as r:
         h = r.header()
         timestamp = h.get("timestamp")
         assert timestamp
