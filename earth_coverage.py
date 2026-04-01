@@ -14,12 +14,14 @@ from collections import defaultdict
 import osmium
 import osmium.filter
 import osmium.geom
+import osmium.io
 import pyproj
 from osmium.osm.types import Area
 from shapely.geometry import shape
 from shapely.ops import transform as shapely_transform
 
-from dates import DateTuple, duration_years, parse_ohm_date, start_of_date
+from dates import duration_years, parse_ohm_date, start_of_date
+from stats import write_stats
 
 EARTH_LAND_AREA_KM2 = 149_000_000
 
@@ -34,49 +36,19 @@ def area_km2(geom) -> float:
     return projected.area / 1e6
 
 
-def parse_year(date_str: str) -> int | None:
-    """Extract the year from a YYYY or YYYY-MM-DD string (supports negatives)."""
-    if not date_str:
-        return None
-    s = date_str.strip()
-    # Handle negative years: "-0500" or "-0500-01-01"
-    try:
-        year_part = (
-            s.split("-")[0] if not s.startswith("-") else "-" + s[1:].split("-")[0]
-        )
-        return int(year_part)
-    except (ValueError, IndexError):
-        return None
-
-
-def decade_years(start: int | None, end: int | None) -> list[int]:
-    """Return all decade years (multiples of 10) in the range [start, end]."""
-    # Open-ended: if no start_date assume it extends back to antiquity; if no
-    # end_date assume it is still current (use year 2030 as a sentinel so we
-    # include 2020 and 2030).
-    lo = start if start is not None else -6000
-    hi = end if end is not None else 2030
-    if lo > hi:
-        return []
-    # Handle negative modulo correctly (Python's // floors toward -inf)
-    first_decade = (lo // 10) * 10
-    if first_decade < lo:
-        first_decade += 10
-    return list(range(first_decade, hi + 1, 10))
-
-
-ADMIN_LEVELS = ("2", "4")
+ADMIN_LEVELS = ("1", "2", "3", "4")
 
 
 class CoverageHandler(osmium.SimpleHandler):
-    def __init__(self):
+    def __init__(self, planet_timestamp: str):
         super().__init__()
         self.geojson = osmium.geom.GeoJSONFactory()
         self.skipped_no_date = 0
         self.skipped_no_start = 0
-        self.planet_date: DateTuple = (2026, 3, 1)  # todo: derive from timestamp
+        self.planet_date = parse_ohm_date(planet_timestamp[:10])
         self.totals = defaultdict[str, float](float)
         self.n_features = 0
+        self.n_nonclosed = 0
 
     def _admin_level(self, tags) -> str | None:
         """Return the admin_level if this is a relevant boundary, else None."""
@@ -137,11 +109,18 @@ def main() -> None:
         description=("Calculate OHM coverage of admin_level features in earth years.")
     )
     parser.add_argument("osm_file", help="Path to the .osm.pbf file")
+    parser.add_argument("--output_dir", default=".")
     args = parser.parse_args()
 
     print(f"Reading {args.osm_file} ...", file=sys.stderr)
-    handler = CoverageHandler()
 
+    with osmium.io.Reader("planet-260326_0301.osm.pbf") as r:
+        h = r.header()
+        timestamp = h.get("timestamp")
+        assert timestamp
+        print(f"{timestamp=}", file=sys.stderr)
+
+    handler = CoverageHandler(timestamp)
     handler.apply_file(
         args.osm_file,
         filters=[
@@ -150,14 +129,19 @@ def main() -> None:
         ],
     )
 
-    counts = "\n".join(
-        f"admin_level={level}: {handler.totals[level] / EARTH_LAND_AREA_KM2}"
-        for level in ADMIN_LEVELS
+    sys.stderr.write(
+        f"Read {handler.n_features} features ; "
+        f"{handler.skipped_no_date=} {handler.skipped_no_start=} {handler.n_nonclosed=}.\n",
     )
-    print(
-        f"Read {handler.n_features} features ({counts}); "
-        f"{handler.skipped_no_date=} {handler.skipped_no_start=}.",
-        file=sys.stderr,
+    counts = {
+        f"earth-years-admin-{level}": area_y_km2 / EARTH_LAND_AREA_KM2
+        for level, area_y_km2 in handler.totals.items()
+    }
+    write_stats(
+        args.output_dir,
+        "earth-coverage",
+        {},
+        counts,
     )
 
 

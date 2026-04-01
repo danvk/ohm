@@ -7,7 +7,7 @@ def write_stats(
     out_dir: str | Path,
     name: str,
     examples: dict[str, list[tuple[str, int, str]]],
-    other_stats: dict[str, int],
+    other_stats: dict[str, int | float],
 ):
     out_dir = Path(out_dir)
     with open(out_dir / f"{name}.summary.csv", "w") as f:

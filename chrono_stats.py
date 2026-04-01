@@ -7,22 +7,24 @@ import osmium
 import osmium.filter
 from osmium.osm import Relation
 
-from dates import parse_ohm_date, parse_ohm_range
+from dates import Range, overlaps, parse_ohm_date, parse_ohm_range
 from stats import write_stats
 
 NAME_RANGE_PAT = r"\(-?\d{3,}--?\d{3,}\)"
+
+type OsmKey = tuple[str, int]  # {"n", "w", "r"} + ID
 
 
 class DateExtractor(osmium.SimpleHandler):
     def __init__(self):
         super(DateExtractor, self).__init__()
-        self.id_to_dates = dict[tuple[str, int], tuple]()
-        self.id_to_raw_dates = dict[tuple[str, int], tuple[str, str]]()
-        self.invalid_ids = set[tuple[str, int]]()
+        self.id_to_dates = dict[OsmKey, Range]()
+        self.id_to_raw_dates = dict[OsmKey, tuple[str, str]]()
+        self.invalid_ids = set[OsmKey]()
         self.invalid = 0
         self.invalid_dates = []
         self.year_names = []
-        self.end_no_start = list[tuple[str, int]]()
+        self.end_no_start = list[OsmKey]()
 
     def handle_object(self, typ: str, f):
         name = f.tags.get("name")
@@ -65,10 +67,11 @@ class DateExtractor(osmium.SimpleHandler):
         self.handle_object("n", n)
 
 
-def overlaps(a: tuple[float, float], b: tuple[float, float]):
-    a1, a2 = a
-    b1, b2 = b
-    return a1 < b2 and b1 < a2
+def format_range(start: str | None, end: str | None) -> str:
+    start = start or ""
+    end = end or ""
+    sep = (" - " if end else " -") if "-" in f"{start}{end}" else "-"
+    return f"{start}{sep}{end}"
 
 
 class ChronologyHandler(osmium.SimpleHandler):
@@ -80,7 +83,10 @@ class ChronologyHandler(osmium.SimpleHandler):
     """
 
     def __init__(
-        self, tid_to_dates, tid_to_raw_dates, invalid_tids: set[tuple[str, int]]
+        self,
+        tid_to_dates: dict[OsmKey, Range],
+        tid_to_raw_dates: dict[OsmKey, tuple[str, str]],
+        invalid_tids: set[OsmKey],
     ) -> None:
         super().__init__()
         self.chronology_count = 0
@@ -96,8 +102,8 @@ class ChronologyHandler(osmium.SimpleHandler):
             return
         self.chronology_count += 1
 
-        undated = []
-        member_dates = []
+        undated: list[OsmKey] = []
+        member_dates: list[tuple[str, int, Range]] = []
         for m in r.members:
             if (m.type, m.ref) in self.invalid_tids:
                 continue
@@ -121,9 +127,10 @@ class ChronologyHandler(osmium.SimpleHandler):
         if fails:
 
             def fmt_member(typ, ref, *_):
-                raw_start, raw_end = self.tid_to_raw_dates.get((typ, ref), ("", ""))
-                sep = " - " if "-" in f"{raw_start}{raw_end}" else "-"
-                return f"{typ}/{ref} ({raw_start}{sep}{raw_end})"
+                range_str = format_range(
+                    *self.tid_to_raw_dates.get((typ, ref), ("", ""))
+                )
+                return f"{typ}/{ref} ({range_str})"
 
             self.overlapping_members.append(
                 (
@@ -139,9 +146,15 @@ class ChronologyHandler(osmium.SimpleHandler):
         end_date = r.tags.get("end_date")
         if start_date or end_date:
             ch_a, ch_b = parse_ohm_range(start_date, end_date)
-            for _, _, (mem_a, mem_b) in member_dates:
+            for mtyp, mid, (mem_a, mem_b) in member_dates:
                 if mem_a < ch_a or mem_b > ch_b:
-                    self.date_outside_ranges.append(("r", r.id, f"{mem_a}-{mem_b}"))
+                    ch_str = format_range(start_date, end_date)
+                    m_str = format_range(
+                        *self.tid_to_raw_dates.get((mtyp, mid), ("", ""))
+                    )
+                    self.date_outside_ranges.append(
+                        ("r", r.id, f"{mtyp}/{mid} ({m_str}) outside {ch_str}")
+                    )
                     break
 
 
@@ -176,7 +189,7 @@ def main() -> None:
     by_type = {
         "date-invalid": handler.invalid_dates,
         "date-in-name": handler.year_names,
-        "date-end-no-start": handler.end_no_start,
+        "date-end-no-start": [(typ, id, "") for typ, id in handler.end_no_start],
         "chronology-undated-member": ch.undated_members,
         "chronology-overlapping-members": ch.overlapping_members,
         "chronology-member-outside-range": ch.date_outside_ranges,
