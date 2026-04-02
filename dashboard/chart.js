@@ -26,7 +26,7 @@ const METRIC_DOCS = {
     help: "Two rings in the relation cross each other.",
   },
   "uncontained-inner-ring": {
-    label: "Uncontainer inner",
+    label: "Uncontained inner",
     help: "A role=inner ring is not contained in any outer ring.",
   },
   "nested-shells": {
@@ -189,6 +189,8 @@ function makeChart(container, series, options) {
   }
 }
 
+const oneYearAgoMs = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).getTime();
+
 makeChart(
   document.getElementById("geometry-errors"),
   [
@@ -202,6 +204,7 @@ makeChart(
   {
     examples: true,
     axes: { y: { valueFormatter: x => String(x) } },
+    dateWindow: [oneYearAgoMs, Date.now()]
   }
 );
 
