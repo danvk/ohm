@@ -217,6 +217,7 @@ __marimo__/
 
 data
 *.pbf
+!test-*.osm.pbf
 *.geojson
 *.osm
 graph.json
