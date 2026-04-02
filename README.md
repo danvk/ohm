@@ -28,6 +28,22 @@ uv run build_connectivity_graph.py planet-260322_0301.osm.pbf
 uv run extract_for_web.py --simplify-tolerance-m 1000 --vw-tolerance-m2 100000 planet-260322_0301.osm.pbf --admin-levels 1,2,3,4 --graph graph.json --coloring welsh-powell
 ```
 
+## OHM Stats Dashboard
+
+📈 [Live Site](http://ohm-quality.s3-website-us-east-1.amazonaws.com/)
+
+This repo contains code to collect the data for the OHM Coverage/Quality dashboard, as well as the HTML/JS/CSS for rendering it.
+
+To download a planet file and produce stats for a day, run:
+
+```bash
+./stats-pipeline.sh 2026-03-31
+```
+
+This will eventually produce output in `daily/2026-03-31`.
+
+The convention is that the dated directories contain `*.summary.csv` files with counts for different metrics. These get collated with previous days' data to produce an ongoing CSV file for visualization on the dashboard. Examples of each metric go in `metricname.examples.txt` files. The dashboard fetches these files to help you drill down on individual metrics.
+
 ## Tools
 
 Most of these tools work with an OHM [planet file].
@@ -40,6 +56,25 @@ This prints stats on how many square kilometers are covered by admin_level=2 and
 
 ```
 uv run decade_coverage.py planet.osm.pbf > admin.decade.txt
+```
+
+### dupe_finder.py
+
+Find duplicate relations in a planet dump. Duplicates must:
+
+- share all tags (except a few non-semantic tags like `source` and `fixme`)
+- have the same underlying geometry
+
+There is a little bit of wiggle room in the geometry matching, proportional to the scale of the feature. Large features can be off by a few hundred meters, but small features must match within a meter or so. Takes 30s-1m to run on an OHM Planet file.
+
+```
+$ uv run dupe_finder.py planet-260322_0301.osm.pbf
+Candidate IDs: 7293
+(7) Bicocca Stadium
+  2797764 https://www.openhistoricalmap.org/relation/2797764
+  2797792 https://www.openhistoricalmap.org/relation/2797792
+  2797799 https://www.openhistoricalmap.org/relation/2797799
+  ...
 ```
 
 ### find_by_name.py

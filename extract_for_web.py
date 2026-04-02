@@ -340,13 +340,14 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
     for rid, rel_data in rel_handler.relations.items():
         outer_way_ids: list[int] = rel_data.pop("outer_ways")
         inner_way_ids: list[int] = rel_data.pop("inner_ways")
-        polygons = build_polygon_rings(
+        polygons, poly_warnings = build_polygon_rings(
             outer_way_ids,
             inner_way_ids,
             way_handler.way_nodes,
             way_handler.way_coords,
-            warn=lambda msg: _log(f"    Warning: {msg}"),
         )
+        for msg in poly_warnings:
+            _log(f"    Warning: {msg}")
         rel_data["ways"] = polygons
 
     # Attach node members to each relation that has them.

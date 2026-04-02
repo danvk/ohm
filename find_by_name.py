@@ -4,6 +4,7 @@ import sys
 from typing import Any
 
 import osmium
+import osmium.filter
 
 
 class NameFinder(osmium.SimpleHandler):
