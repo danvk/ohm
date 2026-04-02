@@ -1,5 +1,7 @@
 import type { Relation, Node } from './ohm-data';
 
+const BASE_URL = '//ohmdash.pages.dev/boundary/';
+
 export interface AppData {
   relations: Relation[];
   ways: Record<string, number[]>;
@@ -18,13 +20,13 @@ const levelCache = new Map<string, Promise<LevelData>>();
 function loadLevel(level: string): Promise<LevelData> {
   if (!levelCache.has(level)) {
     const promise = Promise.all([
-      fetch(`relations${level}.json`).then(
+      fetch(`${BASE_URL}relations${level}.json`).then(
         (r) => r.json() as Promise<Relation[]>,
       ),
-      fetch(`ways${level}.json`).then(
+      fetch(`${BASE_URL}ways${level}.json`).then(
         (r) => r.json() as Promise<Record<string, number[]>>,
       ),
-      fetch(`nodes${level}.json`).then(
+      fetch(`${BASE_URL}nodes${level}.json`).then(
         (r) => r.json() as Promise<Record<string, Node>>,
       ),
     ]).then(([relations, ways, nodes]) => ({ relations, ways, nodes }));
