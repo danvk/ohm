@@ -217,8 +217,8 @@ __marimo__/
 
 data
 *.pbf
+!test-*.osm.pbf
 *.geojson
-*.txt
 *.osm
 graph.json
 coloring.json
