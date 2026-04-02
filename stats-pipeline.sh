@@ -11,9 +11,6 @@ planet=planet-${yymmdd}_*.osm.pbf
 
 dir=daily/$date
 mkdir -p $dir
-uv run feature_stats.py $planet --output_dir $dir
-uv run chrono_stats.py $planet --output_dir $dir
-uv run bad_geometry.py $planet --output_dir $dir
-uv run earth_coverage.py $planet --output_dir $dir
+./extract_stats $planet $dir
 
 rm $planet

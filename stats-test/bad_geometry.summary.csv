@@ -1,0 +1,10 @@
+type,count
+geom-valid,288
+geom-invalid,70
+nested-shells,5
+nonclosed-ring,31
+self-intersect,6
+uncontained-inner-ring,6
+other,5
+no-shapely,7
+ring-self-intersect,13

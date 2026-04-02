@@ -1,0 +1,5 @@
+r/2795157: Too few points in geometry component[-84.3167018 33.7445441]
+r/2810435: Interior is disconnected[7.7747904 50.2314499]
+r/2795168: Too few points in geometry component[-84.3167018 33.7445441]
+r/2795159: Too few points in geometry component[-84.3167018 33.7445441]
+r/2809393: Interior is disconnected[7.7747904 50.2314499]

@@ -1,0 +1,6 @@
+r/2812123: UncontainedInnerRingWarning(way_id=200576707)
+r/2851141: UncontainedInnerRingWarning(way_id=198771065)
+r/2876774: UncontainedInnerRingWarning(way_id=201371487)
+r/2856528: UncontainedInnerRingWarning(way_id=201028677)
+r/2831013: UncontainedInnerRingWarning(way_id=200576707)
+r/2902380: UncontainedInnerRingWarning(way_id=201982486), UncontainedInnerRingWarning(way_id=201982489), UncontainedInnerRingWarning(way_id=201980983), UncontainedInnerRingWarning(way_id=201980992), UncontainedInnerRingWarning(way_id=201980993), UncontainedInnerRingWarning(way_id=201976733)
