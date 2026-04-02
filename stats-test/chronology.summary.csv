@@ -1,8 +1,8 @@
 type,count
 dated-relations,1415
-date-invalid,29
-date-in-name,187
-date-end-no-start,75
-chronology-undated-member,5
-chronology-overlapping-members,6
 chronology-member-outside-range,5
+chronology-overlapping-members,6
+chronology-undated-member,5
+date-end-no-start,75
+date-in-name,187
+date-invalid,29
