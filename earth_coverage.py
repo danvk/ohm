@@ -143,7 +143,7 @@ def main() -> None:
         f"{handler.skipped_no_date=} {handler.skipped_no_start=} {handler.n_nonclosed=}.\n",
     )
     counts = {
-        f"earth-years-admin-{level}": area_y_km2 / EARTH_LAND_AREA_KM2
+        f"earth-years-admin-{level}": round(area_y_km2 / EARTH_LAND_AREA_KM2, 6)
         for level, area_y_km2 in handler.totals.items()
     }
     write_stats(
