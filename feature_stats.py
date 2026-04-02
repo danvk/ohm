@@ -15,7 +15,9 @@ def main() -> None:
 
     out = subprocess.check_output(
         [
-            *"osmium fileinfo --extended --no-crc --json --no-progress".split(" "),
+            *"uv run osmium fileinfo --extended --no-crc --json --no-progress".split(
+                " "
+            ),
             args.osm_file,
         ]
     )
