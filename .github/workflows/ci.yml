@@ -11,6 +11,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install osmium-tool
+        run: sudo apt-get install -y osmium-tool
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
