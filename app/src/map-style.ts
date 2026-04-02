@@ -82,35 +82,33 @@ type FillPaintStyle = Exclude<
   undefined
 >;
 
-const DFEAULT_COLOR = "#6080C0";  // — blue
+const DFEAULT_COLOR = '#6080C0'; // — blue
 const PALETTE = [
   DFEAULT_COLOR,
-  "#E15759",  // — red
-  "#4E9F3D",  // — green
-  "#F28E2B",  // — orange
-  "#B07AA1",  // — purple
-  "#76B7B2",  // — teal
-  "#EDC948",  // — yellow
-  "#9C755F",  // — brown
-  '#FF9DA7',  // - pink
+  '#E15759', // — red
+  '#4E9F3D', // — green
+  '#F28E2B', // — orange
+  '#B07AA1', // — purple
+  '#76B7B2', // — teal
+  '#EDC948', // — yellow
+  '#9C755F', // — brown
+  '#FF9DA7', // - pink
 ];
-const HIGHLIGHT_COLOR = '#FF00FF';  // '#00E5FF',
+const HIGHLIGHT_COLOR = '#FF00FF'; // '#00E5FF',
 
-const ID_PALETTE = PALETTE.flatMap((color, i) => [i, color]) as [number, string]
+const ID_PALETTE = PALETTE.flatMap((color, i) => [i, color]) as [
+  number,
+  string,
+];
 
 export const PAINT_STYLE: FillPaintStyle = {
   'fill-color': [
     'case',
     ['boolean', ['feature-state', 'selected'], false],
     HIGHLIGHT_COLOR,
-    [
-      'match',
-      ['get', 'color'],
-      ...ID_PALETTE,
-     DFEAULT_COLOR
-    ]
+    ['match', ['get', 'color'], ...ID_PALETTE, DFEAULT_COLOR],
   ],
-  'fill-opacity': 0.5
+  'fill-opacity': 0.5,
 };
 
 type LinePaintStyle = Exclude<
@@ -122,12 +120,7 @@ export const LINE_STYLE: LinePaintStyle = {
     'case',
     ['boolean', ['feature-state', 'selected'], false],
     HIGHLIGHT_COLOR,
-    [
-      'match',
-      ['get', 'color'],
-      ...ID_PALETTE,
-     DFEAULT_COLOR
-    ]
+    ['match', ['get', 'color'], ...ID_PALETTE, DFEAULT_COLOR],
   ],
   'line-width': [
     'case',
