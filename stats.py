@@ -20,7 +20,7 @@ def write_stats(
 
     for typ, rs in examples.items():
         with open(out_dir / f"{typ}.examples.txt", "w") as f:
-            to_out = rs if len(rs) < 1_000 else random.sample(rs, 1_000)
+            to_out = rs if len(rs) < 5_000 else random.sample(rs, 1_000)
             f.writelines(
                 f"{ftype}/{fid}: {problems}\n" for ftype, fid, problems in to_out
             )
