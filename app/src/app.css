@@ -60,6 +60,13 @@ a:hover {
   margin-bottom: 5em;
 }
 
+.loading {
+  position: absolute;
+  z-index: 100;
+  top: 1em;
+  left: 50%;
+}
+
 /* ── Admin level filter ───────────────────────────────────── */
 
 .admin-level-filter {

@@ -16,7 +16,7 @@ const EXACT_TAGS = [
   'wikidata',
   'wikipedia',
   'color',
-  'color:id'
+  'color:id',
 ];
 const PREFIX_TAGS = [
   'start_date',

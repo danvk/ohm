@@ -31,3 +31,9 @@ jobs:
 
       - name: Integration test
         run: ./extract-stats.sh test-2026-04-02.osm.pbf stats-test && git diff --exit-code
+
+      - name: Build connectivity graph
+        run: uv run build_connectivity_graph.py test-2026-04-02.osm.pbf
+
+      - name: Extract for web
+        run: uv run extract_for_web.py --simplify-tolerance-m 1000 --vw-tolerance-m2 100000 test-2026-04-02.osm.pbf --admin-levels 1,2,3,4,5,6,7 --graph graph.json --coloring welsh-powell
