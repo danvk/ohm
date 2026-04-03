@@ -15,12 +15,13 @@ p {
 .examples {
     position: relative;
     margin-top: 1em;
-    width: 800px;
+    width: 1024px;
 }
 .examples ul {
     max-height: 400px;
     overflow: auto;
     font-family: monospace;
+    white-space: nowrap;
 }
 .example-header {
     font-weight: bold;
