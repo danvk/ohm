@@ -2,18 +2,24 @@
 """Find relations with geometries that are broken in various ways."""
 
 import argparse
+import math
 import random
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
 import osmium
 import osmium.filter
+import osmium.io
 from osmium.osm.types import Relation
+from shapely import make_valid
 from shapely.validation import explain_validity
 from tqdm import tqdm
 
 import geometry
+from dates import duration_years, parse_ohm_date, start_of_date
+from earth_coverage import EARTH_LAND_AREA_KM2, area_km2
 from stats import write_stats
 
 
@@ -21,6 +27,9 @@ from stats import write_stats
 class RelationGeom:
     outer: list[int]
     inner: list[int]
+    start_date: str | None
+    end_date: str | None
+    name: str | None
 
 
 class RelGeomCollector(osmium.SimpleHandler):
@@ -33,7 +42,13 @@ class RelGeomCollector(osmium.SimpleHandler):
     def relation(self, r: Relation) -> None:
         outer = [m.ref for m in r.members if m.type == "w" and m.role in ("", "outer")]
         inner = [m.ref for m in r.members if m.type == "w" and m.role == "inner"]
-        self.relations[r.id] = RelationGeom(outer=outer, inner=inner)
+        self.relations[r.id] = RelationGeom(
+            outer=outer,
+            inner=inner,
+            start_date=r.tags.get("start_date"),
+            end_date=r.tags.get("end_date"),
+            name=r.tags.get("name"),
+        )
 
 
 class WayCoordCollector(osmium.SimpleHandler):
@@ -100,6 +115,12 @@ def main() -> None:
     way_nodes = way_collector.way_nodes
     way_coords = way_collector.way_coords
 
+    # Read the planet timestamp from the PBF header to use as default end_date.
+    with osmium.io.Reader(args.osm_file) as r:
+        timestamp_str = r.header().get("timestamp") or ""
+    m = re.search(r"(\d{4}-\d{2}-\d{2})", timestamp_str)
+    planet_date = start_of_date(parse_ohm_date(m.group(1))) if m else (2026, 1, 1)
+
     warning_map = {
         geometry.OpenRingWarning: "nonclosed-ring",
         geometry.UncontainedInnerRingWarning: "uncontained-inner-ring",
@@ -109,43 +130,76 @@ def main() -> None:
         "Self-intersection": "self-intersect",
     }
 
-    by_type = defaultdict[str, list[tuple[str, int, str]]](list)
+    # raw_examples: error_code → [(earth_years, ftype, fid, problem_str)]
+    raw_examples: dict[str, list[tuple[float, str, int, str]]] = defaultdict(list)
     n_valid = 0
     n_invalid = 0
     rids = [*rel_collector.relations.keys()]
     random.shuffle(rids)
     for rid in tqdm(rids, smoothing=0):
         geom = rel_collector.relations[rid]
-        rings, warnings = geometry.build_polygon_rings(
+        rings, poly_warnings = geometry.build_polygon_rings(
             geom.outer, geom.inner, way_nodes, way_coords
         )
-        if warnings:
-            types = {type(warning) for warning in warnings}
-            for typ in types:
-                by_type[warning_map[typ]].append(
-                    (
-                        "r",
-                        rid,
-                        ", ".join(str(w) for w in warnings if isinstance(w, typ)),
-                    )
-                )
-            n_invalid += 1
-            continue
-        poly = geometry.shapely_polygon_from_rings(rings, way_coords)
-        if not poly:
-            by_type["no-shapely"].append(("r", rid, ""))
-            n_invalid += 1
-            continue
 
-        if not poly.is_valid:
+        poly = geometry.shapely_polygon_from_rings(rings, way_coords)
+
+        # Compute earth-years using a valid (or make_valid'd) polygon.
+        earth_years = 0.0
+        if poly is not None:
+            area_poly = poly if poly.is_valid else make_valid(poly)
+            start_date = parse_ohm_date(geom.start_date)
+            end_date = parse_ohm_date(geom.end_date)
+            if start_date is not None:
+                end_pt = (
+                    start_of_date(end_date) if end_date is not None else planet_date
+                )
+                dur = duration_years((start_of_date(start_date), end_pt))
+                if math.isfinite(dur) and dur >= 0:
+                    earth_years = dur * area_km2(area_poly) / EARTH_LAND_AREA_KM2
+
+        has_problem = False
+
+        for typ in {type(w) for w in poly_warnings}:
+            raw_examples[warning_map[typ]].append(
+                (
+                    earth_years,
+                    "r",
+                    rid,
+                    (geom.name or "")
+                    + " "
+                    + ", ".join(str(w) for w in poly_warnings if isinstance(w, typ)),
+                )
+            )
+            has_problem = True
+
+        if poly is None:
+            raw_examples["no-shapely"].append((earth_years, "r", rid, ""))
+            has_problem = True
+        elif not poly.is_valid:
             reason = explain_validity(poly)
             error_type = reason.split("[")[0]  # strip out any coords
             error_code = warning_map.get(error_type, "other")
-            by_type[error_code].append(("r", rid, reason))
-            n_invalid += 1
-            continue
+            raw_examples[error_code].append((earth_years, "r", rid, reason))
+            has_problem = True
 
-        n_valid += 1
+        if has_problem:
+            n_invalid += 1
+        else:
+            n_valid += 1
+
+    # Sort each bucket by earth-years descending, then build the final by_type.
+    by_type: dict[str, list[tuple[str, int, str]]] = {}
+    for typ, items in raw_examples.items():
+        items.sort(key=lambda x: x[0], reverse=True)
+        by_type[typ] = [
+            (
+                "r",
+                fid,
+                f"{ey:.4f} earth-yr; {problem}" if problem else f"{ey:.4f} earth-yr",
+            )
+            for ey, _, fid, problem in items
+        ]
 
     write_stats(
         args.output_dir,
@@ -155,6 +209,7 @@ def main() -> None:
             "geom-valid": n_valid,
             "geom-invalid": n_invalid,
         },
+        preserve_sort_order=True,
     )
 
 

@@ -8,6 +8,7 @@ def write_stats(
     name: str,
     examples: dict[str, list[tuple[str, int, str]]],
     other_stats: dict[str, int | float],
+    preserve_sort_order=False,
 ):
     out_dir = Path(out_dir)
     with open(out_dir / f"{name}.summary.csv", "w") as f:
@@ -23,7 +24,7 @@ def write_stats(
     rng = random.Random(2026)
     for typ, rs in sorted(examples.items()):
         with open(out_dir / f"{typ}.examples.txt", "w") as f:
-            rs_sorted = sorted(rs)
+            rs_sorted = sorted(rs) if not preserve_sort_order else rs
             to_out = (
                 rs_sorted if len(rs_sorted) < 5_000 else rng.sample(rs_sorted, 1_000)
             )

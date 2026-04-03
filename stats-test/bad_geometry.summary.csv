@@ -4,7 +4,7 @@ geom-valid,288
 nested-shells,5
 no-shapely,7
 nonclosed-ring,31
-other,5
-ring-self-intersect,13
-self-intersect,6
+other,7
+ring-self-intersect,14
+self-intersect,12
 uncontained-inner-ring,6
