@@ -3,14 +3,21 @@ set -o errexit
 set -x
 
 date=$1  # 2026-03-01
+dashdir=$2
+
+# latest=$(ls -d $dashdir/daily/????-??-?? | tail -1)
 yymmdd=${date//-/}
 yymmdd=${yymmdd/#20/}  # 260301
 
 s3cmd get --force s3://planet.openhistoricalmap.org/planet/planet-${yymmdd}*
 planet=planet-${yymmdd}_*.osm.pbf
 
-dir=daily/$date
+dir=$dashdir/daily/$date
 mkdir -p $dir
-./extract_stats $planet $dir
+./extract-stats.sh $planet $dir
+./update-boundary.sh $planet $dashdir/boundary
+
+uv run collate_stats.py --start_fresh '' $dashdir/daily/'????-??-??'
+cp $dir/stats.csv $dashdir/dashboard/
 
 rm $planet
