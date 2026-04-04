@@ -48,6 +48,10 @@ class CoverageHandler(osmium.SimpleHandler):
         self.skipped_no_start = 0
         self.planet_date = parse_ohm_date(planet_timestamp[:10])
         self.totals = defaultdict[str, float](float)
+        # raw_examples[admin_level] = [(earth_years, ftype, fid, description)]
+        self.raw_examples: dict[str, list[tuple[float, str, int, str]]] = defaultdict(
+            list
+        )
         self.n_features = 0
         self.n_nonclosed = 0
 
@@ -83,8 +87,8 @@ class CoverageHandler(osmium.SimpleHandler):
             (start_of_date(start_date), start_of_date(end_date))
         )
 
-        # orig_type = "way" if a.from_way() else "relation"
-        # orig_id = a.orig_id()
+        orig_type = "w" if a.from_way() else "r"
+        orig_id = a.orig_id()
         try:
             geometry_str = self.geojson.create_multipolygon(a)
         except Exception:
@@ -94,7 +98,16 @@ class CoverageHandler(osmium.SimpleHandler):
         if not geom.is_valid:
             geom = geom.buffer(0)
 
-        self.totals[admin_level] += duration_y * area_km2(geom)
+        area_y_km2 = duration_y * area_km2(geom)
+        earth_yrs = area_y_km2 / EARTH_LAND_AREA_KM2
+        self.totals[admin_level] += area_y_km2
+
+        name = a.tags.get("name", "")
+        start_tag = a.tags.get("start_date", "?")
+        end_tag = a.tags.get("end_date", "present")
+        desc = f"{earth_yrs:.4f} earth-yr; {name} ({start_tag}–{end_tag})"
+        self.raw_examples[admin_level].append((earth_yrs, orig_type, orig_id, desc))
+
         self.n_features += 1
         if self.n_features % 100 == 0:
             counts = ", ".join(
@@ -146,11 +159,20 @@ def main() -> None:
         f"earth-years-admin-{level}": round(area_y_km2 / EARTH_LAND_AREA_KM2, 6)
         for level, area_y_km2 in handler.totals.items()
     }
+
+    examples: dict[str, list[tuple[str, int, str]]] = {}
+    for level, items in handler.raw_examples.items():
+        items.sort(key=lambda x: x[0], reverse=True)
+        examples[f"admin-{level}"] = [
+            (ftype, fid, desc) for _, ftype, fid, desc in items
+        ]
+
     write_stats(
         args.output_dir,
         "earth-coverage",
-        {},
+        examples,
         counts,
+        preserve_sort_order=True,
     )
 
 

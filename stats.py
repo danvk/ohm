@@ -24,10 +24,15 @@ def write_stats(
     rng = random.Random(2026)
     for typ, rs in sorted(examples.items()):
         with open(out_dir / f"{typ}.examples.txt", "w") as f:
-            rs_sorted = sorted(rs) if not preserve_sort_order else rs
-            to_out = (
-                rs_sorted if len(rs_sorted) < 5_000 else rng.sample(rs_sorted, 1_000)
-            )
+            if preserve_sort_order:
+                to_out = rs if len(rs) < 5_000 else rs[:2_500]
+            else:
+                rs_sorted = sorted(rs)
+                to_out = (
+                    rs_sorted
+                    if len(rs_sorted) < 5_000
+                    else rng.sample(rs_sorted, 1_000)
+                )
             f.writelines(
                 f"{ftype}/{fid}: {problems}\n" for ftype, fid, problems in to_out
             )

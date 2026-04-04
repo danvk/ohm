@@ -180,7 +180,8 @@ def main() -> None:
             reason = explain_validity(poly)
             error_type = reason.split("[")[0]  # strip out any coords
             error_code = warning_map.get(error_type, "other")
-            raw_examples[error_code].append((earth_years, "r", rid, reason))
+            message = (geom.name or "") + " " + reason
+            raw_examples[error_code].append((earth_years, "r", rid, message))
             has_problem = True
 
         if has_problem:
