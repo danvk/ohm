@@ -196,7 +196,7 @@ def main() -> None:
             (
                 "r",
                 fid,
-                f"{ey:.4f} earth-yr; {problem}" if problem else f"{ey:.4f} earth-yr",
+                f"({ey:.4f}ey) {problem}" if problem else f"{ey:.4f} earth-yr",
             )
             for ey, _, fid, problem in items
         ]
