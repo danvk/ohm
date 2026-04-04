@@ -1,4 +1,3 @@
-r/2832714: (0.0331ey) Schwäbischer Reichskreis Ring Self-intersection[10.4544323 47.5557894]
 r/2688214: (0.0010ey) Hanau-Lichtenberg Ring Self-intersection[7.6243829 48.6989062]
 r/2688212: (0.0003ey) Hanau-Lichtenberg Ring Self-intersection[7.6243829 48.6989062]
 r/2688216: (0.0002ey) Hanau-Lichtenberg Ring Self-intersection[7.6243829 48.6989062]

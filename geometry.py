@@ -522,7 +522,9 @@ def build_polygon_rings(
         if best_idx is not None:
             polygons[best_idx].append(inner_ring)
         else:
-            warnings.append(UncontainedInnerRingWarning(way_id=abs(inner_ring[0])))
+            if abs(inner_ring[0]) < 10**15:
+                # don't generate warnings about synthesized ways
+                warnings.append(UncontainedInnerRingWarning(way_id=abs(inner_ring[0])))
 
     return polygons, warnings
 

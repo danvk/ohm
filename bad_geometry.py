@@ -176,7 +176,8 @@ def main() -> None:
         if poly is None:
             raw_examples["no-shapely"].append((earth_years, "r", rid, ""))
             has_problem = True
-        elif not poly.is_valid:
+        elif not poly.is_valid and not poly_warnings:
+            # avoid generating shapely warnings for polygons we've "fixed" ourselves
             reason = explain_validity(poly)
             error_type = reason.split("[")[0]  # strip out any coords
             error_code = warning_map.get(error_type, "other")

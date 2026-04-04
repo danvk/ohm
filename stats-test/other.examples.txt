@@ -1,7 +1,5 @@
-r/2684676: (0.0139ey) Dacia Inferior (118-167) Too few points in geometry component[22.4546074 44.714273]
 r/2809393: (0.0075ey) République Française (1802-1804) Interior is disconnected[7.7747904 50.2314499]
 r/2810435: (0.0037ey) République Française (1798 01-12) Interior is disconnected[7.7747904 50.2314499]
-r/2833826: (0.0010ey) Herzogtum Pfalz-Zweibrücken (1733-1787) Too few points in geometry component[7.3501606 50.0244598]
 r/2795168: (0.0000ey) Atlanta (2017-2017) Too few points in geometry component[-84.3167018 33.7445441]
 r/2795159: (0.0000ey) Atlanta (2016-2016) Too few points in geometry component[-84.3167018 33.7445441]
 r/2795157: (0.0000ey) Atlanta (2016-2016) Too few points in geometry component[-84.3167018 33.7445441]
