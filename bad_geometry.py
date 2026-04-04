@@ -193,7 +193,7 @@ def main() -> None:
     # Sort each bucket by earth-years descending, then build the final by_type.
     by_type: dict[str, list[tuple[str, int, str]]] = {}
     for typ, items in raw_examples.items():
-        items.sort(key=lambda x: x[0], reverse=True)
+        items.sort(key=lambda x: (-x[0], x[2]))
         by_type[typ] = [
             (
                 "r",
