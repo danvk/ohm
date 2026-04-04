@@ -8,6 +8,7 @@ import osmium.filter
 from osmium.osm.types import Relation
 
 from geometry import build_polygon_rings_quiet, ring_coords
+from stats import write_stats
 
 IGNORE_KEY_PREFIXES = [
     "wikipedia",
@@ -163,6 +164,7 @@ def main() -> None:
         help="Comma-separated list of relation IDs to consider "
         "(default is all relations with name collisions)",
     )
+    parser.add_argument("--output_dir", default=".")
 
     args = parser.parse_args()
     if args.ids:
@@ -224,14 +226,21 @@ def main() -> None:
     dupe_groups.sort(key=lambda x: (-len(x[1]), -x[2]))
 
     total_dupes = 0
+    examples = []
     for tags, rel_ids, _length in dupe_groups:
         total_dupes += len(rel_ids) - 1
         name = next((v for k, v in tags if k == "name"), "<unknown>")
-        print(f"({len(rel_ids)}) {name}")
-        for rel_id in rel_ids:
-            print(f"  {rel_id} https://www.openhistoricalmap.org/relation/{rel_id}")
+        rel_ids.sort()
+        other_ids = ", ".join(f"r/{id}" for id in rel_ids[1:])
+        examples.append(("r", rel_ids[0], f"dupe of {other_ids} {name}"))
 
-    print(f"Total dupes: {total_dupes}")
+    write_stats(
+        args.output_dir,
+        "dupes",
+        {"dupes": examples},
+        {"dupes-total": total_dupes},
+        preserve_sort_order=True,  # examples are sorted by number of duplicates, most first.
+    )
 
 
 if __name__ == "__main__":

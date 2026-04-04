@@ -316,7 +316,7 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
     )
 
     ways_out = {str(wid): data for wid, data in way_handler.ways.items()}
-    write_json(f"{args.out_dir}/ways{level}.json", ways_out)
+    write_json(f"{args.output_dir}/ways{level}.json", ways_out)
 
     # --- Pass 3: Nodes (direct relation members) ---
     nodes_out: dict[str, Any] = {}
@@ -333,7 +333,7 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
         nodes_out = {str(nid): data for nid, data in node_handler.nodes.items()}
     else:
         _log("Pass 3: no direct node members found, skipping.")
-    write_json(f"{args.out_dir}/nodes{level}.json", nodes_out)
+    write_json(f"{args.output_dir}/nodes{level}.json", nodes_out)
 
     # --- Order ways in each relation into oriented rings, then write relations ---
     _log("Ordering ways into oriented rings …")
@@ -400,7 +400,7 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
 
     relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
     relations_out.sort(key=lambda r: parse_date_key(r["tags"].get("end_date", "2030")))
-    write_json(f"{args.out_dir}/relations{level}.json", relations_out)
+    write_json(f"{args.output_dir}/relations{level}.json", relations_out)
 
 
 def main() -> None:
@@ -412,7 +412,7 @@ def main() -> None:
     )
     parser.add_argument("osm_file", help="Path to the .osm.pbf file")
     parser.add_argument(
-        "--out-dir",
+        "--output-dir",
         default="app/public",
         help="Output directory for JSON files",
     )

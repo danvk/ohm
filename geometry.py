@@ -5,6 +5,10 @@ from dataclasses import dataclass
 
 from shapely import MultiPolygon, Polygon
 
+# Synthetic way IDs are negative integers used to close open rings.  OSM way
+# IDs are always positive, so there is no collision risk.
+_next_synthetic_way_id: int = 10**15  # OSM IDs won't reach this range
+
 
 @dataclass
 class OpenRingWarning:
@@ -419,8 +423,15 @@ def build_rings(
                         ring_head = next_nodes[-1]
                     continue
 
-                # Both ends stuck — this is a genuine open ring
+                # Both ends stuck — this is a genuine open ring.
+                # Warn, then close it with a straight-line synthetic segment.
                 warn(OpenRingWarning(node_id_start=ring_head, node_id_end=ring_tail))
+                global _next_synthetic_way_id
+                tail_coord = way_coords_forward(chain[-1], way_coords)[-1]
+                head_coord = way_coords_forward(chain[0], way_coords)[0]
+                way_coords[_next_synthetic_way_id] = [tail_coord, head_coord]
+                chain.append(_next_synthetic_way_id)
+                _next_synthetic_way_id += 1
                 break
 
             rings.append(list(chain))
@@ -511,7 +522,9 @@ def build_polygon_rings(
         if best_idx is not None:
             polygons[best_idx].append(inner_ring)
         else:
-            warnings.append(UncontainedInnerRingWarning(way_id=abs(inner_ring[0])))
+            if abs(inner_ring[0]) < 10**15:
+                # don't generate warnings about synthesized ways
+                warnings.append(UncontainedInnerRingWarning(way_id=abs(inner_ring[0])))
 
     return polygons, warnings
 

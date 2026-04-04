@@ -73,6 +73,11 @@ const METRIC_DOCS = {
   "num-nodes": { label: "Nodes" },
   "num-ways": { label: "Ways" },
   "num-relations": { label: "Relations" },
+  "dupes": {
+    label: "Duplicate Relations",
+    help: "Number of relations that have a likely duplicate. " +
+    "Each set of likely duplicates counts once."
+  }
 };
 
 const response = await fetch("/dashboard/stats.csv");
@@ -253,5 +258,16 @@ makeChart(
   {
     logscale: true,
     examples: false,
+  }
+);
+
+makeChart(
+  document.getElementById('dupes'),
+  [
+    'dupes'
+  ],
+  {
+    examples: true,
+    dateWindow: [Date.parse('2026-03-31'), Date.now()]
   }
 );
