@@ -86,7 +86,7 @@ const [headerRow, ...rowStrs] = data.split("\r\n").slice(0, -1);
 const header = headerRow.split(",");
 const rows = rowStrs.map((rs) => rs.split(","));
 
-function dataForSeries(...series) {
+function dataForSeries(series, opts) {
   const idxs = [];
   for (const s of series) {
     const idx = header.indexOf(s);
@@ -101,7 +101,9 @@ function dataForSeries(...series) {
       .slice(1)
       .map((v) => Number(v)),
   );
-  idxs.sort((a, b) => lastRow[b] - lastRow[a]);
+  if (!opts?.doNotSort) {
+    idxs.sort((a, b) => lastRow[b] - lastRow[a]);
+  }
   const allIdxs = [0].concat(idxs); // always include the date
 
   const sliceRows = [];
@@ -132,7 +134,8 @@ function formatExample(txt) {
 function makeChart(container, series, options) {
   const chartEl = container.querySelector(".chart");
   const labelsEl = container.querySelector(".chart-labels");
-  const g = new Dygraph(chartEl, dataForSeries(...series), {
+  const data = Array.isArray(series) ? dataForSeries(series) : series;
+  const g = new Dygraph(chartEl, data, {
     labelsDiv: labelsEl,
     labelsSeparateLines: true,
     legend: "always",
@@ -260,17 +263,19 @@ makeChart(
 );
 
 {
-  const rawCounts = dataForSeries('num-nodes', 'num-ways', 'num-relations');
-  const [headers, ...rows] = rawCounts.split('\n').map(row => row.split(','));
+  const rawCounts = dataForSeries(['num-relations', 'num-ways', 'num-nodes'], {doNotSort: true});
+  const [header, ...rows] = rawCounts.split('\n').map(row => row.split(','));
   const initVals = rows[0].map((v, i) => i > 0 ? Number(v) : 0);
-  const vals = rows.map(row => row.map((v, i) => i === 0 ? new Date(v.replaceAll('-', '/')) : Number(v) / initVals[i]));
-  console.log(vals);
+  const vals = rows.map(row => row.map((v, i) => i === 0 ? v : Number(v) / initVals[i]));
+  const text = [header, ...vals].map(row => row.map(String).join(',')).join('\n');
 
-  new Dygraph(
-    document.querySelector('#raw-features .chart'),
-    vals,
-    {
-      labels: headers
-    }
-  );
+  makeChart(document.getElementById('raw-features'), text, {
+    examples: false,
+    axes: { y: { valueFormatter: (scaled, _a, _b, _c, row, col) => {
+      const rawVal = Number(rows[row][col]);
+      const rawStr = rawVal.toLocaleString();
+      const scaleStr = scaled.toLocaleString({numeric: {maximumSignificantDigits: 2}});
+      return `${rawStr} (${scaleStr}x)`;
+    }}}
+  })
 }
