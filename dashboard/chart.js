@@ -249,24 +249,6 @@ makeChart(
 );
 
 makeChart(
-  document.getElementById('num-nodes'),
-  [ "num-nodes" ],
-  { examples: false, valueRange: [0, null], colors: [PALETTE[0]] }
-);
-
-makeChart(
-  document.getElementById('num-ways'),
-  [ "num-ways" ],
-  { examples: false, valueRange: [0, null], colors: [PALETTE[1]] }
-);
-
-makeChart(
-  document.getElementById('num-relations'),
-  [ "num-relations" ],
-  { examples: false, valueRange: [0, null], colors: [PALETTE[2]] }
-);
-
-makeChart(
   document.getElementById('dupes'),
   [
     'dupes'
@@ -276,3 +258,19 @@ makeChart(
     dateWindow: [Date.parse('2026-03-31'), Date.now()]
   }
 );
+
+{
+  const rawCounts = dataForSeries('num-nodes', 'num-ways', 'num-relations');
+  const [headers, ...rows] = rawCounts.split('\n').map(row => row.split(','));
+  const initVals = rows[0].map((v, i) => i > 0 ? Number(v) : 0);
+  const vals = rows.map(row => row.map((v, i) => i === 0 ? new Date(v.replaceAll('-', '/')) : Number(v) / initVals[i]));
+  console.log(vals);
+
+  new Dygraph(
+    document.querySelector('#raw-features .chart'),
+    vals,
+    {
+      labels: headers
+    }
+  );
+}
