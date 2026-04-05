@@ -345,6 +345,9 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
             inner_way_ids,
             way_handler.way_nodes,
             way_handler.way_coords,
+            # We've already output the ways at this point, so it's inconvenient
+            # to include any new, synthesized ways to close rings.
+            leave_open_rings=True,
         )
         for msg in poly_warnings:
             _log(f"    Warning: {msg}")
