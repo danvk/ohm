@@ -11,7 +11,6 @@ import json
 import re
 import sys
 from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 
 import osmium
@@ -24,6 +23,7 @@ from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform as shapely_transform
 from shapely.strtree import STRtree
+from tqdm import tqdm
 
 from dates import Range, duration_years, overlaps, parse_ohm_date, start_of_date
 from stats import write_stats
@@ -145,6 +145,7 @@ class CoverageHandler(osmium.SimpleHandler):
 
 def compute_pairwise_overlaps(
     features: list[OverlapFeature],
+    level: str,
 ) -> tuple[float, list[tuple[float, str, int, str, int, str]]]:
     """Find all pairs of features that overlap in both space and time.
 
@@ -154,13 +155,17 @@ def compute_pairwise_overlaps(
     if len(features) < 2:
         return 0.0, []
 
-    tree = STRtree([f.geom for f in features])
+    # Simplified geometries for fast bbox+topology rejection before full intersection.
+    simplified = [f.geom.simplify(0.1, preserve_topology=False) for f in features]
+    tree = STRtree(simplified)
 
     total = 0.0
     results: list[tuple[float, str, int, str, int, str]] = []
 
-    for i, feat_a in enumerate(features):
-        candidates = tree.query(feat_a.geom)
+    for i, feat_a in enumerate(
+        tqdm(features, desc=f"admin_level={level}", unit="feat", smoothing=0)
+    ):
+        candidates = tree.query(simplified[i], predicate="intersects")
         for j in candidates:
             if j <= i:
                 continue
@@ -170,7 +175,7 @@ def compute_pairwise_overlaps(
             if not overlaps(feat_a.date_range, feat_b.date_range):
                 continue
 
-            # Geometric intersection (expensive)
+            # Full geometric intersection (expensive)
             intersection = feat_a.geom.intersection(feat_b.geom)
             if intersection.is_empty:
                 continue
@@ -255,31 +260,26 @@ def main() -> None:
         preserve_sort_order=True,
     )
 
-    # Compute pairwise overlaps per admin level in parallel processes.
+    # Compute pairwise overlaps per admin level sequentially to limit RAM usage.
     print("Computing pairwise overlaps...", file=sys.stderr)
     overlap_counts: dict[str, float] = {}
     overlap_examples: dict[str, list[tuple[str, int, str]]] = {}
 
-    with ProcessPoolExecutor() as pool:
-        futures = {
-            pool.submit(compute_pairwise_overlaps, handler.features[level]): level
-            for level in ADMIN_LEVELS
-            if len(handler.features.get(level, [])) >= 2
-        }
-        for future in as_completed(futures):
-            level = futures[future]
-            total_ey, pairs = future.result()
-            key = f"double-covered-admin-{level}"
-            overlap_counts[key] = round(total_ey, 6)
-            overlap_examples[key] = [
-                (ftype_a, fid_a, desc)
-                for _, ftype_a, fid_a, *_, desc in pairs
-            ]
-            print(
-                f"  admin_level={level}: {len(pairs)} overlapping pairs, "
-                f"{total_ey:.4f} double-covered earth-years",
-                file=sys.stderr,
-            )
+    for level in ADMIN_LEVELS:
+        feats = handler.features.get(level, [])
+        if len(feats) < 2:
+            continue
+        total_ey, pairs = compute_pairwise_overlaps(feats, level)
+        key = f"double-covered-admin-{level}"
+        overlap_counts[key] = round(total_ey, 6)
+        overlap_examples[key] = [
+            (ftype_a, fid_a, desc) for _, ftype_a, fid_a, *_, desc in pairs
+        ]
+        print(
+            f"  admin_level={level}: {len(pairs)} overlapping pairs, "
+            f"{total_ey:.4f} double-covered earth-years",
+            file=sys.stderr,
+        )
 
     write_stats(
         args.output_dir,
