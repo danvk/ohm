@@ -338,6 +338,7 @@ def build_rings(
     way_nodes: dict[int, list[int]],
     way_coords: dict[int, list[tuple[float, float]]],
     warn=None,
+    leave_open_rings=False,
 ) -> list[list[int]]:
     """Order ways in a relation into closed, right-hand-rule oriented rings.
 
@@ -346,6 +347,8 @@ def build_rings(
 
     Ways that are already closed (first node == last node) form their own rings.
     Open ways are chained by shared endpoints until each ring closes.
+    Open rings are closed using a synthetic way, which is added to way_coords.
+    This can be disabled by passing leave_open_rings=True.
 
     *warn* is an optional callable(GeometryWarning) used to emit warnings; defaults to no-op.
     """
@@ -426,12 +429,13 @@ def build_rings(
                 # Both ends stuck — this is a genuine open ring.
                 # Warn, then close it with a straight-line synthetic segment.
                 warn(OpenRingWarning(node_id_start=ring_head, node_id_end=ring_tail))
-                global _next_synthetic_way_id
-                tail_coord = way_coords_forward(chain[-1], way_coords)[-1]
-                head_coord = way_coords_forward(chain[0], way_coords)[0]
-                way_coords[_next_synthetic_way_id] = [tail_coord, head_coord]
-                chain.append(_next_synthetic_way_id)
-                _next_synthetic_way_id += 1
+                if not leave_open_rings:
+                    global _next_synthetic_way_id
+                    tail_coord = way_coords_forward(chain[-1], way_coords)[-1]
+                    head_coord = way_coords_forward(chain[0], way_coords)[0]
+                    way_coords[_next_synthetic_way_id] = [tail_coord, head_coord]
+                    chain.append(_next_synthetic_way_id)
+                    _next_synthetic_way_id += 1
                 break
 
             rings.append(list(chain))
@@ -470,6 +474,7 @@ def build_polygon_rings(
     inner_way_ids: list[int],
     way_nodes: dict[int, list[int]],
     way_coords: dict[int, list[tuple[float, float]]],
+    leave_open_rings=False,
 ) -> tuple[list[list[list[int]]], list[GeometryWarning]]:
     """Build a MultiPolygon ring structure from outer and inner (hole) ways.
 
@@ -486,11 +491,21 @@ def build_polygon_rings(
 
     # Build outer rings (CCW)
     outer_rings = build_rings(
-        outer_way_ids, way_nodes, way_coords, warn=warnings.append
+        outer_way_ids,
+        way_nodes,
+        way_coords,
+        warn=warnings.append,
+        leave_open_rings=leave_open_rings,
     )
 
     # Build inner rings, then flip to CW (negate each way and reverse list)
-    raw_inner = build_rings(inner_way_ids, way_nodes, way_coords, warn=warnings.append)
+    raw_inner = build_rings(
+        inner_way_ids,
+        way_nodes,
+        way_coords,
+        warn=warnings.append,
+        leave_open_rings=leave_open_rings,
+    )
     inner_rings: list[list[int]] = [[-wid for wid in reversed(r)] for r in raw_inner]
 
     # Pre-compute a representative point (first coord of first way) for each inner ring
@@ -534,10 +549,15 @@ def build_polygon_rings_quiet(
     inner_way_ids: list[int],
     way_nodes: dict[int, list[int]],
     way_coords: dict[int, list[tuple[float, float]]],
+    leave_open_rings=False,
 ) -> list[list[list[int]]]:
     """Wrapper around :func:`build_polygon_rings` that silently drops warnings."""
     polygons, _ = build_polygon_rings(
-        outer_way_ids, inner_way_ids, way_nodes, way_coords
+        outer_way_ids,
+        inner_way_ids,
+        way_nodes,
+        way_coords,
+        leave_open_rings=leave_open_rings,
     )
     return polygons
 
