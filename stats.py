@@ -18,7 +18,10 @@ def write_stats(
             {"type": typ, "count": count} for typ, count in sorted(other_stats.items())
         )
         out.writerows(
-            {"type": typ, "count": len(rs)} for typ, rs in sorted(examples.items())
+            {"type": typ, "count": len(rs)}
+            for typ, rs in sorted(examples.items())
+            # allow "other_stats" to count differently, e.g. for earth_coverage.py
+            if typ not in other_stats
         )
 
     rng = random.Random(2026)

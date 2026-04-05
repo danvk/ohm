@@ -73,7 +73,7 @@ class ChronologyHandler(osmium.SimpleHandler):
             return
         self.chronology_count += 1
         chrono_id = r.id
-        chrono_name = r.tags.get("name", "")
+        chrono_name = r.tags.get("name:en") or r.tags.get("name")
         # Members are stored in chronological order; all are relation members.
         members = [m.ref for m in r.members if m.type == "r"]
         for i, member_id in enumerate(members):

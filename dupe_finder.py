@@ -31,7 +31,7 @@ class DupeCandidateFinder(osmium.SimpleHandler):
         self.name_to_relation = defaultdict[tuple, list[int]](list)
 
     def relation(self, r: Relation) -> None:
-        name = r.tags.get("name")
+        name = r.tags.get("name:en") or r.tags.get("name")
         if not name:
             return
         if len(r.members) == 0:

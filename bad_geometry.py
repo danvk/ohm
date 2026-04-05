@@ -47,7 +47,7 @@ class RelGeomCollector(osmium.SimpleHandler):
             inner=inner,
             start_date=r.tags.get("start_date"),
             end_date=r.tags.get("end_date"),
-            name=r.tags.get("name"),
+            name=r.tags.get("name:en") or r.tags.get("name"),
         )
 
 
