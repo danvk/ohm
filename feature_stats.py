@@ -4,26 +4,23 @@ import subprocess
 import sys
 
 import osmium
-import osmium.filter
 import osmium.osm
 
 from stats import write_stats
 
 
 def count_empty_ways(osm_file: str) -> int:
-    fp = osmium.FileProcessor(osm_file, osmium.osm.WAY).with_filter(
-        osmium.filter.KeyFilter("name")
-    )
-    n_named_ways = 0
+    fp = osmium.FileProcessor(osm_file, osmium.osm.WAY)
+    n_ways = 0
     n_empty_ways = 0
     for obj in fp:
         if not isinstance(obj, osmium.osm.Way):
             continue
-        n_named_ways += 1
+        n_ways += 1
         if len(obj.nodes) == 0:
             n_empty_ways += 1
 
-    sys.stderr.write(f"{osm_file}: {n_named_ways=} {n_empty_ways=}\n")
+    sys.stderr.write(f"{osm_file}: {n_ways=} {n_empty_ways=}\n")
     return n_empty_ways
 
 
