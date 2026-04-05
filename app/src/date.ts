@@ -1,13 +1,23 @@
+function toDecimal(d: string) {
+  const padded = padDate(d, 'start');
+  return padded ? isoDateToDecimalDate(padded, false) : null;
+}
+
 export function isDateInRange(
   date: string,
   startDate: string | undefined | null,
   endDate: string | undefined | null,
 ): boolean {
-  if (startDate && date < startDate) {
-    return false;
+  const decDate = toDecimal(date);
+  if (decDate === null) return true;
+
+  if (startDate) {
+    const decStart = toDecimal(startDate);
+    if (decStart !== null && decDate < decStart) return false;
   }
-  if (endDate && date >= endDate) {
-    return false;
+  if (endDate) {
+    const decEnd = toDecimal(endDate);
+    if (decEnd !== null && decDate >= decEnd) return false;
   }
   return true;
 }
@@ -33,8 +43,14 @@ export function isValidMonth(month: number): boolean {
   return month >= 1 && month <= 12;
 }
 
-export function isValidMonthDay(year: number, month: number, day: number): boolean {
-  return isValidMonth(month) && day > 0 && day <= howManyDaysInMonth(year, month);
+export function isValidMonthDay(
+  year: number,
+  month: number,
+  day: number,
+): boolean {
+  return (
+    isValidMonth(month) && day > 0 && day <= howManyDaysInMonth(year, month)
+  );
 }
 
 // Return the 1-based day-of-year (yday) for the given date.
@@ -50,10 +66,16 @@ export function yday(year: number, month: number, day: number): number {
 }
 
 // Split an ISO-8601-shaped date string into [year, month, day].
-export function splitDateString(datestring: string): [number, number, number] | null {
+export function splitDateString(
+  datestring: string,
+): [number, number, number] | null {
   const match = datestring.match(/^(-?\+?\d+)-(\d\d)-(\d\d)$/);
   if (!match) return null;
-  return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10)];
+  return [
+    parseInt(match[1], 10),
+    parseInt(match[2], 10),
+    parseInt(match[3], 10),
+  ];
 }
 
 // Convert an ISO-8601-shaped date string to a decimal year.
@@ -64,7 +86,8 @@ export function isoDateToDecimalDate(
 ): number | null {
   const parts = splitDateString(datestring);
   if (!parts) {
-    if (tryToFixInvalid == null) throw new Error(`Cannot parse date: ${datestring}`);
+    if (tryToFixInvalid == null)
+      throw new Error(`Cannot parse date: ${datestring}`);
     return null;
   }
 

@@ -21,6 +21,37 @@ describe('isDateInRange', () => {
     expect(isDateInRange('1989', '1981', '1989')).toBe(false);
     expect(isDateInRange('1990', '1981', '1989')).toBe(false);
   });
+
+  it('should handle open-ended ranges', () => {
+    expect(isDateInRange('1981', null, '2000')).toBe(true);
+    expect(isDateInRange('1981', null, '1982')).toBe(true);
+    expect(isDateInRange('1981', null, '1981')).toBe(false);
+    expect(isDateInRange('1981', '1980', null)).toBe(true);
+    expect(isDateInRange('1981', '1981', null)).toBe(true);
+    expect(isDateInRange('1981', '1982', null)).toBe(false);
+  });
+
+  it('should handle zero-padded dates', () => {
+    expect(isDateInRange('1981', '0802', '905')).toBe(false);
+    expect(isDateInRange('802', '0802', '905')).toBe(true);
+    expect(isDateInRange('900', '0802', '905')).toBe(true);
+    expect(isDateInRange('905', '0802', '905')).toBe(false);
+    expect(isDateInRange('0905', '0802', '905')).toBe(false);
+  });
+
+  it('should handle months', () => {
+    expect(isDateInRange('1984-07-12', '1984-01', '1984-12')).toBe(true);
+    expect(isDateInRange('1984-07', '1984-01', '1984-12')).toBe(true);
+    expect(isDateInRange('1984-07', '1984-01', '1984-07')).toBe(false);
+    expect(isDateInRange('1984-07', '1984-07', '1984-08')).toBe(true);
+  });
+
+  it('should handle negative dates', () => {
+    expect(isDateInRange('1234', '-123', '1234')).toBe(false);
+    expect(isDateInRange('-123', '-123', '1234')).toBe(true);
+    expect(isDateInRange('-124', '-123', '1234')).toBe(false);
+    expect(isDateInRange('-122', '-123', '1234')).toBe(true);
+  });
 });
 
 describe('isLeapYear', () => {
@@ -165,6 +196,17 @@ describe('isoDateToDecimalDate', () => {
   it('throws on invalid input by default', () => {
     expect(() => isoDateToDecimalDate('1917-04-31')).toThrow();
   });
+
+  it('handles zero-padded dates', () => {
+    expect(padDate('802', 'start')).toMatchInlineSnapshot(`"802-01-01"`);
+    expect(padDate('0802', 'start')).toMatchInlineSnapshot(`"0802-01-01"`);
+    expect(isoDateToDecimalDate('0802-01-01')).toMatchInlineSnapshot(
+      `802.00137`,
+    );
+    expect(isoDateToDecimalDate('802-01-01')).toMatchInlineSnapshot(
+      `802.00137`,
+    );
+  });
 });
 
 describe('decimalDateToIsoDate', () => {
@@ -186,18 +228,38 @@ describe('decimalDateToIsoDate', () => {
 
 describe('isoDateToDecimalDate / decimalDateToIsoDate round-trip', () => {
   it('round-trips positive dates', () => {
-    expect(decimalDateToIsoDate(isoDateToDecimalDate('2000-12-01')!)).toBe('2000-12-01');
-    expect(decimalDateToIsoDate(isoDateToDecimalDate('2000-12-31')!)).toBe('2000-12-31');
-    expect(decimalDateToIsoDate(isoDateToDecimalDate('2000-02-29')!)).toBe('2000-02-29');
-    expect(decimalDateToIsoDate(isoDateToDecimalDate('1999-12-01')!)).toBe('1999-12-01');
-    expect(decimalDateToIsoDate(isoDateToDecimalDate('1999-12-31')!)).toBe('1999-12-31');
-    expect(decimalDateToIsoDate(isoDateToDecimalDate('10191-06-30')!)).toBe('10191-06-30');
-    expect(decimalDateToIsoDate(isoDateToDecimalDate('10191-07-31')!)).toBe('10191-07-31');
+    expect(decimalDateToIsoDate(isoDateToDecimalDate('2000-12-01')!)).toBe(
+      '2000-12-01',
+    );
+    expect(decimalDateToIsoDate(isoDateToDecimalDate('2000-12-31')!)).toBe(
+      '2000-12-31',
+    );
+    expect(decimalDateToIsoDate(isoDateToDecimalDate('2000-02-29')!)).toBe(
+      '2000-02-29',
+    );
+    expect(decimalDateToIsoDate(isoDateToDecimalDate('1999-12-01')!)).toBe(
+      '1999-12-01',
+    );
+    expect(decimalDateToIsoDate(isoDateToDecimalDate('1999-12-31')!)).toBe(
+      '1999-12-31',
+    );
+    expect(decimalDateToIsoDate(isoDateToDecimalDate('10191-06-30')!)).toBe(
+      '10191-06-30',
+    );
+    expect(decimalDateToIsoDate(isoDateToDecimalDate('10191-07-31')!)).toBe(
+      '10191-07-31',
+    );
   });
 
   it('round-trips negative dates (with expected ISO 8601 offset)', () => {
-    expect(decimalDateToIsoDate(isoDateToDecimalDate('-1999-06-15')!)).toBe('-1999-06-15');
-    expect(decimalDateToIsoDate(isoDateToDecimalDate('-10191-06-30')!)).toBe('-10191-06-30');
-    expect(decimalDateToIsoDate(isoDateToDecimalDate('-10191-07-31')!)).toBe('-10191-07-31');
+    expect(decimalDateToIsoDate(isoDateToDecimalDate('-1999-06-15')!)).toBe(
+      '-1999-06-15',
+    );
+    expect(decimalDateToIsoDate(isoDateToDecimalDate('-10191-06-30')!)).toBe(
+      '-10191-06-30',
+    );
+    expect(decimalDateToIsoDate(isoDateToDecimalDate('-10191-07-31')!)).toBe(
+      '-10191-07-31',
+    );
   });
 });
