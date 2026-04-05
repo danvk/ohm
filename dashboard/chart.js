@@ -65,10 +65,10 @@ const METRIC_DOCS = {
     help: "If a feature has end_date, then it should have start_date. Nothing is timeless.",
   },
 
-  "earth-years-admin-1": { label: "admin1" },
-  "earth-years-admin-2": { label: "admin2" },
-  "earth-years-admin-3": { label: "admin3" },
-  "earth-years-admin-4": { label: "admin4" },
+  "earth-years-admin-1": { label: "admin1", help: 'See above for an explanation of this metric.' },
+  "earth-years-admin-2": { label: "admin2", help: 'See above for an explanation of this metric.' },
+  "earth-years-admin-3": { label: "admin3", help: 'See above for an explanation of this metric.' },
+  "earth-years-admin-4": { label: "admin4", help: 'See above for an explanation of this metric.' },
 
   "num-nodes": { label: "Nodes" },
   "num-ways": { label: "Ways" },
@@ -246,7 +246,7 @@ makeChart(
   "earth-years-admin-4"],
   {
     ylabel: 'Earth Years',
-    examples: false,
+    examples: true,
     labelsKMB: false,
   }
 );

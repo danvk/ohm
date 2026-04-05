@@ -102,7 +102,7 @@ class CoverageHandler(osmium.SimpleHandler):
         earth_yrs = area_y_km2 / EARTH_LAND_AREA_KM2
         self.totals[admin_level] += area_y_km2
 
-        name = a.tags.get("name", "")
+        name = a.tags.get("name:en") or a.tags.get("name") or ""
         start_tag = a.tags.get("start_date", "?")
         end_tag = a.tags.get("end_date", "present")
         desc = f"{earth_yrs:.4f} earth-yr; {name} ({start_tag}–{end_tag})"
@@ -163,7 +163,7 @@ def main() -> None:
     examples: dict[str, list[tuple[str, int, str]]] = {}
     for level, items in handler.raw_examples.items():
         items.sort(key=lambda x: x[0], reverse=True)
-        examples[f"admin-{level}"] = [
+        examples[f"earth-years-admin-{level}"] = [
             (ftype, fid, desc) for _, ftype, fid, desc in items
         ]
 

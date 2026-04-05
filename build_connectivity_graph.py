@@ -251,7 +251,7 @@ class RelationHandler(osmium.SimpleHandler):
         self.relations[r.id] = {
             "start_date": tags.get("start_date"),
             "end_date": tags.get("end_date"),
-            "name": tags.get("name", ""),
+            "name": r.tags.get("name:en") or r.tags.get("name") or "",
             "outer_ways": outer_ways,
             "inner_ways": inner_ways,
             "all_ways": set(all_ways),
