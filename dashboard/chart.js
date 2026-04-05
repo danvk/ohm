@@ -249,16 +249,21 @@ makeChart(
 );
 
 makeChart(
-  document.getElementById('raw-features'),
-  [
-    "num-nodes",
-    "num-ways",
-    "num-relations"
-  ],
-  {
-    logscale: true,
-    examples: false,
-  }
+  document.getElementById('num-nodes'),
+  [ "num-nodes" ],
+  { examples: false, valueRange: [0, null], colors: [PALETTE[0]] }
+);
+
+makeChart(
+  document.getElementById('num-ways'),
+  [ "num-ways" ],
+  { examples: false, valueRange: [0, null], colors: [PALETTE[1]] }
+);
+
+makeChart(
+  document.getElementById('num-relations'),
+  [ "num-relations" ],
+  { examples: false, valueRange: [0, null], colors: [PALETTE[2]] }
 );
 
 makeChart(
