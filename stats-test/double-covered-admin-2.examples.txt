@@ -1,3 +1,0 @@
-r/2865630: 2.7988 earth-yr; r/2865630 × r/2860325 Seljuk Empire|Abbasid Caliphate (1060–1194)
-r/2860259: 0.3787 earth-yr; r/2860259 × r/2865630 Fatimid Caliphate|Seljuk Empire (1060–1171)
-r/2860259: 0.0000 earth-yr; r/2860259 × r/2860325 Fatimid Caliphate|Abbasid Caliphate (1060–1171)
