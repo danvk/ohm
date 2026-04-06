@@ -1,0 +1,7 @@
+r/2830611: 0.0000 earth-yr; r/2830611 × r/2830660 Brandenburg (1524-1575)|Lower Saxon Circle (1522-1593) (1524–1575)
+r/2695513: 0.0000 earth-yr; r/2695513 × r/2830430 Brandenburg (1575-1614)|Lands of the Bohemian Crown (1557-1635) (1575–1614)
+r/2812123: 0.0000 earth-yr; r/2812123 × r/2830660 Lower Rhenish–Westphalian Circle (1548-1679)|Lower Saxon Circle (1522-1593) (1548–1593)
+r/2810174: 0.0000 earth-yr; r/2810174 × r/2830430 Bavarian Circle (1565-1779)|Lands of the Bohemian Crown (1557-1635) (1565–1635)
+r/2830685: 0.0000 earth-yr; r/2830685 × r/2812123 Lower Saxon Circle (1593-1806)|Lower Rhenish–Westphalian Circle (1548-1679) (1593–1679)
+r/2830392: 0.0000 earth-yr; r/2830392 × r/2810174 Lands of the Bohemian Crown (1635-1742)|Bavarian Circle (1565-1779) (1635–1742)
+r/2831013: 0.0000 earth-yr; r/2831013 × r/2830685 Lower Rhenish–Westphalian Circle (1679-1713)|Lower Saxon Circle (1593-1806) (1679–1713)
