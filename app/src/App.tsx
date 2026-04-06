@@ -246,7 +246,7 @@ export default function App() {
       </div>
       <TimeSlider
         year={year}
-        minYear={-4000}
+        minYear={0}
         maxYear={2030}
         onChange={handleYearChange}
       />

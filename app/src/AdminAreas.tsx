@@ -12,7 +12,6 @@ import type { FeatureInfo } from './FeaturePanel';
 import type { AppData } from './loader.ts';
 import type { Relation } from './ohm-data.ts';
 import { CIRCLE_STYLE, LINE_STYLE, PAINT_STYLE } from './map-style.ts';
-import { isDateInRange } from './date.ts';
 
 export interface AdminAreasProps {
   data: AppData;
@@ -123,7 +122,8 @@ export function AdminAreas(props: AdminAreasProps) {
       const { id, tags } = relation;
       if (
         !adminLevels.has(tags['admin_level'] ?? '') ||
-        !isDateInRange(year, tags['start_date'], tags['end_date'])
+        ('start_date' in tags && year < tags['start_date']) ||
+        ('end_date' in tags && year >= tags['end_date'])
       ) {
         continue;
       }
