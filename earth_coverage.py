@@ -39,6 +39,7 @@ class OverlapFeature:
     name: str
     geom: BaseGeometry
     date_range: Range  # (start_DateTuple, end_DateTuple)
+    area_km2: float
 
 
 # Transformer from WGS84 lon/lat → equal-area projection (EPSG:6933) for km²
@@ -115,7 +116,8 @@ class CoverageHandler(osmium.SimpleHandler):
         if not geom.is_valid:
             geom = geom.buffer(0)
 
-        area_y_km2 = duration_y * area_km2(geom)
+        geom_km2 = area_km2(geom)
+        area_y_km2 = duration_y * geom_km2
         earth_yrs = area_y_km2 / EARTH_LAND_AREA_KM2
         self.totals[admin_level] += area_y_km2
 
@@ -127,6 +129,7 @@ class CoverageHandler(osmium.SimpleHandler):
                 name=name,
                 geom=geom,
                 date_range=date_range,
+                area_km2=geom_km2,
             )
         )
         start_tag = a.tags.get("start_date", "?")
@@ -147,6 +150,7 @@ class CoverageHandler(osmium.SimpleHandler):
 def compute_pairwise_overlaps(
     features: list[OverlapFeature],
     level: str,
+    min_earth_years: float = 0.0,
 ) -> tuple[float, list[tuple[float, str, int, str, int, str]]]:
     """Find all pairs of features that overlap in both space and time.
 
@@ -196,16 +200,20 @@ def compute_pairwise_overlaps(
 
             feat_j = sorted_feats[j]
 
+            # Upper-bound check: intersection can't exceed the smaller feature's area.
+            overlap_start = max(start_k, feat_j.date_range[0])
+            overlap_end = min(end_k, feat_j.date_range[1])
+            overlap_range: Range = (overlap_start, overlap_end)
+            dur_y = duration_years(overlap_range)
+            max_earth_yrs = dur_y * min(feat_k.area_km2, feat_j.area_km2) / EARTH_LAND_AREA_KM2
+            if max_earth_yrs < min_earth_years:
+                continue
+
             # Full geometric intersection.
             intersection = feat_k.geom.intersection(feat_j.geom)
             if intersection.is_empty:
                 continue
 
-            overlap_start = max(start_k, feat_j.date_range[0])
-            overlap_end = min(end_k, feat_j.date_range[1])
-            overlap_range: Range = (overlap_start, overlap_end)
-
-            dur_y = duration_years(overlap_range)
             km2 = area_km2(intersection)
             earth_yrs = dur_y * km2 / EARTH_LAND_AREA_KM2
 
@@ -234,6 +242,12 @@ def main() -> None:
     )
     parser.add_argument("osm_file", help="Path to the .osm.pbf file")
     parser.add_argument("--output_dir", default=".")
+    parser.add_argument(
+        "--min_overlap_earth_years",
+        type=float,
+        default=0.01,
+        help="Skip pairs whose upper-bound overlap is below this threshold (default: 0.01)",
+    )
     args = parser.parse_args()
 
     print(f"Reading {args.osm_file} ...", file=sys.stderr)
@@ -294,7 +308,7 @@ def main() -> None:
         feats = handler.features.get(level, [])
         if len(feats) < 2:
             continue
-        total_ey, pairs = compute_pairwise_overlaps(feats, level)
+        total_ey, pairs = compute_pairwise_overlaps(feats, level, args.min_overlap_earth_years)
         key = f"double-covered-admin-{level}"
         overlap_counts[key] = round(total_ey, 6)
         overlap_examples[key] = [
