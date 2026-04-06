@@ -7,6 +7,7 @@ start_date/end_date tags.
 
 import argparse
 import functools
+import heapq
 import json
 import re
 import sys
@@ -25,7 +26,7 @@ from shapely.ops import transform as shapely_transform
 from shapely.strtree import STRtree
 from tqdm import tqdm
 
-from dates import Range, duration_years, overlaps, parse_ohm_date, start_of_date
+from dates import Range, duration_years, parse_ohm_date, start_of_date
 from stats import write_stats
 
 EARTH_LAND_AREA_KM2 = 149_000_000
@@ -149,39 +150,59 @@ def compute_pairwise_overlaps(
 ) -> tuple[float, list[tuple[float, str, int, str, int, str]]]:
     """Find all pairs of features that overlap in both space and time.
 
+    Uses a temporal sweep line so that spatial intersection is only tested
+    against features that are temporally active (overlapping in time).
+
     Returns (total_earth_years, sorted_results) where each result is
     (earth_yrs, ftype_a, fid_a, ftype_b, fid_b, desc).
     """
     if len(features) < 2:
         return 0.0, []
 
-    # Simplified geometries for fast bbox+topology rejection before full intersection.
-    simplified = [f.geom.simplify(0.1, preserve_topology=False) for f in features]
+    # Sort by start_date so we can sweep and expire features as time advances.
+    order = sorted(range(len(features)), key=lambda k: features[k].date_range[0])
+    sorted_feats = [features[k] for k in order]
+
+    # Simplified geometries for fast spatial rejection (STRtree uses these).
+    simplified = [f.geom.simplify(0.1, preserve_topology=False) for f in sorted_feats]
     tree = STRtree(simplified)
 
     total = 0.0
     results: list[tuple[float, str, int, str, int, str]] = []
 
-    for i, feat_a in enumerate(
-        tqdm(features, desc=f"admin_level={level}", unit="feat", smoothing=0)
+    # active_set: sorted indices that have started and not yet expired.
+    # expiry_heap: min-heap of (end_date, sorted_index) for efficient expiry.
+    active_set: set[int] = set()
+    expiry_heap: list[tuple[tuple[int, int, int], int]] = []
+
+    for k, feat_k in enumerate(
+        tqdm(sorted_feats, desc=f"admin_level={level}", unit="feat", smoothing=0)
     ):
-        candidates = tree.query(simplified[i], predicate="intersects")
+        start_k, end_k = feat_k.date_range
+
+        # Expire features that ended at or before start_k (no temporal overlap).
+        while expiry_heap and expiry_heap[0][0] <= start_k:
+            _, expired = heapq.heappop(expiry_heap)
+            active_set.discard(expired)
+
+        # Query STRtree for spatially-nearby candidates (bbox + simplified intersects).
+        candidates = tree.query(simplified[k], predicate="intersects")
+
         for j in candidates:
-            if j <= i:
-                continue
-            feat_b = features[j]
-
-            # Temporal check first (cheap)
-            if not overlaps(feat_a.date_range, feat_b.date_range):
+            # Only check against already-active features (j < k in sorted order).
+            # This guarantees temporal overlap and avoids processing each pair twice.
+            if j not in active_set:
                 continue
 
-            # Full geometric intersection (expensive)
-            intersection = feat_a.geom.intersection(feat_b.geom)
+            feat_j = sorted_feats[j]
+
+            # Full geometric intersection.
+            intersection = feat_k.geom.intersection(feat_j.geom)
             if intersection.is_empty:
                 continue
 
-            overlap_start = max(feat_a.date_range[0], feat_b.date_range[0])
-            overlap_end = min(feat_a.date_range[1], feat_b.date_range[1])
+            overlap_start = max(start_k, feat_j.date_range[0])
+            overlap_end = min(end_k, feat_j.date_range[1])
             overlap_range: Range = (overlap_start, overlap_end)
 
             dur_y = duration_years(overlap_range)
@@ -190,14 +211,18 @@ def compute_pairwise_overlaps(
 
             desc = (
                 f"{earth_yrs:.4f} earth-yr; "
-                f"{feat_a.ftype}/{feat_a.fid} × {feat_b.ftype}/{feat_b.fid} "
-                f"{feat_a.name}|{feat_b.name} "
+                f"{feat_k.ftype}/{feat_k.fid} × {feat_j.ftype}/{feat_j.fid} "
+                f"{feat_k.name}|{feat_j.name} "
                 f"({overlap_start[0]}–{overlap_end[0]})"
             )
             results.append(
-                (earth_yrs, feat_a.ftype, feat_a.fid, feat_b.ftype, feat_b.fid, desc)
+                (earth_yrs, feat_k.ftype, feat_k.fid, feat_j.ftype, feat_j.fid, desc)
             )
             total += earth_yrs
+
+        # Add k to the active set after checking (so it's available for future features).
+        active_set.add(k)
+        heapq.heappush(expiry_heap, (end_k, k))
 
     results.sort(key=lambda x: x[0], reverse=True)
     return total, results
