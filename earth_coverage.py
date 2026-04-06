@@ -205,7 +205,9 @@ def compute_pairwise_overlaps(
             overlap_end = min(end_k, feat_j.date_range[1])
             overlap_range: Range = (overlap_start, overlap_end)
             dur_y = duration_years(overlap_range)
-            max_earth_yrs = dur_y * min(feat_k.area_km2, feat_j.area_km2) / EARTH_LAND_AREA_KM2
+            max_earth_yrs = (
+                dur_y * min(feat_k.area_km2, feat_j.area_km2) / EARTH_LAND_AREA_KM2
+            )
             if max_earth_yrs < min_earth_years:
                 continue
 
@@ -308,7 +310,9 @@ def main() -> None:
         feats = handler.features.get(level, [])
         if len(feats) < 2:
             continue
-        total_ey, pairs = compute_pairwise_overlaps(feats, level, args.min_overlap_earth_years)
+        total_ey, pairs = compute_pairwise_overlaps(
+            feats, level, args.min_overlap_earth_years
+        )
         key = f"double-covered-admin-{level}"
         overlap_counts[key] = round(total_ey, 6)
         overlap_examples[key] = [
