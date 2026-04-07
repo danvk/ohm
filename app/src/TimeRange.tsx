@@ -27,9 +27,21 @@ function sliderToYear(pos: number, minYear: number, maxYear: number): number {
 }
 
 function makeMarks(minYear: number, maxYear: number): Record<number, number> {
-  const years = [minYear, 500, 1000, 1500, 1800, 1900, 2000, maxYear].filter(
-    (y) => y >= minYear && y <= maxYear,
-  );
+  const years = [
+    minYear,
+    -4000,
+    -3000,
+    -2000,
+    -1000,
+    0,
+    500,
+    1000,
+    1500,
+    1800,
+    1900,
+    2000,
+    maxYear,
+  ].filter((y) => y >= minYear && y <= maxYear);
   return Object.fromEntries(
     years.map((y) => [yearToSlider(y, minYear, maxYear), y]),
   );

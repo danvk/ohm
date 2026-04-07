@@ -28,7 +28,7 @@ export function TimeControl(props: TimeControlProps) {
       />
       <TimeRange
         years={[minYear, maxYear]}
-        minYear={-4000}
+        minYear={-6000}
         maxYear={2030}
         onChange={props.onChangeRange}
       />
