@@ -2,6 +2,56 @@
  * URL search-parameter state: `?map=zoom/lat/lng&date=year`
  */
 
+import { createParser } from 'nuqs';
+
+// nuqs parsers — custom serialization to preserve the existing URL format.
+// nuqs's renderQueryString intentionally leaves / and , unencoded, so pretty URLs are preserved.
+
+export const mapViewParser = createParser({
+  parse(value: string) {
+    const parts = value.split('/');
+    if (parts.length !== 3) return null;
+    const [zoom, lat, lng] = parts.map(parseFloat);
+    if (!isFinite(zoom) || !isFinite(lat) || !isFinite(lng)) return null;
+    return { zoom, lat, lng };
+  },
+  serialize({ zoom, lat, lng }: { zoom: number; lat: number; lng: number }) {
+    return `${zoom.toFixed(2)}/${lat.toFixed(4)}/${lng.toFixed(4)}`;
+  },
+});
+
+export const dateParser = createParser({
+  parse(v: string) {
+    return /^-?\d{1,4}(-\d{2}(-\d{2})?)?$/.test(v) ? v : null;
+  },
+  serialize(v: string) {
+    return v;
+  },
+});
+
+export const idsParser = createParser({
+  parse(v: string) {
+    const parsed = v.split(',').map(Number).filter(isFinite);
+    return parsed.length > 0 ? parsed : null;
+  },
+  serialize(v: number[]) {
+    return v.join(',');
+  },
+});
+
+export const levelsParser = createParser({
+  parse(v: string) {
+    const parsed = v.split(',').filter((l) => /^\d+$/.test(l));
+    return parsed.length > 0 ? new Set(parsed) : null;
+  },
+  serialize(v: Set<string>) {
+    return [...v].sort().join(',');
+  },
+  eq(a: Set<string>, b: Set<string>) {
+    return [...a].sort().join() === [...b].sort().join();
+  },
+});
+
 export interface UrlState {
   zoom: number;
   lat: number;
