@@ -27,6 +27,20 @@ function sliderToYear(pos: number, minYear: number, maxYear: number): number {
   return Math.round(minYear + t * (maxYear - minYear));
 }
 
+// Snap threshold in slider units (0..SLIDER_MAX). ~150 ≈ 15px on a 1000px-wide slider.
+const SNAP_THRESHOLD = 150;
+
+/** Snap to nearest multiple of 100 (or 50 for year ≥ 1700) if within threshold. */
+function snapYear(sliderPos: number, year: number, minYear: number, maxYear: number): number {
+  const interval = year >= 1700 ? 50 : 100;
+  const nearest = Math.round(year / interval) * interval;
+  const nearestSliderPos = yearToSlider(nearest, minYear, maxYear);
+  if (Math.abs(sliderPos - nearestSliderPos) <= SNAP_THRESHOLD) {
+    return nearest;
+  }
+  return year;
+}
+
 function makeMarks(minYear: number, maxYear: number): Record<number, number> {
   const years = [
     minYear,
@@ -149,8 +163,8 @@ export function TimeRange({
             }
             const [v1, v2] = vs;
             onChange(
-              sliderToYear(v1, minYear, maxYear),
-              sliderToYear(v2, minYear, maxYear),
+              snapYear(v1, sliderToYear(v1, minYear, maxYear), minYear, maxYear),
+              snapYear(v2, sliderToYear(v2, minYear, maxYear), minYear, maxYear),
             );
           }}
           marks={makeMarks(minYear, maxYear)}
