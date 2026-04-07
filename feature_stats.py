@@ -1,5 +1,6 @@
 import argparse
 import json
+import random
 import subprocess
 import sys
 
@@ -22,6 +23,53 @@ def count_empty_ways(osm_file: str) -> int:
 
     sys.stderr.write(f"{osm_file}: {n_ways=} {n_empty_ways=}\n")
     return n_empty_ways
+
+
+def count_orphaned_features(osm_file: str) -> tuple[int, int]:
+    """Count untagged nodes not in any way, and untagged ways not in any relation."""
+    # Pass 1: collect node IDs used by ways, and way IDs used by relations
+    node_ids_in_ways: set[int] = set()
+    way_ids_in_relations: set[int] = set()
+    fp = osmium.FileProcessor(osm_file, osmium.osm.WAY | osmium.osm.RELATION)
+    for obj in fp:
+        if isinstance(obj, osmium.osm.Way):
+            for node_ref in obj.nodes:
+                node_ids_in_ways.add(node_ref.ref)
+        elif isinstance(obj, osmium.osm.Relation):
+            for member in obj.members:
+                if member.type == "w":
+                    way_ids_in_relations.add(member.ref)
+
+    # Pass 2: count untagged nodes not in any way
+    n_untagged_orphan_nodes = 0
+    untagged_orphan_nodes: list[int] = []
+    fp = osmium.FileProcessor(osm_file, osmium.osm.NODE)
+    for obj in fp:
+        if not isinstance(obj, osmium.osm.Node):
+            continue
+        if len(obj.tags) == 0 and obj.id not in node_ids_in_ways:
+            n_untagged_orphan_nodes += 1
+            untagged_orphan_nodes.append(obj.id)
+
+    # Pass 3: count untagged ways not in any relation
+    n_untagged_orphan_ways = 0
+    untagged_orphan_ways: list[int] = []
+    fp = osmium.FileProcessor(osm_file, osmium.osm.WAY)
+    for obj in fp:
+        if not isinstance(obj, osmium.osm.Way):
+            continue
+        if len(obj.tags) == 0 and obj.id not in way_ids_in_relations:
+            n_untagged_orphan_ways += 1
+            untagged_orphan_ways.append(obj.id)
+
+    sys.stderr.write(
+        f"{osm_file}: {n_untagged_orphan_nodes=} {n_untagged_orphan_ways=}\n"
+    )
+    print(
+        "nodes: ", ", ".join(str(x) for x in random.sample(untagged_orphan_nodes, 200))
+    )
+    print("ways: ", ", ".join(str(x) for x in random.sample(untagged_orphan_ways, 200)))
+    return n_untagged_orphan_nodes, n_untagged_orphan_ways
 
 
 def main() -> None:
@@ -47,10 +95,16 @@ def main() -> None:
     fileinfo = json.loads(out.decode("utf8"))
     count = fileinfo["data"]["count"]
 
+    n_untagged_orphan_nodes, n_untagged_orphan_ways = count_orphaned_features(
+        args.osm_file
+    )
+
     by_type = {
         "num-nodes": count["nodes"],
         "num-ways": count["ways"],
         "num-relations": count["relations"],
+        "num-untagged-orphan-nodes": n_untagged_orphan_nodes,
+        "num-untagged-orphan-ways": n_untagged_orphan_ways,
     }
 
     write_stats(
