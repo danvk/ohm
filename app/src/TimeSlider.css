@@ -44,13 +44,35 @@
   font-size: 16px;
   color: #222;
   white-space: nowrap;
-  pointer-events: none;
   user-select: none;
+  cursor: text;
   text-shadow:
     -1px -1px 0 rgba(255, 255, 255, 0.6),
     1px -1px 0 rgba(255, 255, 255, 0.6),
     -1px 1px 0 rgba(255, 255, 255, 0.6),
     1px 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.rc-slider-range-label {
+  cursor: text;
+}
+
+.rc-slider-label-input {
+  font-size: 16px;
+  color: #222;
+  border: none;
+  border-bottom: 2px solid #6080c0;
+  background: transparent;
+  outline: none;
+  width: 5ch;
+  text-align: center;
+  font-family: inherit;
+}
+
+.rc-slider-handle-label.rc-slider-label-input {
+  position: absolute;
+  transform: translateX(-50%);
+  margin-top: -1.25em;
 }
 .rc-slider-dot {
   bottom: -4px;

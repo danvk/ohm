@@ -1,3 +1,4 @@
+import React from 'react';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 import { yearFromDateStr } from './date-utils';
@@ -9,30 +10,95 @@ export interface TimeSliderProps {
   minYear: number;
   maxYear: number;
   onChange: (year: number) => void;
+  onChangeMinYear?: (year: number) => void;
+  onChangeMaxYear?: (year: number) => void;
 }
+
+type EditingField = 'min' | 'max' | 'year' | null;
 
 export function LinearTimeSlider({
   year,
   minYear,
   maxYear,
   onChange,
+  onChangeMinYear,
+  onChangeMaxYear,
 }: TimeSliderProps) {
   const numericYear = yearFromDateStr(year);
   const sliderValue = (numericYear - minYear) / (maxYear - minYear);
   const pct = sliderValue * 100;
 
+  const [editing, setEditing] = React.useState<EditingField>(null);
+  const [editValue, setEditValue] = React.useState('');
+
+  const startEdit = (field: EditingField, value: number) => {
+    setEditing(field);
+    setEditValue(String(value));
+  };
+
+  const commitEdit = () => {
+    // TODO: for editing='year', parse as full date
+    const parsed = parseInt(editValue, 10);
+    if (!isNaN(parsed)) {
+      if (editing === 'min') onChangeMinYear?.(parsed);
+      else if (editing === 'max') onChangeMaxYear?.(parsed);
+      else if (editing === 'year') onChange(parsed);
+    }
+    setEditing(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') commitEdit();
+    else if (e.key === 'Escape') setEditing(null);
+  };
+
+  const renderLabel = (
+    field: EditingField,
+    value: number,
+    className: string,
+    style?: React.CSSProperties,
+  ) => {
+    if (editing === field) {
+      return (
+        <input
+          className={`${className} rc-slider-label-input`}
+          style={style}
+          value={editValue}
+          size={6}
+          autoFocus
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={handleKeyDown}
+        />
+      );
+    }
+    return (
+      <span
+        className={className}
+        style={style}
+        onDoubleClick={() => startEdit(field, value)}
+      >
+        {value}
+      </span>
+    );
+  };
+
   return (
     <div className="time-slider-linear">
-      <span className="rc-slider-range-label rc-slider-range-label-left">
-        {minYear}
-      </span>
-      <span className="rc-slider-range-label rc-slider-range-label-right">
-        {maxYear}
-      </span>
+      {renderLabel(
+        'min',
+        minYear,
+        'rc-slider-range-label rc-slider-range-label-left',
+      )}
+      {renderLabel(
+        'max',
+        maxYear,
+        'rc-slider-range-label rc-slider-range-label-right',
+      )}
       <div className="rc-slider-wrap">
-        <span className="rc-slider-handle-label" style={{ left: `${pct}%` }}>
-          {numericYear}
-        </span>
+        {renderLabel('year', numericYear, 'rc-slider-handle-label', {
+          left: `${pct}%`,
+        })}
         <Slider
           min={minYear}
           max={maxYear}
