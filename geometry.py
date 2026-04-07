@@ -1,6 +1,38 @@
 """Geometry helpers for OSM ring-building and orientation."""
 
-from collections import defaultdict
+from collections import defaultdict, deque
+from dataclasses import dataclass
+
+from shapely import MultiPolygon, Polygon
+
+# Synthetic way IDs are negative integers used to close open rings.  OSM way
+# IDs are always positive, so there is no collision risk.
+_next_synthetic_way_id: int = 10**15  # OSM IDs won't reach this range
+
+
+@dataclass
+class OpenRingWarning:
+    """Emitted when a ring cannot be closed: both ends are stuck with no connectable way."""
+
+    node_id_start: int  # head of the open chain
+    node_id_end: int  # tail of the open chain
+
+
+@dataclass
+class UncontainedInnerRingWarning:
+    """Emitted when an inner ring has no outer ring that contains it."""
+
+    way_id: int
+
+
+@dataclass
+class MissingWayWarning:
+    """Emitted when a referenced way wasn't in the data."""
+
+    way_id: int
+
+
+GeometryWarning = OpenRingWarning | UncontainedInnerRingWarning | MissingWayWarning
 
 
 def rdp_simplify(
@@ -243,11 +275,70 @@ def ring_coords(
     return coords
 
 
+def _cross2d(
+    o: tuple[float, float],
+    a: tuple[float, float],
+    b: tuple[float, float],
+) -> float:
+    """2D cross product (a−o) × (b−o). Positive means b is left of the ray o→a."""
+    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+
+def _segments_cross(
+    p1: tuple[float, float],
+    p2: tuple[float, float],
+    p3: tuple[float, float],
+    p4: tuple[float, float],
+) -> bool:
+    """Return True if segment p1→p2 and p3→p4 properly cross (not just touch at an endpoint)."""
+    d1 = _cross2d(p1, p2, p3)
+    d2 = _cross2d(p1, p2, p4)
+    d3 = _cross2d(p3, p4, p1)
+    d4 = _cross2d(p3, p4, p2)
+    return (d1 * d2 < 0) and (d3 * d4 < 0)
+
+
+def _find_ring_self_intersection(
+    ring: list[int],
+    way_coords: dict[int, list[tuple[float, float]]],
+) -> tuple[int, int] | None:
+    """Return (way_id_a, way_id_b) for the first pair of crossing edges, or None.
+
+    Only checks properly closed rings. O(n²) in the total number of edges.
+    """
+    # Build one edge entry per node-pair within each way, tagged with the way ID.
+    # Each edge is (start_coord, end_coord, abs_way_id).
+    edges: list[tuple[tuple[float, float], tuple[float, float], int]] = []
+    for signed_wid in ring:
+        wid = abs(signed_wid)
+        wcoords = way_coords_forward(signed_wid, way_coords)
+        for k in range(len(wcoords) - 1):
+            edges.append((wcoords[k], wcoords[k + 1], wid))
+
+    n = len(edges)
+    if n < 3:
+        return None
+    # Only check properly closed rings (last edge ends where the first edge starts)
+    if edges[-1][1] != edges[0][0]:
+        return None
+
+    for i in range(n):
+        for j in range(i + 2, n):
+            if i == 0 and j == n - 1:
+                continue  # first and last edges share the closing node — adjacent
+            p1, p2, w1 = edges[i]
+            p3, p4, w2 = edges[j]
+            if _segments_cross(p1, p2, p3, p4):
+                return (w1, w2)
+    return None
+
+
 def build_rings(
     way_ids: list[int],
     way_nodes: dict[int, list[int]],
     way_coords: dict[int, list[tuple[float, float]]],
     warn=None,
+    leave_open_rings=False,
 ) -> list[list[int]]:
     """Order ways in a relation into closed, right-hand-rule oriented rings.
 
@@ -256,18 +347,21 @@ def build_rings(
 
     Ways that are already closed (first node == last node) form their own rings.
     Open ways are chained by shared endpoints until each ring closes.
+    Open rings are closed using a synthetic way, which is added to way_coords.
+    This can be disabled by passing leave_open_rings=True.
 
-    *warn* is an optional callable(str) used to emit warnings; defaults to no-op.
+    *warn* is an optional callable(GeometryWarning) used to emit warnings; defaults to no-op.
     """
     if warn is None:
-        warn = lambda msg: None  # noqa: E731
+        warn = lambda _: None  # noqa: E731
 
     # Separate closed and open ways; skip ways we failed to collect
     closed: list[int] = []
     open_ways: list[int] = []
     for wid in way_ids:
         if wid not in way_nodes:
-            continue  # missing way – skip
+            warn(MissingWayWarning(wid))
+            continue
         nodes = way_nodes[wid]
         if len(nodes) >= 2 and nodes[0] == nodes[-1]:
             closed.append(wid)
@@ -294,31 +388,59 @@ def build_rings(
         while remaining:
             seed = next(iter(remaining))
             remaining.remove(seed)
-            ring: list[int] = [seed]
+            chain: deque[int] = deque([seed])
             seed_nodes = way_nodes[seed]
-            ring_start = seed_nodes[0]
-            current_tail = seed_nodes[-1]
+            ring_head = seed_nodes[0]
+            ring_tail = seed_nodes[-1]
 
-            while current_tail != ring_start:
-                candidates = [
-                    wid for wid in endpoint_index[current_tail] if wid in remaining
+            while ring_tail != ring_head:
+                # Try extending from the tail
+                tail_cands = [
+                    wid for wid in endpoint_index[ring_tail] if wid in remaining
                 ]
-                if not candidates:
-                    warn(f"could not close ring (stuck at node {current_tail})")
-                    break
-                next_wid = candidates[0]
-                remaining.remove(next_wid)
-                next_nodes = way_nodes[next_wid]
-                if next_nodes[0] == current_tail:
-                    ring.append(next_wid)
-                    current_tail = next_nodes[-1]
-                else:
-                    ring.append(-next_wid)
-                    current_tail = next_nodes[0]
+                if tail_cands:
+                    next_wid = tail_cands[0]
+                    remaining.remove(next_wid)
+                    next_nodes = way_nodes[next_wid]
+                    if next_nodes[0] == ring_tail:
+                        chain.append(next_wid)
+                        ring_tail = next_nodes[-1]
+                    else:
+                        chain.append(-next_wid)
+                        ring_tail = next_nodes[0]
+                    continue
 
-            rings.append(ring)
+                # Tail stuck; try extending from the head
+                head_cands = [
+                    wid for wid in endpoint_index[ring_head] if wid in remaining
+                ]
+                if head_cands:
+                    next_wid = head_cands[0]
+                    remaining.remove(next_wid)
+                    next_nodes = way_nodes[next_wid]
+                    if next_nodes[-1] == ring_head:
+                        chain.appendleft(next_wid)
+                        ring_head = next_nodes[0]
+                    else:
+                        chain.appendleft(-next_wid)
+                        ring_head = next_nodes[-1]
+                    continue
 
-    # Apply right-hand rule: each ring should be CCW in geographic coordinates
+                # Both ends stuck — this is a genuine open ring.
+                # Warn, then close it with a straight-line synthetic segment.
+                warn(OpenRingWarning(node_id_start=ring_head, node_id_end=ring_tail))
+                if not leave_open_rings:
+                    global _next_synthetic_way_id
+                    tail_coord = way_coords_forward(chain[-1], way_coords)[-1]
+                    head_coord = way_coords_forward(chain[0], way_coords)[0]
+                    way_coords[_next_synthetic_way_id] = [tail_coord, head_coord]
+                    chain.append(_next_synthetic_way_id)
+                    _next_synthetic_way_id += 1
+                break
+
+            rings.append(list(chain))
+
+    # Apply right-hand rule and check for self-intersections
     oriented: list[list[int]] = []
     for ring in rings:
         coords = ring_coords(ring, way_coords)
@@ -352,26 +474,38 @@ def build_polygon_rings(
     inner_way_ids: list[int],
     way_nodes: dict[int, list[int]],
     way_coords: dict[int, list[tuple[float, float]]],
-    warn=None,
-) -> list[list[list[int]]]:
+    leave_open_rings=False,
+) -> tuple[list[list[list[int]]], list[GeometryWarning]]:
     """Build a MultiPolygon ring structure from outer and inner (hole) ways.
 
-    Returns a list of polygons. Each polygon is a list whose first element is
-    the outer ring (list of signed way IDs) and whose subsequent elements are
-    inner rings (holes).  Inner rings are oriented CW (clockwise) to follow the
-    GeoJSON right-hand rule for holes.
+    Returns ``(polygons, warnings)`` where *polygons* is a list of polygons and
+    *warnings* is a list of :class:`GeometryWarning` objects.  Each polygon is a list whose
+    first element is the outer ring (list of signed way IDs) and whose
+    subsequent elements are inner rings (holes).  Inner rings are oriented CW
+    (clockwise) to follow the GeoJSON right-hand rule for holes.
 
     Containment is determined geometrically: each inner ring is assigned to the
     smallest outer ring that contains it.
     """
-    if warn is None:
-        warn = lambda msg: None  # noqa: E731
+    warnings: list[GeometryWarning] = []
 
     # Build outer rings (CCW)
-    outer_rings = build_rings(outer_way_ids, way_nodes, way_coords, warn=warn)
+    outer_rings = build_rings(
+        outer_way_ids,
+        way_nodes,
+        way_coords,
+        warn=warnings.append,
+        leave_open_rings=leave_open_rings,
+    )
 
     # Build inner rings, then flip to CW (negate each way and reverse list)
-    raw_inner = build_rings(inner_way_ids, way_nodes, way_coords, warn=warn)
+    raw_inner = build_rings(
+        inner_way_ids,
+        way_nodes,
+        way_coords,
+        warn=warnings.append,
+        leave_open_rings=leave_open_rings,
+    )
     inner_rings: list[list[int]] = [[-wid for wid in reversed(r)] for r in raw_inner]
 
     # Pre-compute a representative point (first coord of first way) for each inner ring
@@ -403,8 +537,44 @@ def build_polygon_rings(
         if best_idx is not None:
             polygons[best_idx].append(inner_ring)
         else:
-            warn(
-                f"inner ring starting at way {abs(inner_ring[0])} has no containing outer ring"
-            )
+            if abs(inner_ring[0]) < 10**15:
+                # don't generate warnings about synthesized ways
+                warnings.append(UncontainedInnerRingWarning(way_id=abs(inner_ring[0])))
 
+    return polygons, warnings
+
+
+def build_polygon_rings_quiet(
+    outer_way_ids: list[int],
+    inner_way_ids: list[int],
+    way_nodes: dict[int, list[int]],
+    way_coords: dict[int, list[tuple[float, float]]],
+    leave_open_rings=False,
+) -> list[list[list[int]]]:
+    """Wrapper around :func:`build_polygon_rings` that silently drops warnings."""
+    polygons, _ = build_polygon_rings(
+        outer_way_ids,
+        inner_way_ids,
+        way_nodes,
+        way_coords,
+        leave_open_rings=leave_open_rings,
+    )
     return polygons
+
+
+def shapely_polygon_from_rings(
+    rings: list[list[list[int]]],
+    way_coords: dict[int, list[tuple[float, float]]],
+) -> MultiPolygon | Polygon | None:
+    shapely_polys = []
+    for polygon in rings:
+        outer_ring = ring_coords(polygon[0], way_coords)
+        if len(outer_ring) < 3:
+            continue
+        holes = [ring_coords(r, way_coords) for r in polygon[1:]]
+        holes = [h for h in holes if len(h) >= 3]
+        shapely_polys.append(Polygon(outer_ring, holes))
+
+    if not shapely_polys:
+        return None
+    return MultiPolygon(shapely_polys) if len(shapely_polys) > 1 else shapely_polys[0]

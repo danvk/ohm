@@ -1,0 +1,5 @@
+r/2851141: (0.2385ey) Russian Empire UncontainedInnerRingWarning(way_id=198771065)
+r/2812123: (0.0397ey) Lower Rhenish–Westphalian Circle (1548-1679) UncontainedInnerRingWarning(way_id=200576707)
+r/2831013: (0.0101ey) Lower Rhenish–Westphalian Circle (1679-1713) UncontainedInnerRingWarning(way_id=200576707)
+r/2902380: (0.0003ey) Yorkshire UncontainedInnerRingWarning(way_id=201982486), UncontainedInnerRingWarning(way_id=201980983), UncontainedInnerRingWarning(way_id=201980993), UncontainedInnerRingWarning(way_id=201976733)
+r/2876774: (0.0000ey) Sokkelund Herred UncontainedInnerRingWarning(way_id=201371487)

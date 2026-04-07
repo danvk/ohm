@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>OpenHistoricalMap Quality and Coverage Stats</title>
+    <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/dygraph/2.2.1/dygraph.min.css" />
+    <link rel="stylesheet" type="text/css" href="/dashboard/chart.css" />
+  </head>
+  <body>
+    <h1>OpenHistoricalMap Quality and Coverage Stats</h1>
+    <p>
+        This page tracks quality and coverage metrics for
+        <a href="https://www.openhistoricalmap.org/">OpenHistoricalMap</a>
+        using the <a href="https://planet.openhistoricalmap.org/">daily planet files</a>.
+        Each chart shows metrics for the most recent day.
+        Mouse over the chart to see earlier days.
+        Click a number on the right for an explanation of it and examples.
+        Click and drag to zoom any chart, either horizontally or vertically.
+        Double-click to reset the zoom. If you have ideas for metrics to track,
+        <a href="https://github.com/danvk/ohm/issues/new">file an issue</a> or
+        send a pull request to <a href="https://github.com/danvk/ohm">danvk/ohm</a>.
+    </p>
+
+    <h2>Coverage</h2>
+    <h3>Earth Years by admin_level</h3>
+    <p>
+        This tracks the area covered by <code>admin_level=N</code> features through time.
+        The units are "earth years:" all of earth's land area (149 million sq km) for one year
+        would be one earth year. Alternatively, Africa is about 20% of the earth's land area.
+        So mapping all of Africa for one century would count as 0.2*100=20 earth years.
+    </p>
+    <p>
+        If two features cover the same area in the same year, then there will be double-counting.
+        If you'd like to help fix this, take a look at
+        <a href="https://github.com/danvk/ohm/blob/main/earth_coverage.py"><code>earth_coverage.py</code></a>.
+    </p>
+
+    <div id="earth-coverage">
+        <div class="chart-container">
+            <div class="chart"></div>
+            <div class="chart-labels"></div>
+        </div>
+        <div class="examples"></div>
+    </div>
+
+    <h2>Data Quality / Correctness</h2>
+
+    <h3>Geometry Errors</h3>
+
+    <p>
+    This tracks various types of geometry problems for relations with <code>[boundary]</code>.
+    These often correspond to errors that are flagged by the <a href="https://wiki.openstreetmap.org/wiki/JOSM/Validator">JOSM Validator</a>.
+    Members ways in the relations are grouped into inner and outer rings using something
+    like OSM's <a href="https://wiki.openstreetmap.org/wiki/Relation:multipolygon/Algorithm">Multipolygon Algorithm</a>.
+    These are then processed using <a href="https://shapely.readthedocs.io/en/stable/">shapely</a>, which
+    reports other pathologies through its <a href="https://shapely.readthedocs.io/en/stable/manual.html#diagnostics"><code>explain_validity</code></a> method.
+    See <a href="https://github.com/danvk/ohm/blob/main/bad_geometry.py"><code>bad_geometry.py</code></a> for details.
+    </p>
+
+    <div id="geometry-errors">
+        <div class="chart-container">
+            <div class="chart"></div>
+            <div class="chart-labels"></div>
+        </div>
+        <div class="examples"></div>
+    </div>
+
+    <h3>Chronology Errors</h3>
+
+    <p>
+        This tracks problems with <code>type=chronology</code> relations.
+        See <a href="https://github.com/danvk/ohm/blob/main/chrono_stats.py"><code>chrono_stats.py</code></a> for details.
+    </p>
+
+    <div id="chronology-errors">
+        <div class="chart-container">
+            <div class="chart"></div>
+            <div class="chart-labels"></div>
+        </div>
+        <div class="examples"></div>
+    </div>
+
+    <h3>Duplicate Features</h3>
+
+    <p>
+        This tracks likely duplicate relations. These have identical semantically meaningful tags
+        and approximately duplicate geometries.
+        See <a href="https://github.com/danvk/ohm/blob/main/dupe_finder.py"><code>dupe_finder.py</code></a> for details.
+    </p>
+
+    <div id="dupes">
+        <div class="chart-container">
+            <div class="chart"></div>
+            <div class="chart-labels"></div>
+        </div>
+        <div class="examples"></div>
+    </div>
+
+    <h3>Tag Errors</h3>
+
+    <p>
+        Various problems with OHM tags like <code>start_date</code> and <code>end_date</code>.
+    </p>
+
+    <div id="tag-errors">
+        <div class="chart-container">
+            <div class="chart"></div>
+            <div class="chart-labels"></div>
+        </div>
+        <div class="examples"></div>
+    </div>
+
+    <h2>Other Metrics</h2>
+
+    <h3>Raw features</h3>
+
+    <p>Total nodes, ways and relations in OHM, scaled to counts at the start of 2024.</p>
+    <div id="raw-features">
+        <div class="chart-container">
+            <div class="chart"></div>
+            <div class="chart-labels"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/dygraph/2.2.1/dygraph.min.js"></script>
+    <script type="module" src="/dashboard/chart.js"></script>
+  </body>
+</html>

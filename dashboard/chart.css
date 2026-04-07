@@ -1,0 +1,36 @@
+p {
+    max-width: 1024px;
+}
+.chart-container {
+    display: flex;
+    flex-direction: row;
+}
+.chart {
+    width: 800px;
+    height: 300px;
+}
+.series-name {
+    font-weight: bold;
+}
+.examples {
+    position: relative;
+    margin-top: 1em;
+    width: 1024px;
+}
+.examples ul {
+    max-height: 400px;
+    overflow: auto;
+    font-family: monospace;
+    white-space: nowrap;
+}
+.example-header {
+    font-weight: bold;
+}
+.close-example {
+    position: absolute;
+    top: 0.5em;
+    right: 0.5em;
+}
+.close-example:hover {
+    cursor: pointer;
+}

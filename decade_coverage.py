@@ -14,11 +14,11 @@ import sys
 import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any
 
 import osmium
 import osmium.geom
 import pyproj
+from osmium.osm.types import Area
 from shapely.geometry import shape
 from shapely.ops import transform as shapely_transform
 from shapely.ops import unary_union
@@ -91,7 +91,7 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
         lvl = tags.get("admin_level")
         return lvl if lvl in ADMIN_LEVELS else None
 
-    def area(self, a: Any) -> None:
+    def area(self, a: Area) -> None:
         admin_level = self._admin_level(a.tags)
         if admin_level is None:
             return
