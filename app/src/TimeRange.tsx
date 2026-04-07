@@ -27,16 +27,26 @@ function sliderToYear(pos: number, minYear: number, maxYear: number): number {
   return Math.round(minYear + t * (maxYear - minYear));
 }
 
-// Snap threshold in slider units (0..SLIDER_MAX). ~150 ≈ 15px on a 1000px-wide slider.
-const SNAP_THRESHOLD = 150;
+// Snap threshold in slider units (0..SLIDER_MAX) for years ≥ 1900.
+const SNAP_THRESHOLD = 60;
 
-/** Snap to nearest multiple of 100 (or 50 for year ≥ 1700) if within threshold. */
-function snapYear(sliderPos: number, year: number, minYear: number, maxYear: number): number {
-  const interval = year >= 1700 ? 50 : 100;
-  const nearest = Math.round(year / interval) * interval;
+/** Snap year to a "nice" value:
+ *  - year < 1900: always round to nearest multiple of 10
+ *  - year ≥ 1900: snap to nearest multiple of 50 if within SNAP_THRESHOLD slider units
+ */
+function snapYear(
+  sliderPos: number,
+  year: number,
+  minYear: number,
+  maxYear: number,
+): number {
+  const nearest = Math.round(year / 50) * 50;
   const nearestSliderPos = yearToSlider(nearest, minYear, maxYear);
   if (Math.abs(sliderPos - nearestSliderPos) <= SNAP_THRESHOLD) {
     return nearest;
+  }
+  if (year < 1900) {
+    return Math.round(year / 10) * 10;
   }
   return year;
 }
@@ -95,7 +105,11 @@ export function TimeRange({
     const wrap = wrapRef.current;
     if (!wrap) return;
 
-    type DragState = { startX: number; startSliderA: number; yearWidth: number };
+    type DragState = {
+      startX: number;
+      startSliderA: number;
+      yearWidth: number;
+    };
     let drag: DragState | null = null;
 
     // Use capture phase so we intercept before rc-slider's own mousedown handler.
@@ -122,10 +136,18 @@ export function TimeRange({
       const rect = sliderEl.getBoundingClientRect();
       const dx = e.clientX - drag.startX;
       const deltaSlider = Math.round((dx / rect.width) * SLIDER_MAX);
-      const newSliderA = Math.max(0, Math.min(SLIDER_MAX, drag.startSliderA + deltaSlider));
+      const newSliderA = Math.max(
+        0,
+        Math.min(SLIDER_MAX, drag.startSliderA + deltaSlider),
+      );
       const newYearA = sliderToYear(newSliderA, minYear, maxYear);
-      const clampedA = Math.max(minYear, Math.min(newYearA, maxYear - drag.yearWidth));
-      onChangeRef.current(clampedA, clampedA + drag.yearWidth);
+      const clampedA = Math.max(
+        minYear,
+        Math.min(newYearA, maxYear - drag.yearWidth),
+      );
+      const clampedSliderA = yearToSlider(clampedA, minYear, maxYear);
+      const snappedA = snapYear(clampedSliderA, clampedA, minYear, maxYear);
+      onChangeRef.current(snappedA, snappedA + drag.yearWidth);
     };
 
     const onMouseUp = () => {
@@ -163,8 +185,18 @@ export function TimeRange({
             }
             const [v1, v2] = vs;
             onChange(
-              snapYear(v1, sliderToYear(v1, minYear, maxYear), minYear, maxYear),
-              snapYear(v2, sliderToYear(v2, minYear, maxYear), minYear, maxYear),
+              snapYear(
+                v1,
+                sliderToYear(v1, minYear, maxYear),
+                minYear,
+                maxYear,
+              ),
+              snapYear(
+                v2,
+                sliderToYear(v2, minYear, maxYear),
+                minYear,
+                maxYear,
+              ),
             );
           }}
           marks={makeMarks(minYear, maxYear)}
