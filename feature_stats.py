@@ -27,20 +27,31 @@ def count_empty_ways(osm_file: str) -> int:
 
 def count_orphaned_features(osm_file: str) -> tuple[int, int]:
     """Count untagged nodes not in any way, and untagged ways not in any relation."""
-    # Pass 1: collect node IDs used by ways, and way IDs used by relations
+    # Pass 1: collect way IDs used by relations
     node_ids_in_ways: set[int] = set()
     way_ids_in_relations: set[int] = set()
-    fp = osmium.FileProcessor(osm_file, osmium.osm.WAY | osmium.osm.RELATION)
+    fp = osmium.FileProcessor(osm_file, osmium.osm.RELATION)
     for obj in fp:
-        if isinstance(obj, osmium.osm.Way):
-            for node_ref in obj.nodes:
-                node_ids_in_ways.add(node_ref.ref)
-        elif isinstance(obj, osmium.osm.Relation):
+        if isinstance(obj, osmium.osm.Relation):
             for member in obj.members:
                 if member.type == "w":
                     way_ids_in_relations.add(member.ref)
 
-    # Pass 2: count untagged nodes not in any way
+    # Pass 2: count untagged ways not in any relation
+    n_untagged_orphan_ways = 0
+    untagged_orphan_ways: list[int] = []
+    fp = osmium.FileProcessor(osm_file, osmium.osm.WAY)
+    for obj in fp:
+        if not isinstance(obj, osmium.osm.Way):
+            continue
+        if len(obj.tags) == 0 and obj.id not in way_ids_in_relations:
+            n_untagged_orphan_ways += 1
+            untagged_orphan_ways.append(obj.id)
+        else:
+            for node_ref in obj.nodes:
+                node_ids_in_ways.add(node_ref.ref)
+
+    # Pass 3: count untagged nodes not in any non-orphan way
     n_untagged_orphan_nodes = 0
     untagged_orphan_nodes: list[int] = []
     fp = osmium.FileProcessor(osm_file, osmium.osm.NODE)
@@ -51,24 +62,19 @@ def count_orphaned_features(osm_file: str) -> tuple[int, int]:
             n_untagged_orphan_nodes += 1
             untagged_orphan_nodes.append(obj.id)
 
-    # Pass 3: count untagged ways not in any relation
-    n_untagged_orphan_ways = 0
-    untagged_orphan_ways: list[int] = []
-    fp = osmium.FileProcessor(osm_file, osmium.osm.WAY)
-    for obj in fp:
-        if not isinstance(obj, osmium.osm.Way):
-            continue
-        if len(obj.tags) == 0 and obj.id not in way_ids_in_relations:
-            n_untagged_orphan_ways += 1
-            untagged_orphan_ways.append(obj.id)
-
     sys.stderr.write(
         f"{osm_file}: {n_untagged_orphan_nodes=} {n_untagged_orphan_ways=}\n"
     )
     print(
-        "nodes: ", ", ".join(str(x) for x in random.sample(untagged_orphan_nodes, 200))
+        "nodes: ", ", ".join(str(x) for x in random.sample(untagged_orphan_nodes, 100))
     )
-    print("ways: ", ", ".join(str(x) for x in random.sample(untagged_orphan_ways, 200)))
+    print("ways: ", ", ".join(str(x) for x in random.sample(untagged_orphan_ways, 100)))
+
+    with open("orphan.ways.txt", "w") as out:
+        out.writelines(f"{x}\n" for x in untagged_orphan_ways)
+    with open("orphan.nodes.txt", "w") as out:
+        out.writelines(f"{x}\n" for x in untagged_orphan_nodes)
+
     return n_untagged_orphan_nodes, n_untagged_orphan_ways
 
 
