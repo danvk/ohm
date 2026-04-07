@@ -247,6 +247,24 @@ export default function App() {
     }
   };
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      )
+        return;
+      if (e.key !== 'n' && e.key !== 'p') return;
+      const currentYear = yearFromDateStr(year);
+      const newYear = e.key === 'n' ? currentYear + 1 : currentYear - 1;
+      if (newYear > maxYear) setMaxYear(newYear);
+      if (newYear < minYear) setMinYear(newYear);
+      handleYearChange(newYear);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [year, minYear, maxYear, handleYearChange]);
+
   return (
     <>
       {isLoading && <div className="loading">Loading…</div>}
