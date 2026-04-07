@@ -16,6 +16,8 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@types/d3-array": "^3.2.2",
+    "d3-array": "^3.2.4",
     "maplibre-gl": "^5.19.0",
     "nuqs": "^2.8.9",
     "rc-slider": "^11.1.9",

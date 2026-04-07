@@ -1,6 +1,7 @@
 import React from 'react';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
+import { ticks } from 'd3-array';
 import { yearFromDateStr } from './date-utils';
 
 import './TimeSlider.css';
@@ -27,6 +28,9 @@ export function LinearTimeSlider({
   const numericYear = yearFromDateStr(year);
   const sliderValue = (numericYear - minYear) / (maxYear - minYear);
   const pct = sliderValue * 100;
+  const tickMarks = Object.fromEntries(
+    ticks(minYear, maxYear, 5).map((y) => [y, ' ']),
+  );
 
   const [editing, setEditing] = React.useState<EditingField>(null);
   const [editValue, setEditValue] = React.useState('');
@@ -107,6 +111,7 @@ export function LinearTimeSlider({
             track: { height: 8 },
             rail: { height: 8 },
           }}
+          marks={tickMarks}
           onChange={(v) => onChange(v as number)}
         />
       </div>
