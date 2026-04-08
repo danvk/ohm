@@ -9,7 +9,7 @@ dashdir=$2
 yymmdd=${date//-/}
 yymmdd=${yymmdd/#20/}  # 260301
 
-# s3cmd get --force s3://planet.openhistoricalmap.org/planet/planet-${yymmdd}*
+s3cmd get --force s3://planet.openhistoricalmap.org/planet/planet-${yymmdd}*
 planet=planet-${yymmdd}_*.osm.pbf
 
 dir=$dashdir/daily/$date
