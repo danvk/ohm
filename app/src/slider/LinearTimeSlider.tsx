@@ -57,7 +57,7 @@ export function LinearTimeSlider({
   };
 
   const renderBoundLabel = (field: 'min' | 'max', value: number) => {
-    const className = 'rc-slider-range-label';
+    const className = `rc-slider-range-label rc-slider-range-label-${field === 'min' ? 'left' : 'right'}`;
     if (editing === field) {
       return (
         <input

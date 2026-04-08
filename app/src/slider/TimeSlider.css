@@ -104,12 +104,22 @@
 }
 
 .rc-slider-range-label {
+  position: absolute;
   cursor: text;
   white-space: nowrap;
-  align-self: center;
   font-size: 14px;
   color: #555;
-  flex-shrink: 0;
+  /* Vertically center on the rail: wrap has 0.75em top margin, rail center is ~9px into wrap */
+  top: calc(0.75em + 9px);
+  transform: translateY(-50%);
+}
+
+.rc-slider-range-label-left {
+  left: 0;
+}
+
+.rc-slider-range-label-right {
+  right: 0;
 }
 
 .rc-slider-label-input {
@@ -157,15 +167,12 @@
 }
 
 .time-slider-linear {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  gap: 0.5em;
+  position: relative;
 }
 
 .time-slider-linear .rc-slider-wrap {
-  flex: 1;
-  min-width: 0;
+  /* Match the range slider's horizontal margins so both rails are identical width */
+  margin: 0.75em 2em 0;
 }
 
 .time-slider-linear .rc-slider {
