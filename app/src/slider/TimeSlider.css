@@ -75,9 +75,11 @@
 }
 .time-slider-linear .rc-slider-rail {
   background-color: var(--slider-color);
+  border-radius: 0;
 }
 .time-slider-linear .rc-slider-track {
   background-color: rgba(0, 0, 0, 0);
+  border-radius: 0;
 }
 
 .rc-slider-handle {
