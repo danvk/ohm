@@ -3,8 +3,12 @@
   bottom: 1em;
   left: 1em;
   right: 1em;
-  padding: 0 1.5rem;
+  padding: 0 1.5rem 0 0.5rem;
   z-index: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
   /* subtle frosted background so map doesn't bleed through */
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(4px);
@@ -12,21 +16,47 @@
   --slider-color: rgb(181, 193, 225);
 }
 
-.time-mode-toggle {
-  position: absolute;
-  top: 0.4em;
-  right: 0.4em;
-  background: none;
-  border: 1px solid #aaa;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 2px 6px;
-  color: #555;
-  line-height: 1.4;
+.time-control-sliders {
+  flex: 1;
+  min-width: 0;
 }
-.time-mode-toggle:hover {
-  background: rgba(0, 0, 0, 0.05);
+
+.time-mode-toggle-v {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+  align-self: center;
+}
+
+.time-mode-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  cursor: pointer;
+  color: #888;
+  padding: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.time-mode-toggle-btn:last-child {
+  border-bottom: none;
+}
+
+.time-mode-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.time-mode-toggle-btn.active {
+  background: var(--slider-color);
+  color: #333;
 }
 
 .time-slider-sqrt .rc-slider-dot {
@@ -39,6 +69,11 @@
 /* rc-slider handle label (value bubble above thumb) */
 .rc-slider-wrap {
   position: relative;
+  margin: 1.5em 0;
+}
+
+/* In range mode the wrap still needs horizontal margin for the connectors */
+.time-slider-range .rc-slider-wrap {
   margin: 1.5em 2em;
 }
 .rc-slider-track {
@@ -79,6 +114,11 @@
 
 .rc-slider-range-label {
   cursor: text;
+  white-space: nowrap;
+  align-self: center;
+  font-size: 14px;
+  color: #555;
+  flex-shrink: 0;
 }
 
 .rc-slider-label-input {
@@ -125,15 +165,18 @@
   color: #666;
 }
 
-.rc-slider-range-label {
-  position: absolute;
+.time-slider-linear {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.5em;
 }
-.rc-slider-range-label-left {
-  left: 0.5em;
+
+.time-slider-linear .rc-slider-wrap {
+  flex: 1;
+  min-width: 0;
 }
-.rc-slider-range-label-right {
-  right: 0.5em;
-}
+
 .time-slider-linear .rc-slider {
   width: auto;
 }

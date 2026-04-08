@@ -56,17 +56,34 @@ export function LinearTimeSlider({
     else if (e.key === 'Escape') setEditing(null);
   };
 
-  const renderLabel = (
-    field: EditingField,
-    value: number,
-    className: string,
-    style?: React.CSSProperties,
-  ) => {
+  const renderBoundLabel = (field: 'min' | 'max', value: number) => {
+    const className = 'rc-slider-range-label';
     if (editing === field) {
       return (
         <input
           className={`${className} rc-slider-label-input`}
-          style={style}
+          value={editValue}
+          size={6}
+          autoFocus
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={handleKeyDown}
+        />
+      );
+    }
+    return (
+      <span className={className} onDoubleClick={() => startEdit(field, value)}>
+        {value}
+      </span>
+    );
+  };
+
+  const renderYearLabel = () => {
+    if (editing === 'year') {
+      return (
+        <input
+          className="rc-slider-handle-label rc-slider-label-input"
+          style={{ left: `${pct}%` }}
           value={editValue}
           size={6}
           autoFocus
@@ -78,31 +95,20 @@ export function LinearTimeSlider({
     }
     return (
       <span
-        className={className}
-        style={style}
-        onDoubleClick={() => startEdit(field, value)}
+        className="rc-slider-handle-label"
+        style={{ left: `${pct}%` }}
+        onDoubleClick={() => startEdit('year', numericYear)}
       >
-        {value}
+        {numericYear}
       </span>
     );
   };
 
   return (
     <div className="time-slider-linear">
-      {renderLabel(
-        'min',
-        minYear,
-        'rc-slider-range-label rc-slider-range-label-left',
-      )}
-      {renderLabel(
-        'max',
-        maxYear,
-        'rc-slider-range-label rc-slider-range-label-right',
-      )}
+      {renderBoundLabel('min', minYear)}
       <div className="rc-slider-wrap">
-        {renderLabel('year', numericYear, 'rc-slider-handle-label', {
-          left: `${pct}%`,
-        })}
+        {renderYearLabel()}
         <Slider
           min={minYear}
           max={maxYear}
@@ -115,6 +121,7 @@ export function LinearTimeSlider({
           onChange={(v) => onChange(v as number)}
         />
       </div>
+      {renderBoundLabel('max', maxYear)}
     </div>
   );
 }
