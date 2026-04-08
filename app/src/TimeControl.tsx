@@ -1,8 +1,8 @@
 /** The thing that sets the time. Either single or double slider. */
 
-import React from 'react';
 import { LinearTimeSlider } from './LinearTimeSlider';
 import { TimeRange } from './TimeRange';
+import { SqrtTimeSlider } from './SqrtTimeSlider';
 
 import './TimeSlider.css';
 
@@ -17,23 +17,36 @@ export interface TimeControlProps {
 }
 
 export function TimeControl(props: TimeControlProps) {
-  const { minYear, maxYear, year } = props;
+  const { minYear, maxYear, year, isRange } = props;
   return (
     <div className="time-control">
-      <LinearTimeSlider
-        minYear={minYear}
-        maxYear={maxYear}
-        year={year}
-        onChange={props.onChange}
-        onChangeMinYear={(newMin) => props.onChangeRange(newMin, maxYear)}
-        onChangeMaxYear={(newMax) => props.onChangeRange(minYear, newMax)}
-      />
-      <TimeRange
-        years={[minYear, maxYear]}
-        minYear={-6000}
-        maxYear={2030}
-        onChange={props.onChangeRange}
-      />
+      <button
+        className="time-mode-toggle"
+        title={isRange ? 'Switch to single-date mode' : 'Switch to date-range mode'}
+        onClick={() => props.onChangeIsRange(!isRange)}
+      >
+        {isRange ? '⇔' : '▸'}
+      </button>
+      {isRange ? (
+        <>
+          <LinearTimeSlider
+            minYear={minYear}
+            maxYear={maxYear}
+            year={year}
+            onChange={props.onChange}
+            onChangeMinYear={(newMin) => props.onChangeRange(newMin, maxYear)}
+            onChangeMaxYear={(newMax) => props.onChangeRange(minYear, newMax)}
+          />
+          <TimeRange
+            years={[minYear, maxYear]}
+            minYear={-6000}
+            maxYear={2030}
+            onChange={props.onChangeRange}
+          />
+        </>
+      ) : (
+        <SqrtTimeSlider year={year} onChange={props.onChange} />
+      )}
     </div>
   );
 }

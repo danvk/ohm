@@ -77,6 +77,7 @@ export default function App() {
 
   const [minYear, setMinYear] = React.useState(1500);
   const [maxYear, setMaxYear] = React.useState(1900);
+  const [isRange, setIsRange] = React.useState(true);
 
   // Viewport (zoom/lat/lng) is kept in a ref so map moves don't cause re-renders
   // and don't feed back into setCenter.
@@ -267,8 +268,8 @@ export default function App() {
         maxYear={maxYear}
         onChange={handleYearChange}
         onChangeRange={handleChangeRange}
-        isRange
-        onChangeIsRange={() => {}}
+        isRange={isRange}
+        onChangeIsRange={setIsRange}
       />
       <MapLibreMap
         containerId="map"
