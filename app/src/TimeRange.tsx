@@ -29,8 +29,10 @@ function sliderToYear(pos: number, minYear: number, maxYear: number): number {
 
 // Snap threshold in slider units (0..SLIDER_MAX) for years ≥ 1900.
 const SNAP_THRESHOLD = 60;
+// Equivalent pixel threshold for onMouseMove (≈ SNAP_THRESHOLD/SLIDER_MAX * typical slider width).
+const SNAP_PX_THRESHOLD = 6;
 
-/** Snap year to a "nice" value:
+/** Snap year to a "nice" value (for rc-slider onChange, which gives slider units):
  *  - year < 1900: always round to nearest multiple of 10
  *  - year ≥ 1900: snap to nearest multiple of 50 if within SNAP_THRESHOLD slider units
  */
@@ -47,6 +49,28 @@ function snapYear(
   }
   if (year < 1900) {
     return Math.round(year / 10) * 10;
+  }
+  return year;
+}
+
+/** Snap year to a "nice" value (for onMouseMove, which works in pixels):
+ *  - year < 1900: always round to nearest multiple of 10
+ *  - year ≥ 1900: snap to nearest multiple of 50 if within SNAP_PX_THRESHOLD pixels
+ */
+function snapYearByPixels(
+  year: number,
+  sliderWidthPx: number,
+  minYear: number,
+  maxYear: number,
+): number {
+  if (year < 1900) {
+    return Math.round(year / 10) * 10;
+  }
+  const nearest = Math.round(year / 50) * 50;
+  const yearPx = (yearToSlider(year, minYear, maxYear) / SLIDER_MAX) * sliderWidthPx;
+  const nearestPx = (yearToSlider(nearest, minYear, maxYear) / SLIDER_MAX) * sliderWidthPx;
+  if (Math.abs(yearPx - nearestPx) <= SNAP_PX_THRESHOLD) {
+    return nearest;
   }
   return year;
 }
@@ -145,8 +169,7 @@ export function TimeRange({
         minYear,
         Math.min(newYearA, maxYear - drag.yearWidth),
       );
-      const clampedSliderA = yearToSlider(clampedA, minYear, maxYear);
-      const snappedA = snapYear(clampedSliderA, clampedA, minYear, maxYear);
+      const snappedA = snapYearByPixels(clampedA, rect.width, minYear, maxYear);
       onChangeRef.current(snappedA, snappedA + drag.yearWidth);
     };
 
