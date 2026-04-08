@@ -16,47 +16,34 @@ export interface TimeControlProps {
   onChangeIsRange: (isRange: boolean) => void;
 }
 
-/** Schematic icon: single slider with a thumb and label above it (Date mode). */
-function DateIcon() {
+/** Arrows pointing away from center: click to expand. */
+function ExpandIcon() {
   return (
-    <svg viewBox="0 0 28 22" width="28" height="22" aria-hidden="true">
-      {/* Rail */}
-      <line x1="2" y1="16" x2="26" y2="16" stroke="currentColor" strokeOpacity="0.4" strokeWidth="2" strokeLinecap="round" />
-      {/* Thumb */}
-      <circle cx="18" cy="16" r="3.5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.25" />
-      {/* Tick from rail to label */}
-      <line x1="18" y1="6" x2="18" y2="11" stroke="currentColor" strokeOpacity="0.7" strokeWidth="1.5" strokeLinecap="round" />
-      {/* Year label bubble */}
-      <rect x="12" y="2" width="12" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.15" />
+    <svg viewBox="0 0 16 28" width="16" height="28" aria-hidden="true">
+      {/* Up arrowhead */}
+      <polyline points="4,10 8,4 12,10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Up stem */}
+      <line x1="8" y1="4" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      {/* Down arrowhead */}
+      <polyline points="4,18 8,24 12,18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Down stem */}
+      <line x1="8" y1="15" x2="8" y2="24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
 
-/** Schematic icon: two-slider range with bracket connectors to upper bar (Range mode). */
-function RangeIcon() {
-  const lx = 7;    // left thumb x
-  const rx = 21;   // right thumb x
-  const topY = 5;  // upper bar y
-  const midY = 13; // connector horizontal y
-  const botY = 20; // lower rail y
+/** Arrows pointing toward center: click to collapse. */
+function CollapseIcon() {
   return (
-    <svg viewBox="0 0 28 24" width="28" height="24" aria-hidden="true">
-      {/* Upper bar (LinearTimeSlider rail) */}
-      <line x1="2" y1={topY} x2="26" y2={topY} stroke="currentColor" strokeOpacity="0.4" strokeWidth="2" strokeLinecap="round" />
-      {/* Left bracket: vertical down */}
-      <line x1={lx} y1={topY} x2={lx} y2={botY} stroke="currentColor" strokeOpacity="0.7" strokeWidth="1.5" strokeLinecap="round" />
-      {/* Right bracket: vertical down */}
-      <line x1={rx} y1={topY} x2={rx} y2={botY} stroke="currentColor" strokeOpacity="0.7" strokeWidth="1.5" strokeLinecap="round" />
-      {/* Horizontal connector mid-bracket */}
-      <line x1={lx} y1={midY} x2={rx} y2={midY} stroke="currentColor" strokeOpacity="0.5" strokeWidth="1.5" strokeLinecap="round" />
-      {/* Lower rail */}
-      <line x1="2" y1={botY} x2="26" y2={botY} stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" strokeLinecap="round" />
-      {/* Selected track segment */}
-      <line x1={lx} y1={botY} x2={rx} y2={botY} stroke="currentColor" strokeOpacity="0.7" strokeWidth="2.5" strokeLinecap="round" />
-      {/* Left thumb */}
-      <circle cx={lx} cy={botY} r="3" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.25" />
-      {/* Right thumb */}
-      <circle cx={rx} cy={botY} r="3" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.25" />
+    <svg viewBox="0 0 16 28" width="16" height="28" aria-hidden="true">
+      {/* Down arrowhead (pointing inward/down from top) */}
+      <polyline points="4,5 8,11 12,5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Down stem from top */}
+      <line x1="8" y1="3" x2="8" y2="11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      {/* Up arrowhead (pointing inward/up from bottom) */}
+      <polyline points="4,23 8,17 12,23" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Up stem from bottom */}
+      <line x1="8" y1="17" x2="8" y2="25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -65,22 +52,13 @@ export function TimeControl(props: TimeControlProps) {
   const { minYear, maxYear, year, isRange } = props;
   return (
     <div className="time-control">
-      <div className="time-mode-toggle-v">
-        <button
-          className={`time-mode-toggle-btn${!isRange ? ' active' : ''}`}
-          title="Single date"
-          onClick={() => props.onChangeIsRange(false)}
-        >
-          <DateIcon />
-        </button>
-        <button
-          className={`time-mode-toggle-btn${isRange ? ' active' : ''}`}
-          title="Date range"
-          onClick={() => props.onChangeIsRange(true)}
-        >
-          <RangeIcon />
-        </button>
-      </div>
+      <button
+        className="time-mode-toggle-btn"
+        title={isRange ? 'Collapse to single date' : 'Expand to date range'}
+        onClick={() => props.onChangeIsRange(!isRange)}
+      >
+        {isRange ? <CollapseIcon /> : <ExpandIcon />}
+      </button>
       <div className="time-control-sliders">
         {isRange ? (
           <>

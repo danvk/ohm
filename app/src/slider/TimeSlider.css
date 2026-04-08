@@ -3,7 +3,7 @@
   bottom: 1em;
   left: 1em;
   right: 1em;
-  padding: 0 1.5rem 0 0.5rem;
+  padding: 1.25em 1.5rem 0.6em 0.25rem;
   z-index: 1;
   display: flex;
   flex-direction: row;
@@ -21,42 +21,24 @@
   min-width: 0;
 }
 
-.time-mode-toggle-v {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  overflow: hidden;
-  align-self: center;
-}
-
 .time-mode-toggle-btn {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 20px;
+  align-self: stretch;
   background: none;
   border: none;
-  border-bottom: 1px solid #ccc;
+  border-radius: 4px;
   cursor: pointer;
-  color: #888;
+  color: #aaa;
   padding: 0;
-  transition: background 0.1s, color 0.1s;
-}
-
-.time-mode-toggle-btn:last-child {
-  border-bottom: none;
+  transition: color 0.1s;
 }
 
 .time-mode-toggle-btn:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.time-mode-toggle-btn.active {
-  background: var(--slider-color);
-  color: #333;
+  color: #555;
 }
 
 .time-slider-sqrt .rc-slider-dot {
@@ -69,12 +51,12 @@
 /* rc-slider handle label (value bubble above thumb) */
 .rc-slider-wrap {
   position: relative;
-  margin: 1.5em 0;
+  margin: 0.75em 0;
 }
 
-/* In range mode the wrap still needs horizontal margin for the connectors */
+/* Range wrap: no top margin (sits flush under linear slider), horizontal margin for connectors */
 .time-slider-range .rc-slider-wrap {
-  margin: 1.5em 2em;
+  margin: 0 2em 0.75em 2em;
 }
 .rc-slider-track {
   background-color: #e9e9e9; /* #6080c077; */
@@ -183,13 +165,13 @@
 
 /*
 Bracket connectors linking TimeRange handles to LinearTimeSlider.
-The outer div spans the full height; two child divs draw the top and bottom halves.
-Total height = 38px (29px above + 9px below the rc-slider-wrap top).
+top: reaches up into the linear slider's wrap (linearWrap marginBottom = 12px, plus a few px overlap).
+height: top offset + 9px below rangeWrap top to reach the rail.
 */
 .rc-slider-connector {
   position: absolute;
-  top: -29px;
-  height: 38px;
+  top: -16px;
+  height: 25px;
   pointer-events: none;
 }
 
