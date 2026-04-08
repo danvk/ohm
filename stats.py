@@ -1,6 +1,13 @@
 import csv
 import random
+import sys
+from datetime import datetime
 from pathlib import Path
+
+
+def log_start(name: str, msg="start"):
+    timestamp = datetime.now().isoformat()
+    sys.stderr.write(f"{timestamp} {name} {msg}\n")
 
 
 def write_stats(
@@ -39,3 +46,5 @@ def write_stats(
             f.writelines(
                 f"{ftype}/{fid}: {problems}\n" for ftype, fid, problems in to_out
             )
+    timestamp = datetime.now().isoformat()
+    sys.stderr.write(f"{timestamp} {name} complete\n")
