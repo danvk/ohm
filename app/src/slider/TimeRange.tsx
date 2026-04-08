@@ -5,11 +5,11 @@ import 'rc-slider/assets/index.css';
 import './TimeSlider.css';
 import {
   SLIDER_MAX,
-  yearToSlider,
-  sliderToYear,
-  snapYear,
-  snapYearByPixels,
-  makeHistoricalMarks,
+  yearToSliderPiecewise,
+  sliderToYearPiecewise,
+  snapYearPiecewise,
+  snapYearByPixelsPiecewise,
+  makeHistoricalMarksPiecewise,
 } from './slider-utils';
 
 export interface TimeRangeProps {
@@ -18,6 +18,8 @@ export interface TimeRangeProps {
   maxYear: number;
   onChange: (a: number, b: number) => void;
 }
+
+const MARKS = makeHistoricalMarksPiecewise();
 
 function Connector({ side, pct }: { side: 'left' | 'right'; pct: number }) {
   return (
@@ -38,7 +40,7 @@ export function TimeRange({
   maxYear,
   onChange,
 }: TimeRangeProps) {
-  const sliderValues = years.map((y) => yearToSlider(y, minYear, maxYear));
+  const sliderValues = years.map((y) => yearToSliderPiecewise(y));
   const pcts = sliderValues.map((v) => (v / SLIDER_MAX) * 100);
 
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -71,7 +73,7 @@ export function TimeRange({
       const currentYears = yearsRef.current;
       drag = {
         startX: e.clientX,
-        startSliderA: yearToSlider(currentYears[0], minYear, maxYear),
+        startSliderA: yearToSliderPiecewise(currentYears[0]),
         yearWidth: currentYears[1] - currentYears[0],
       };
     };
@@ -87,12 +89,12 @@ export function TimeRange({
         0,
         Math.min(SLIDER_MAX, drag.startSliderA + deltaSlider),
       );
-      const newYearA = sliderToYear(newSliderA, minYear, maxYear);
+      const newYearA = sliderToYearPiecewise(newSliderA);
       const clampedA = Math.max(
         minYear,
         Math.min(newYearA, maxYear - drag.yearWidth),
       );
-      const snappedA = snapYearByPixels(clampedA, rect.width, minYear, maxYear);
+      const snappedA = snapYearByPixelsPiecewise(clampedA, rect.width);
       onChangeRef.current(snappedA, snappedA + drag.yearWidth);
     };
 
@@ -131,11 +133,11 @@ export function TimeRange({
             }
             const [v1, v2] = vs;
             onChange(
-              snapYear(v1, sliderToYear(v1, minYear, maxYear), minYear, maxYear),
-              snapYear(v2, sliderToYear(v2, minYear, maxYear), minYear, maxYear),
+              snapYearPiecewise(v1, sliderToYearPiecewise(v1)),
+              snapYearPiecewise(v2, sliderToYearPiecewise(v2)),
             );
           }}
-          marks={makeHistoricalMarks(minYear, maxYear)}
+          marks={MARKS}
         />
       </div>
     </div>

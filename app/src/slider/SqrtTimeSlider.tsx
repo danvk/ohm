@@ -6,16 +6,17 @@ import { yearFromDateStr } from '../date-utils';
 import './TimeSlider.css';
 import {
   SLIDER_MAX,
-  yearToSlider,
-  sliderToYear,
-  snapYear,
-  makeHistoricalMarks,
+  PIECEWISE_MAX_YEAR,
+  yearToSliderPiecewise,
+  sliderToYearPiecewise,
+  snapYearPiecewise,
+  makeHistoricalMarksPiecewise,
 } from './slider-utils';
 
 export const SQRT_MIN_YEAR = -6000;
-export const SQRT_MAX_YEAR = 2026;
+export const SQRT_MAX_YEAR = PIECEWISE_MAX_YEAR;
 
-const MARKS = makeHistoricalMarks(SQRT_MIN_YEAR, SQRT_MAX_YEAR);
+const MARKS = makeHistoricalMarksPiecewise();
 
 export interface SqrtTimeSliderProps {
   year: string;
@@ -24,7 +25,7 @@ export interface SqrtTimeSliderProps {
 
 export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
   const numericYear = yearFromDateStr(year);
-  const sliderValue = yearToSlider(numericYear, SQRT_MIN_YEAR, SQRT_MAX_YEAR);
+  const sliderValue = yearToSliderPiecewise(numericYear);
   const pct = (sliderValue / SLIDER_MAX) * 100;
 
   const [editing, setEditing] = React.useState(false);
@@ -82,8 +83,8 @@ export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
           marks={MARKS}
           onChange={(v) => {
             const pos = v as number;
-            const rawYear = sliderToYear(pos, SQRT_MIN_YEAR, SQRT_MAX_YEAR);
-            onChange(snapYear(pos, rawYear, SQRT_MIN_YEAR, SQRT_MAX_YEAR));
+            const rawYear = sliderToYearPiecewise(pos);
+            onChange(snapYearPiecewise(pos, rawYear));
           }}
         />
       </div>
