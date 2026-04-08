@@ -13,7 +13,7 @@ import {
 } from './slider-utils';
 
 export const SQRT_MIN_YEAR = -6000;
-export const SQRT_MAX_YEAR = 2030;
+export const SQRT_MAX_YEAR = 2026;
 
 const MARKS = makeHistoricalMarks(SQRT_MIN_YEAR, SQRT_MAX_YEAR);
 
@@ -58,7 +58,10 @@ export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
     <span
       className="rc-slider-handle-label"
       style={{ left: `${pct}%` }}
-      onDoubleClick={() => { setEditing(true); setEditValue(String(numericYear)); }}
+      onDoubleClick={() => {
+        setEditing(true);
+        setEditValue(String(numericYear));
+      }}
     >
       {numericYear}
     </span>
