@@ -29,16 +29,6 @@ function ExpandIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Up stem */}
-      <line
-        x1="8"
-        y1="4"
-        x2="8"
-        y2="13"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
       {/* Down arrowhead */}
       <polyline
         points="4,18 8,24 12,18"
@@ -47,16 +37,6 @@ function ExpandIcon() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-      {/* Down stem */}
-      <line
-        x1="8"
-        y1="15"
-        x2="8"
-        y2="24"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
       />
     </svg>
   );
@@ -75,16 +55,6 @@ function CollapseIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Down stem from top */}
-      <line
-        x1="8"
-        y1="3"
-        x2="8"
-        y2="11"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
       {/* Up arrowhead (pointing inward/up from bottom) */}
       <polyline
         points="4,23 8,17 12,23"
@@ -93,16 +63,6 @@ function CollapseIcon() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-      {/* Up stem from bottom */}
-      <line
-        x1="8"
-        y1="17"
-        x2="8"
-        y2="25"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
       />
     </svg>
   );
