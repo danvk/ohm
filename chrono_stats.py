@@ -5,14 +5,38 @@ from typing import Iterable
 
 import osmium
 import osmium.filter
-from osmium.osm import Relation
+from osmium.osm import Node, OSMObject, Relation, Way
 
 from dates import Range, overlaps, parse_ohm_date, parse_ohm_range
-from stats import write_stats
+from stats import log_start, write_stats
 
 NAME_RANGE_PAT = r"\(-?\d{3,}--?\d{3,}\)"
 
 type OsmKey = tuple[str, int]  # {"n", "w", "r"} + ID
+
+# https://github.com/OpenHistoricalMap/iD/blob/7177516c0356f12a35a3a01e8ef599bada802d7f/modules/osm/tags.js#L389-L392
+TIMELESS_VALUES = {
+    "wood",
+    "wetland",
+    "beach",
+    "cave_entrance",
+    "peak",
+    "cliff",
+    "coastline",
+    "tree_row",
+    "water",
+    "scrub",
+    "grassland",
+    "heath",
+    "bare_rock",
+    "glacier",
+    "stream",
+    "river",
+    "pond",
+    "basin",
+    "lake",
+}
+TIMELESS_KEYS = {"natural", "waterway", "water"}
 
 
 class DateExtractor(osmium.SimpleHandler):
@@ -21,12 +45,13 @@ class DateExtractor(osmium.SimpleHandler):
         self.id_to_dates = dict[OsmKey, Range]()
         self.id_to_raw_dates = dict[OsmKey, tuple[str, str]]()
         self.invalid_ids = set[OsmKey]()
-        self.invalid = 0
+        self.n_invalid = 0
         self.invalid_dates = []
         self.year_names = []
         self.end_no_start = list[OsmKey]()
+        self.n_timeless = 0
 
-    def handle_object(self, typ: str, f):
+    def handle_object(self, typ: str, f: OSMObject):
         name = f.tags.get("name")
         if name and re.search(NAME_RANGE_PAT, name):
             self.year_names.append((typ, f.id, name))
@@ -38,7 +63,7 @@ class DateExtractor(osmium.SimpleHandler):
         if start_date:
             start_tup = parse_ohm_date(start_date)
             if not start_tup:
-                self.invalid += 1
+                self.n_invalid += 1
                 self.invalid_dates.append((typ, f.id, start_date))
                 self.invalid_ids.add(key)
                 return
@@ -46,24 +71,34 @@ class DateExtractor(osmium.SimpleHandler):
         if end_date:
             end_tup = parse_ohm_date(end_date)
             if not end_tup:
-                self.invalid += 1
+                self.n_invalid += 1
                 self.invalid_dates.append((typ, f.id, end_date))
                 self.invalid_ids.add(key)
                 return
 
         if end_date and not start_date:
-            self.end_no_start.append(key)
+            is_timeless = False
+            for k in TIMELESS_KEYS:
+                v = f.tags.get(k)
+                if v and v in TIMELESS_KEYS:
+                    is_timeless = True
+                    break
+
+            if is_timeless:
+                self.n_timeless += 1
+            else:
+                self.end_no_start.append(key)
 
         self.id_to_dates[key] = parse_ohm_range(start_date, end_date)
         self.id_to_raw_dates[key] = (start_date or "", end_date or "")
 
-    def relation(self, r) -> None:
+    def relation(self, r: Relation) -> None:
         self.handle_object("r", r)
 
-    def way(self, w) -> None:
+    def way(self, w: Way) -> None:
         self.handle_object("w", w)
 
-    def node(self, n) -> None:
+    def node(self, n: Node) -> None:
         self.handle_object("n", n)
 
 
@@ -171,6 +206,7 @@ def main() -> None:
     parser.add_argument("--output_dir", default=".")
 
     args = parser.parse_args()
+    log_start("chronology")
 
     handler = DateExtractor()
     handler.apply_file(
@@ -199,9 +235,7 @@ def main() -> None:
         args.output_dir,
         "chronology",
         by_type,
-        {
-            "dated-relations": n_dated_rels,
-        },
+        {"dated-relations": n_dated_rels, "dated-timeless": handler.n_timeless},
     )
 
 

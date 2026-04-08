@@ -27,7 +27,7 @@ from shapely.strtree import STRtree
 from tqdm import tqdm
 
 from dates import Range, duration_years, parse_ohm_date, start_of_date
-from stats import write_stats
+from stats import log_start, write_stats
 
 EARTH_LAND_AREA_KM2 = 149_000_000
 
@@ -252,6 +252,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    log_start("earth-coverage")
     print(f"Reading {args.osm_file} ...", file=sys.stderr)
 
     with osmium.io.Reader(args.osm_file) as r:
@@ -302,6 +303,7 @@ def main() -> None:
     )
 
     # Compute pairwise overlaps per admin level sequentially to limit RAM usage.
+    log_start("earth-coverage-overlap")
     print("Computing pairwise overlaps...", file=sys.stderr)
     overlap_counts: dict[str, float] = {}
     overlap_examples: dict[str, list[tuple[str, int, str]]] = {}

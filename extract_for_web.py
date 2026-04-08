@@ -34,6 +34,7 @@ import osmium.osm
 
 from geometry import build_polygon_rings, rdp_simplify, vw_simplify
 from graph_coloring import build_adjacency, dsatur_color, greedy_color
+from stats import log_finish, log_start
 
 
 def tags_to_dict(tags) -> dict[str, str]:
@@ -472,6 +473,7 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+    log_start(__file__)
 
     tag_filter: tuple[str, set[str]] | None = None
     if args.filter:
@@ -495,7 +497,9 @@ def main() -> None:
 
     admin_levels = args.admin_levels.split(",")
     for admin_level in admin_levels:
+        log_start(f"admin_level={admin_level}")
         process_admin_level(admin_level, args, tag_filter, chrono_handler.by_member)
+        log_finish(f"admin_level={admin_level}")
 
     _log("Done.")
 
