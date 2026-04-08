@@ -2,7 +2,7 @@ import React from 'react';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 import { ticks } from 'd3-array';
-import { yearFromDateStr } from './date-utils';
+import { yearFromDateStr } from '../date-utils';
 
 import './TimeSlider.css';
 

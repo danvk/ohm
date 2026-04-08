@@ -1,10 +1,10 @@
 /** The thing that sets the time. Either single or double slider. */
 
-import { LinearTimeSlider } from './LinearTimeSlider';
-import { TimeRange } from './TimeRange';
-import { SqrtTimeSlider } from './SqrtTimeSlider';
+import { LinearTimeSlider } from './slider/LinearTimeSlider';
+import { TimeRange } from './slider/TimeRange';
+import { SqrtTimeSlider } from './slider/SqrtTimeSlider';
 
-import './TimeSlider.css';
+import './slider/TimeSlider.css';
 
 export interface TimeControlProps {
   year: string;
