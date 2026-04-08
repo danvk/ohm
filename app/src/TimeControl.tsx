@@ -21,13 +21,43 @@ function ExpandIcon() {
   return (
     <svg viewBox="0 0 16 28" width="16" height="28" aria-hidden="true">
       {/* Up arrowhead */}
-      <polyline points="4,10 8,4 12,10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline
+        points="4,10 8,4 12,10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       {/* Up stem */}
-      <line x1="8" y1="4" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line
+        x1="8"
+        y1="4"
+        x2="8"
+        y2="13"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
       {/* Down arrowhead */}
-      <polyline points="4,18 8,24 12,18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline
+        points="4,18 8,24 12,18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       {/* Down stem */}
-      <line x1="8" y1="15" x2="8" y2="24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line
+        x1="8"
+        y1="15"
+        x2="8"
+        y2="24"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -37,13 +67,43 @@ function CollapseIcon() {
   return (
     <svg viewBox="0 0 16 28" width="16" height="28" aria-hidden="true">
       {/* Down arrowhead (pointing inward/down from top) */}
-      <polyline points="4,5 8,11 12,5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline
+        points="4,5 8,11 12,5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       {/* Down stem from top */}
-      <line x1="8" y1="3" x2="8" y2="11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line
+        x1="8"
+        y1="3"
+        x2="8"
+        y2="11"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
       {/* Up arrowhead (pointing inward/up from bottom) */}
-      <polyline points="4,23 8,17 12,23" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline
+        points="4,23 8,17 12,23"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       {/* Up stem from bottom */}
-      <line x1="8" y1="17" x2="8" y2="25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line
+        x1="8"
+        y1="17"
+        x2="8"
+        y2="25"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -51,7 +111,7 @@ function CollapseIcon() {
 export function TimeControl(props: TimeControlProps) {
   const { minYear, maxYear, year, isRange } = props;
   return (
-    <div className="time-control">
+    <div className={'time-control ' + (isRange ? 'dual' : 'single')}>
       <button
         className="time-mode-toggle-btn"
         title={isRange ? 'Collapse to single date' : 'Expand to date range'}
