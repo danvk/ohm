@@ -38,7 +38,7 @@ export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
           value={sliderValue}
           styles={{
             track: { height: 8, backgroundColor: 'rgba(0,0,0,0)' },
-            rail: { height: 8, backgroundColor: 'var(--slider-color)' },
+            rail: { height: 8 },
           }}
           marks={MARKS}
           onChange={(v) => {

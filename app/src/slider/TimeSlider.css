@@ -8,7 +8,6 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 1rem;
   /* subtle frosted background so map doesn't bleed through */
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(4px);
@@ -18,6 +17,7 @@
 
 .time-control.single {
   padding-right: 1em;
+  gap: 0;
 }
 .time-control.dual {
   gap: 0.25rem;
@@ -58,12 +58,15 @@
 /* rc-slider handle label (value bubble above thumb) */
 .rc-slider-wrap {
   position: relative;
-  margin: 0.75em 0;
+  margin: 1.5em 2.5em;
 }
 
-/* Range wrap: no top margin (sits flush under linear slider), horizontal margin for connectors */
+/* Range wrap: no top margin — connector bridges linearWrap's bottom margin */
 .time-slider-range .rc-slider-wrap {
-  margin: 0 2em 0.75em 2em;
+  margin-top: 0;
+}
+.time-control.single .rc-slider-wrap {
+  margin: 1em 1em;
 }
 .rc-slider-track {
   background-color: #e9e9e9; /* #6080c077; */
@@ -109,8 +112,7 @@
   white-space: nowrap;
   font-size: 14px;
   color: #555;
-  /* Vertically center on the rail: wrap has 0.75em top margin, rail center is ~9px into wrap */
-  top: calc(0.75em + 9px);
+  top: 9px;
   transform: translateY(-50%);
 }
 
@@ -172,7 +174,7 @@
 
 .time-slider-linear .rc-slider-wrap {
   /* Match the range slider's horizontal margins so both rails are identical width */
-  margin: 0.75em 2em 0;
+  margin: 1.5em 2.5em 1.5em;
 }
 
 .time-slider-linear .rc-slider {
@@ -181,13 +183,14 @@
 
 /*
 Bracket connectors linking TimeRange handles to LinearTimeSlider.
-top: reaches up into the linear slider's wrap (linearWrap marginBottom = 12px, plus a few px overlap).
-height: top offset + 9px below rangeWrap top to reach the rail.
+linearWrap bottom margin = 1.5em ≈ 24px; rangeWrap top margin = 0.
+top: -(24px gap + 14px wrap height - 9px to rail center) = -29px.
+height: 29px + 9px into rangeWrap to reach range rail = 38px.
 */
 .rc-slider-connector {
   position: absolute;
-  top: -16px;
-  height: 25px;
+  top: -29px;
+  height: 38px;
   pointer-events: none;
 }
 
