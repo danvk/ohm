@@ -1,3 +1,4 @@
+import React from 'react';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 import { yearFromDateStr } from '../date-utils';
@@ -26,12 +27,47 @@ export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
   const sliderValue = yearToSlider(numericYear, SQRT_MIN_YEAR, SQRT_MAX_YEAR);
   const pct = (sliderValue / SLIDER_MAX) * 100;
 
+  const [editing, setEditing] = React.useState(false);
+  const [editValue, setEditValue] = React.useState('');
+
+  const commitEdit = () => {
+    const parsed = parseInt(editValue, 10);
+    if (!isNaN(parsed)) {
+      onChange(Math.max(SQRT_MIN_YEAR, Math.min(SQRT_MAX_YEAR, parsed)));
+    }
+    setEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') commitEdit();
+    else if (e.key === 'Escape') setEditing(false);
+  };
+
+  const yearLabel = editing ? (
+    <input
+      className="rc-slider-handle-label rc-slider-label-input"
+      style={{ left: `${pct}%` }}
+      value={editValue}
+      size={6}
+      autoFocus
+      onChange={(e) => setEditValue(e.target.value)}
+      onBlur={commitEdit}
+      onKeyDown={handleKeyDown}
+    />
+  ) : (
+    <span
+      className="rc-slider-handle-label"
+      style={{ left: `${pct}%` }}
+      onDoubleClick={() => { setEditing(true); setEditValue(String(numericYear)); }}
+    >
+      {numericYear}
+    </span>
+  );
+
   return (
     <div className="time-slider-sqrt">
       <div className="rc-slider-wrap">
-        <span className="rc-slider-handle-label" style={{ left: `${pct}%` }}>
-          {numericYear}
-        </span>
+        {yearLabel}
         <Slider
           min={0}
           max={SLIDER_MAX}
