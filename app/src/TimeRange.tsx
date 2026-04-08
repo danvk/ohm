@@ -67,8 +67,10 @@ function snapYearByPixels(
     return Math.round(year / 10) * 10;
   }
   const nearest = Math.round(year / 50) * 50;
-  const yearPx = (yearToSlider(year, minYear, maxYear) / SLIDER_MAX) * sliderWidthPx;
-  const nearestPx = (yearToSlider(nearest, minYear, maxYear) / SLIDER_MAX) * sliderWidthPx;
+  const yearPx =
+    (yearToSlider(year, minYear, maxYear) / SLIDER_MAX) * sliderWidthPx;
+  const nearestPx =
+    (yearToSlider(nearest, minYear, maxYear) / SLIDER_MAX) * sliderWidthPx;
   if (Math.abs(yearPx - nearestPx) <= SNAP_PX_THRESHOLD) {
     return nearest;
   }
