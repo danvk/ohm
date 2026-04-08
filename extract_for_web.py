@@ -34,7 +34,7 @@ import osmium.osm
 
 from geometry import build_polygon_rings, rdp_simplify, vw_simplify
 from graph_coloring import build_adjacency, dsatur_color, greedy_color
-from stats import log_start
+from stats import log_finish, log_start
 
 
 def tags_to_dict(tags) -> dict[str, str]:
@@ -499,7 +499,7 @@ def main() -> None:
     for admin_level in admin_levels:
         log_start(f"admin_level={admin_level}")
         process_admin_level(admin_level, args, tag_filter, chrono_handler.by_member)
-        log_start(f"admin_level={admin_level}", "complete")
+        log_finish(f"admin_level={admin_level}")
 
     _log("Done.")
 
