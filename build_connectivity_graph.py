@@ -46,6 +46,7 @@ import osmium.osm
 from shapely.geometry import MultiPolygon, Polygon
 
 from geometry import build_polygon_rings_quiet, shapely_polygon_from_rings
+from stats import log_start
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -352,6 +353,7 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+    log_start(__file__)
 
     osm_file = args.osm_file
     containment_threshold = args.containment_threshold

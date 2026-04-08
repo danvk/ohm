@@ -8,7 +8,7 @@ import osmium.filter
 from osmium.osm.types import Relation
 
 from geometry import build_polygon_rings_quiet, ring_coords
-from stats import write_stats
+from stats import log_start, write_stats
 
 IGNORE_KEY_PREFIXES = [
     "wikipedia",
@@ -167,6 +167,7 @@ def main() -> None:
     parser.add_argument("--output_dir", default=".")
 
     args = parser.parse_args()
+    log_start("dupes")
     if args.ids:
         candidate_ids = [int(id) for id in args.ids.split(",")]
     else:

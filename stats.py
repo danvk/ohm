@@ -1,6 +1,29 @@
 import csv
+import os
 import random
+import sys
+from datetime import datetime
 from pathlib import Path
+
+LOG_COUNTER = 0
+
+
+def log_to_stderr(name: str, msg: str):
+    if os.environ.get("TESTING"):
+        global LOG_COUNTER
+        timestamp = LOG_COUNTER
+        LOG_COUNTER += 1
+    else:
+        timestamp = datetime.now().isoformat()
+    sys.stderr.write(f"{timestamp} {name} {msg}\n")
+
+
+def log_start(name: str):
+    log_to_stderr(name, "starting")
+
+
+def log_finish(name: str):
+    log_to_stderr(name, "completed")
 
 
 def write_stats(
@@ -39,3 +62,4 @@ def write_stats(
             f.writelines(
                 f"{ftype}/{fid}: {problems}\n" for ftype, fid, problems in to_out
             )
+    log_finish(name)
