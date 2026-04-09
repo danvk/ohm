@@ -39,6 +39,20 @@ export const idsParser = createParser({
   },
 });
 
+export const rangeParser = createParser<{ min: number; max: number }>({
+  parse(v: string) {
+    const parts = v.split(',');
+    if (parts.length !== 2) return null;
+    const min = parseInt(parts[0], 10);
+    const max = parseInt(parts[1], 10);
+    if (!isFinite(min) || !isFinite(max) || min >= max) return null;
+    return { min, max };
+  },
+  serialize({ min, max }) {
+    return `${min},${max}`;
+  },
+});
+
 export const levelsParser = createParser({
   parse(v: string) {
     const parsed = v.split(',').filter((l) => /^\d+$/.test(l));

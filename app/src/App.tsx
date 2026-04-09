@@ -13,6 +13,7 @@ import {
   dateParser,
   idsParser,
   levelsParser,
+  rangeParser,
 } from './useUrlState';
 import Logo from './ohm_logo.svg';
 import { yearFromDateStr } from './date-utils';
@@ -75,9 +76,22 @@ export default function App() {
 
   const relations = data?.relations ?? [];
 
-  const [minYear, setMinYear] = React.useState(1500);
-  const [maxYear, setMaxYear] = React.useState(1900);
-  const [isRange, setIsRange] = React.useState(true);
+  // Range mode: `range=min,max` in URL means range mode is active.
+  // null means single-slider mode (parameter absent from URL).
+  const [urlRange, setUrlRange] = useQueryState(
+    'range',
+    rangeParser.withOptions({ history: 'replace', limitUrlUpdates: throttle(300) }),
+  );
+
+  const isRange = urlRange !== null;
+  const minYear = urlRange?.min ?? 1500;
+  const maxYear = urlRange?.max ?? 1900;
+
+  // Preserve the last range when switching to single mode, so switching back restores it.
+  const lastRangeRef = React.useRef({ min: minYear, max: maxYear });
+  if (isRange) {
+    lastRangeRef.current = { min: minYear, max: maxYear };
+  }
 
   // Viewport (zoom/lat/lng) is kept in a ref so map moves don't cause re-renders
   // and don't feed back into setCenter.
@@ -225,8 +239,7 @@ export default function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChangeRange = (newMinYear: number, newMaxYear: number) => {
-    setMinYear(newMinYear);
-    setMaxYear(newMaxYear);
+    setUrlRange({ min: newMinYear, max: newMaxYear });
     if (yearFromDateStr(year) < newMinYear) {
       handleDateChange(String(newMinYear));
     } else if (yearFromDateStr(year) > newMaxYear) {
@@ -244,13 +257,13 @@ export default function App() {
       if (e.key !== 'n' && e.key !== 'p') return;
       const currentYear = yearFromDateStr(year);
       const newYear = e.key === 'n' ? currentYear + 1 : currentYear - 1;
-      if (newYear > maxYear) setMaxYear(newYear);
-      if (newYear < minYear) setMinYear(newYear);
+      if (newYear > maxYear) setUrlRange({ min: minYear, max: newYear });
+      if (newYear < minYear) setUrlRange({ min: newYear, max: maxYear });
       handleYearChange(newYear);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [year, minYear, maxYear, handleYearChange]);
+  }, [year, minYear, maxYear, handleYearChange, setUrlRange]);
 
   return (
     <>
@@ -269,7 +282,9 @@ export default function App() {
         onChange={handleYearChange}
         onChangeRange={handleChangeRange}
         isRange={isRange}
-        onChangeIsRange={setIsRange}
+        onChangeIsRange={(newIsRange) => {
+          setUrlRange(newIsRange ? lastRangeRef.current : null);
+        }}
       />
       <MapLibreMap
         containerId="map"
