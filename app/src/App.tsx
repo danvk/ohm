@@ -283,7 +283,18 @@ export default function App() {
         onChangeRange={handleChangeRange}
         isRange={isRange}
         onChangeIsRange={(newIsRange) => {
-          setUrlRange(newIsRange ? lastRangeRef.current : null);
+          if (!newIsRange) {
+            setUrlRange(null);
+            return;
+          }
+          const currentYear = yearFromDateStr(year);
+          let { min, max } = lastRangeRef.current;
+          if (currentYear < min || currentYear > max) {
+            min = Math.round((currentYear - 200) / 100) * 100;
+            max = Math.round((currentYear + 200) / 100) * 100;
+            if (min === max) max += 100;
+          }
+          setUrlRange({ min, max });
         }}
       />
       <MapLibreMap
