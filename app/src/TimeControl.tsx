@@ -15,7 +15,7 @@ export interface TimeControlProps {
   minYear: number;
   maxYear: number;
   isRange: boolean;
-  onChange: (year: number) => void;
+  onChange: (date: string) => void;
   onChangeRange: (minYear: number, maxYear: number) => void;
   onChangeIsRange: (isRange: boolean) => void;
 }

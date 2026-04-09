@@ -283,7 +283,7 @@ export default function App() {
         year={year}
         minYear={minYear}
         maxYear={maxYear}
-        onChange={handleYearChange}
+        onChange={handleDateChange}
         onChangeRange={handleChangeRange}
         isRange={isRange}
         onChangeIsRange={(newIsRange) => {

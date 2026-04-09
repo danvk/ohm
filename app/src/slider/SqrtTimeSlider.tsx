@@ -1,7 +1,7 @@
 import React from 'react';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
-import { yearFromDateStr } from '../date-utils';
+import { yearFromDateStr, yearToDateStr, DATE_STR_REGEX } from '../date-utils';
 
 import './TimeSlider.css';
 import {
@@ -20,7 +20,7 @@ const MARKS = makeHistoricalMarksPiecewise();
 
 export interface SqrtTimeSliderProps {
   year: string;
-  onChange: (year: number) => void;
+  onChange: (date: string) => void;
 }
 
 export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
@@ -32,9 +32,11 @@ export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
   const [editValue, setEditValue] = React.useState('');
 
   const commitEdit = () => {
-    const parsed = parseInt(editValue, 10);
-    if (!isNaN(parsed)) {
-      onChange(Math.max(SQRT_MIN_YEAR, Math.min(SQRT_MAX_YEAR, parsed)));
+    if (DATE_STR_REGEX.test(editValue)) {
+      const parsedYear = yearFromDateStr(editValue);
+      if (parsedYear >= SQRT_MIN_YEAR && parsedYear <= SQRT_MAX_YEAR) {
+        onChange(editValue);
+      }
     }
     setEditing(false);
   };
@@ -47,9 +49,8 @@ export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
   const yearLabel = editing ? (
     <input
       className="rc-slider-handle-label rc-slider-label-input"
-      style={{ left: `${pct}%` }}
+      style={{ left: `${pct}%`, width: `${Math.max(4, editValue.length + 1)}ch` }}
       value={editValue}
-      size={6}
       autoFocus
       onChange={(e) => setEditValue(e.target.value)}
       onBlur={commitEdit}
@@ -61,10 +62,10 @@ export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
       style={{ left: `${pct}%` }}
       onDoubleClick={() => {
         setEditing(true);
-        setEditValue(String(numericYear));
+        setEditValue(year);
       }}
     >
-      {numericYear}
+      {year}
     </span>
   );
 
@@ -84,7 +85,7 @@ export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
           onChange={(v) => {
             const pos = v as number;
             const rawYear = sliderToYearPiecewise(pos);
-            onChange(snapYearPiecewise(pos, rawYear));
+            onChange(yearToDateStr(snapYearPiecewise(pos, rawYear)));
           }}
         />
       </div>

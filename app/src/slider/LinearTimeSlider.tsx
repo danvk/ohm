@@ -2,7 +2,7 @@ import React from 'react';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 import { ticks } from 'd3-array';
-import { yearFromDateStr } from '../date-utils';
+import { yearFromDateStr, yearToDateStr, DATE_STR_REGEX } from '../date-utils';
 
 import './TimeSlider.css';
 
@@ -10,7 +10,7 @@ export interface TimeSliderProps {
   year: string;
   minYear: number;
   maxYear: number;
-  onChange: (year: number) => void;
+  onChange: (date: string) => void;
   onChangeMinYear?: (year: number) => void;
   onChangeMaxYear?: (year: number) => void;
 }
@@ -35,18 +35,22 @@ export function LinearTimeSlider({
   const [editing, setEditing] = React.useState<EditingField>(null);
   const [editValue, setEditValue] = React.useState('');
 
-  const startEdit = (field: EditingField, value: number) => {
+  const startEdit = (field: EditingField, value: string | number) => {
     setEditing(field);
     setEditValue(String(value));
   };
 
   const commitEdit = () => {
-    // TODO: for editing='year', parse as full date
-    const parsed = parseInt(editValue, 10);
-    if (!isNaN(parsed)) {
-      if (editing === 'min') onChangeMinYear?.(parsed);
-      else if (editing === 'max') onChangeMaxYear?.(parsed);
-      else if (editing === 'year') onChange(parsed);
+    if (editing === 'year') {
+      if (DATE_STR_REGEX.test(editValue)) {
+        onChange(editValue);
+      }
+    } else {
+      const parsed = parseInt(editValue, 10);
+      if (!isNaN(parsed)) {
+        if (editing === 'min') onChangeMinYear?.(parsed);
+        else if (editing === 'max') onChangeMaxYear?.(parsed);
+      }
     }
     setEditing(null);
   };
@@ -63,7 +67,7 @@ export function LinearTimeSlider({
         <input
           className={`${className} rc-slider-label-input`}
           value={editValue}
-          size={6}
+          style={{ width: `${Math.max(4, editValue.length + 1)}ch` }}
           autoFocus
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={commitEdit}
@@ -83,9 +87,8 @@ export function LinearTimeSlider({
       return (
         <input
           className="rc-slider-handle-label rc-slider-label-input"
-          style={{ left: `${pct}%` }}
+          style={{ left: `${pct}%`, width: `${Math.max(4, editValue.length + 1)}ch` }}
           value={editValue}
-          size={6}
           autoFocus
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={commitEdit}
@@ -97,9 +100,9 @@ export function LinearTimeSlider({
       <span
         className="rc-slider-handle-label"
         style={{ left: `${pct}%` }}
-        onDoubleClick={() => startEdit('year', numericYear)}
+        onDoubleClick={() => startEdit('year', year)}
       >
-        {numericYear}
+        {year}
       </span>
     );
   };
@@ -118,7 +121,7 @@ export function LinearTimeSlider({
             rail: { height: 8 },
           }}
           marks={tickMarks}
-          onChange={(v) => onChange(v as number)}
+          onChange={(v) => onChange(yearToDateStr(v as number))}
         />
       </div>
       {renderBoundLabel('max', maxYear)}
