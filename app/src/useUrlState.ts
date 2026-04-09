@@ -3,6 +3,7 @@
  */
 
 import { createParser } from 'nuqs';
+import { MAX_YEAR, MIN_YEAR } from './slider/slider-utils';
 
 // nuqs parsers — custom serialization to preserve the existing URL format.
 // nuqs's renderQueryString intentionally leaves / and , unencoded, so pretty URLs are preserved.
@@ -46,6 +47,7 @@ export const rangeParser = createParser<{ min: number; max: number }>({
     const min = parseInt(parts[0], 10);
     const max = parseInt(parts[1], 10);
     if (!isFinite(min) || !isFinite(max) || min >= max) return null;
+    if (min < MIN_YEAR || max > MAX_YEAR) return null;
     return { min, max };
   },
   serialize({ min, max }) {

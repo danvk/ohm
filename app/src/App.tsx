@@ -16,10 +16,10 @@ import {
   rangeParser,
 } from './useUrlState';
 import Logo from './ohm_logo.svg';
-import { yearFromDateStr } from './date-utils';
+import { yearFromDateStr, yearToDateStr } from './date-utils';
 import type { AppData } from './loader.ts';
 import { loadDataForLevels } from './loader.ts';
-import { SQRT_MAX_YEAR, SQRT_MIN_YEAR } from './slider/SqrtTimeSlider.tsx';
+import { MAX_YEAR, MIN_YEAR } from './slider/slider-utils.ts';
 
 export default function App() {
   // Map viewport — 500ms throttle (can fire 60fps during pan/zoom)
@@ -51,7 +51,6 @@ export default function App() {
     { history: 'replace' },
   );
 
-  const year = date;
   const urlIds = ids;
   const adminLevels = levels ?? new Set(['2']);
 
@@ -164,18 +163,11 @@ export default function App() {
     [selectedFeatures],
   );
 
-  const handleDateChange = React.useCallback(
-    (nextDate: string) => {
-      setDate(nextDate);
-    },
-    [setDate],
-  );
-
   const handleYearChange = React.useCallback(
     (nextYear: number) => {
-      handleDateChange(String(nextYear).padStart(4, '0'));
+      setDate(yearToDateStr(nextYear));
     },
-    [handleDateChange],
+    [setDate],
   );
 
   const handleMapMove = React.useCallback(
@@ -200,12 +192,11 @@ export default function App() {
       const relation = relations.find((r) => Number(r.id) === relationId);
       if (!relation) return;
       const startDateStr = relation.tags['start_date'];
-      const nextYear =
-        startDateStr ?? String(yearFromDateStr(year)).padStart(4, '0');
-      setDate(nextYear);
+      const nextDate = startDateStr ?? yearToDateStr(yearFromDateStr(date));
+      setDate(nextDate);
       setUrlParams({ ids: [relationId] });
     },
-    [relations, year, setDate, setUrlParams],
+    [relations, date, setDate, setUrlParams],
   );
 
   // On initial load: if ids are present but no explicit date, set date to the
@@ -242,14 +233,18 @@ export default function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleChangeRange = (newMinYear: number, newMaxYear: number) => {
-    setUrlRange({ min: newMinYear, max: newMaxYear });
-    if (yearFromDateStr(year) < newMinYear) {
-      handleDateChange(String(newMinYear));
-    } else if (yearFromDateStr(year) > newMaxYear) {
-      handleDateChange(String(newMaxYear));
-    }
-  };
+  const handleChangeRange = React.useCallback(
+    (newMinYear: number, newMaxYear: number) => {
+      setUrlRange({ min: newMinYear, max: newMaxYear });
+      const currentYear = yearFromDateStr(date);
+      if (currentYear < newMinYear) {
+        setDate(yearToDateStr(newMinYear));
+      } else if (currentYear > newMaxYear) {
+        setDate(yearToDateStr(newMaxYear));
+      }
+    },
+    [date, setDate, setUrlRange],
+  );
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -259,15 +254,20 @@ export default function App() {
       )
         return;
       if (e.key !== 'n' && e.key !== 'p') return;
-      const currentYear = yearFromDateStr(year);
+      const currentYear = yearFromDateStr(date);
       const newYear = e.key === 'n' ? currentYear + 1 : currentYear - 1;
-      if (newYear > maxYear) setUrlRange({ min: minYear, max: newYear });
-      if (newYear < minYear) setUrlRange({ min: newYear, max: maxYear });
-      handleYearChange(newYear);
+      const clampedYear = Math.max(MIN_YEAR, Math.min(MAX_YEAR, newYear));
+      if (isRange) {
+        if (clampedYear > maxYear)
+          setUrlRange({ min: minYear, max: clampedYear });
+        else if (clampedYear < minYear)
+          setUrlRange({ min: clampedYear, max: maxYear });
+      }
+      handleYearChange(clampedYear);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [year, minYear, maxYear, handleYearChange, setUrlRange]);
+  }, [date, isRange, minYear, maxYear, handleYearChange, setUrlRange]);
 
   return (
     <>
@@ -280,10 +280,10 @@ export default function App() {
         </a>
       </div>
       <TimeControl
-        year={year}
+        year={date}
         minYear={minYear}
         maxYear={maxYear}
-        onChange={handleDateChange}
+        onChange={setDate}
         onChangeRange={handleChangeRange}
         isRange={isRange}
         onChangeIsRange={(newIsRange) => {
@@ -291,14 +291,15 @@ export default function App() {
             setUrlRange(null);
             return;
           }
-          const currentYear = yearFromDateStr(year);
+          const currentYear = yearFromDateStr(date);
           let { min, max } = lastRangeRef.current;
           if (currentYear < min || currentYear > max) {
             min = Math.round((currentYear - 200) / 100) * 100;
             max = Math.round((currentYear + 200) / 100) * 100;
             if (min === max) max += 100;
-            min = Math.max(min, SQRT_MIN_YEAR);
-            max = Math.min(max, SQRT_MAX_YEAR);
+            min = Math.max(min, MIN_YEAR);
+            max = Math.min(max, MAX_YEAR);
+            if (min >= max) min = max - 100;
           }
           setUrlRange({ min, max });
         }}
@@ -320,7 +321,7 @@ export default function App() {
         />
         <AdminAreas
           data={data ?? { relations: [], ways: {}, nodes: {} }}
-          year={year}
+          year={date}
           adminLevels={adminLevels}
           selectedIds={selectedIds}
           onClickFeature={handleClickFeature}
@@ -331,7 +332,7 @@ export default function App() {
         onClose={() => {
           setUrlParams({ ids: [] });
         }}
-        onSetDate={handleDateChange}
+        onSetDate={setDate}
         onSelectRelation={handleSelectRelation}
       />
     </>

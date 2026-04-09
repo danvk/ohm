@@ -5,11 +5,11 @@ import 'rc-slider/assets/index.css';
 import './TimeSlider.css';
 import {
   SLIDER_MAX,
-  yearToSliderPiecewise,
-  sliderToYearPiecewise,
-  snapYearPiecewise,
-  snapYearByPixelsPiecewise,
-  makeHistoricalMarksPiecewise,
+  yearToSlider,
+  sliderToYear,
+  snapYear,
+  snapYearByPixels,
+  makeHistoricalMarks,
 } from './slider-utils';
 
 export interface TimeRangeProps {
@@ -19,7 +19,7 @@ export interface TimeRangeProps {
   onChange: (a: number, b: number) => void;
 }
 
-const MARKS = makeHistoricalMarksPiecewise();
+const MARKS = makeHistoricalMarks();
 
 function Connector({ side, pct }: { side: 'left' | 'right'; pct: number }) {
   return (
@@ -40,7 +40,7 @@ export function TimeRange({
   maxYear,
   onChange,
 }: TimeRangeProps) {
-  const sliderValues = years.map((y) => yearToSliderPiecewise(y));
+  const sliderValues = years.map((y) => yearToSlider(y));
   const pcts = sliderValues.map((v) => (v / SLIDER_MAX) * 100);
 
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -73,7 +73,7 @@ export function TimeRange({
       const currentYears = yearsRef.current;
       drag = {
         startX: e.clientX,
-        startSliderA: yearToSliderPiecewise(currentYears[0]),
+        startSliderA: yearToSlider(currentYears[0]),
         yearWidth: currentYears[1] - currentYears[0],
       };
     };
@@ -89,12 +89,12 @@ export function TimeRange({
         0,
         Math.min(SLIDER_MAX, drag.startSliderA + deltaSlider),
       );
-      const newYearA = sliderToYearPiecewise(newSliderA);
+      const newYearA = sliderToYear(newSliderA);
       const clampedA = Math.max(
         minYear,
         Math.min(newYearA, maxYear - drag.yearWidth),
       );
-      const snappedA = snapYearByPixelsPiecewise(clampedA, rect.width);
+      const snappedA = snapYearByPixels(clampedA, rect.width);
       onChangeRef.current(snappedA, snappedA + drag.yearWidth);
     };
 
@@ -129,12 +129,14 @@ export function TimeRange({
           }}
           onChange={(vs) => {
             if (!Array.isArray(vs)) {
-              throw new Error('blah');
+              throw new Error(
+                'rc-slider onChange: expected array for range slider',
+              );
             }
             const [v1, v2] = vs;
             onChange(
-              snapYearPiecewise(v1, sliderToYearPiecewise(v1)),
-              snapYearPiecewise(v2, sliderToYearPiecewise(v2)),
+              snapYear(v1, sliderToYear(v1)),
+              snapYear(v2, sliderToYear(v2)),
             );
           }}
           marks={MARKS}

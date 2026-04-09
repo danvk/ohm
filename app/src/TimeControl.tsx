@@ -2,13 +2,10 @@
 
 import { LinearTimeSlider } from './slider/LinearTimeSlider';
 import { TimeRange } from './slider/TimeRange';
-import {
-  SQRT_MAX_YEAR,
-  SQRT_MIN_YEAR,
-  SqrtTimeSlider,
-} from './slider/SqrtTimeSlider';
+import { ScaledTimeSlider } from './slider/ScaledTimeSlider';
 
 import './slider/TimeSlider.css';
+import { MAX_YEAR, MIN_YEAR } from './slider/slider-utils';
 
 export interface TimeControlProps {
   year: string;
@@ -96,13 +93,13 @@ export function TimeControl(props: TimeControlProps) {
             />
             <TimeRange
               years={[minYear, maxYear]}
-              minYear={SQRT_MIN_YEAR}
-              maxYear={SQRT_MAX_YEAR}
+              minYear={MIN_YEAR}
+              maxYear={MAX_YEAR}
               onChange={props.onChangeRange}
             />
           </>
         ) : (
-          <SqrtTimeSlider year={year} onChange={props.onChange} />
+          <ScaledTimeSlider year={year} onChange={props.onChange} />
         )}
       </div>
     </div>

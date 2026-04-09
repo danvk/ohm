@@ -26,7 +26,8 @@ export function LinearTimeSlider({
   onChangeMaxYear,
 }: TimeSliderProps) {
   const numericYear = yearFromDateStr(year);
-  const sliderValue = (numericYear - minYear) / (maxYear - minYear);
+  const range = maxYear - minYear || 1; // guard against division by zero
+  const sliderValue = (numericYear - minYear) / range;
   const pct = sliderValue * 100;
   const tickMarks = Object.fromEntries(
     ticks(minYear, maxYear, 5).map((y) => [y, ' ']),

@@ -6,26 +6,24 @@ import { yearFromDateStr, yearToDateStr, DATE_STR_REGEX } from '../date-utils';
 import './TimeSlider.css';
 import {
   SLIDER_MAX,
-  PIECEWISE_MAX_YEAR,
-  yearToSliderPiecewise,
-  sliderToYearPiecewise,
-  snapYearPiecewise,
-  makeHistoricalMarksPiecewise,
+  MAX_YEAR,
+  yearToSlider,
+  sliderToYear,
+  snapYear,
+  makeHistoricalMarks,
+  MIN_YEAR,
 } from './slider-utils';
 
-export const SQRT_MIN_YEAR = -6000;
-export const SQRT_MAX_YEAR = PIECEWISE_MAX_YEAR;
+const MARKS = makeHistoricalMarks();
 
-const MARKS = makeHistoricalMarksPiecewise();
-
-export interface SqrtTimeSliderProps {
+export interface ScaledTimeSliderProps {
   year: string;
   onChange: (date: string) => void;
 }
 
-export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
+export function ScaledTimeSlider({ year, onChange }: ScaledTimeSliderProps) {
   const numericYear = yearFromDateStr(year);
-  const sliderValue = yearToSliderPiecewise(numericYear);
+  const sliderValue = yearToSlider(numericYear);
   const pct = (sliderValue / SLIDER_MAX) * 100;
 
   const [editing, setEditing] = React.useState(false);
@@ -34,7 +32,7 @@ export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
   const commitEdit = () => {
     if (DATE_STR_REGEX.test(editValue)) {
       const parsedYear = yearFromDateStr(editValue);
-      if (parsedYear >= SQRT_MIN_YEAR && parsedYear <= SQRT_MAX_YEAR) {
+      if (parsedYear >= MIN_YEAR && parsedYear <= MAX_YEAR) {
         onChange(editValue);
       }
     }
@@ -87,8 +85,8 @@ export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
           marks={MARKS}
           onChange={(v) => {
             const pos = v as number;
-            const rawYear = sliderToYearPiecewise(pos);
-            onChange(yearToDateStr(snapYearPiecewise(pos, rawYear)));
+            const rawYear = sliderToYear(pos);
+            onChange(yearToDateStr(snapYear(pos, rawYear)));
           }}
         />
       </div>
