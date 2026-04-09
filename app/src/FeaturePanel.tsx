@@ -1,6 +1,8 @@
 import React from 'react';
 import type { Chronology } from './ohm-data';
 
+import './FeaturePanel.css';
+
 export interface FeatureInfo {
   id: string | number;
   tags: Record<string, string>;
