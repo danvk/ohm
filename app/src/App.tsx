@@ -305,7 +305,7 @@ export default function App() {
       />
       <MapLibreMap
         containerId="map"
-        containerClassName="maplibregl-map"
+        containerClassName={'maplibregl-map' + (isRange ? ' dual' : ' single')}
         center={[mapView.lng, mapView.lat]}
         zoom={mapView.zoom}
         {...(externalView && { externalView })}

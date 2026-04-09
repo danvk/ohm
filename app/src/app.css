@@ -56,8 +56,11 @@ a:hover {
 .maplibregl-ctrl-top-left {
   margin-top: 3em;
 }
-.maplibregl-ctrl-bottom-right {
-  margin-bottom: 10em;
+.single .maplibregl-ctrl-bottom-right {
+  margin-bottom: 6.5em;
+}
+.dual .maplibregl-ctrl-bottom-right {
+  margin-bottom: 11em;
 }
 
 .loading {
