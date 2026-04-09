@@ -49,7 +49,10 @@ export function SqrtTimeSlider({ year, onChange }: SqrtTimeSliderProps) {
   const yearLabel = editing ? (
     <input
       className="rc-slider-handle-label rc-slider-label-input"
-      style={{ left: `${pct}%`, width: `${Math.max(4, editValue.length + 1)}ch` }}
+      style={{
+        left: `${pct}%`,
+        width: `${Math.max(4, editValue.length + 1)}ch`,
+      }}
       value={editValue}
       autoFocus
       onChange={(e) => setEditValue(e.target.value)}
