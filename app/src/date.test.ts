@@ -1,3 +1,5 @@
+// This is an AI port of https://github.com/OpenHistoricalMap/DateFunctions-plpgsql/blob/90d8d0f0daea4c8c5aa62edf440f26e9eb0ab950/tests.sql
+
 import { describe, expect, it } from 'vitest';
 import {
   decimalDateToIsoDate,
