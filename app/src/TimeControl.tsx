@@ -3,9 +3,9 @@
 import { LinearTimeSlider } from './slider/LinearTimeSlider';
 import { TimeRange } from './slider/TimeRange';
 import { ScaledTimeSlider } from './slider/ScaledTimeSlider';
+import { MAX_YEAR, MIN_YEAR } from './slider/slider-utils';
 
 import './slider/TimeSlider.css';
-import { MAX_YEAR, MIN_YEAR } from './slider/slider-utils';
 
 export interface TimeControlProps {
   year: string;
