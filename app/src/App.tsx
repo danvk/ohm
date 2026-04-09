@@ -19,6 +19,7 @@ import Logo from './ohm_logo.svg';
 import { yearFromDateStr } from './date-utils';
 import type { AppData } from './loader.ts';
 import { loadDataForLevels } from './loader.ts';
+import { SQRT_MAX_YEAR, SQRT_MIN_YEAR } from './slider/SqrtTimeSlider.tsx';
 
 export default function App() {
   // Map viewport — 500ms throttle (can fire 60fps during pan/zoom)
@@ -80,7 +81,10 @@ export default function App() {
   // null means single-slider mode (parameter absent from URL).
   const [urlRange, setUrlRange] = useQueryState(
     'range',
-    rangeParser.withOptions({ history: 'replace', limitUrlUpdates: throttle(300) }),
+    rangeParser.withOptions({
+      history: 'replace',
+      limitUrlUpdates: throttle(300),
+    }),
   );
 
   const isRange = urlRange !== null;
@@ -293,6 +297,8 @@ export default function App() {
             min = Math.round((currentYear - 200) / 100) * 100;
             max = Math.round((currentYear + 200) / 100) * 100;
             if (min === max) max += 100;
+            min = Math.max(min, SQRT_MIN_YEAR);
+            max = Math.min(max, SQRT_MAX_YEAR);
           }
           setUrlRange({ min, max });
         }}
