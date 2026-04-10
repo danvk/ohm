@@ -16,36 +16,14 @@ DATE_RE = re.compile(r"^(-?\d+)(?:-(\d{1,2})(?:-(\d{1,2}))?)?$")
 
 
 # ----------------------------
-# Normalization (OHM quirks)
-# ----------------------------
-def normalize_ohm_date(s: Optional[str]) -> Optional[str]:
-    if not s:
-        return None
-
-    s = s.strip().lower()
-
-    # Remove common uncertainty prefixes
-    s = re.sub(r"^(c\.|ca\.|~)\s*", "", s)
-
-    # Remove trailing junk (e.g. "1900?", "1900 (est.)")
-    s = re.sub(r"[^\d\-].*$", "", s)
-
-    # Reject embedded ranges like "1900-1910"
-    if re.match(r"^-?\d{3,}-\d{3,}$", s):
-        return None
-
-    return s or None
-
-
-# ----------------------------
 # Parsing
 # ----------------------------
 def parse_ohm_date(
     s: Optional[str],
 ) -> Optional[Tuple[int, Optional[int], Optional[int]]]:
-    s = normalize_ohm_date(s)
     if not s:
         return None
+    s = s.strip()
 
     m = DATE_RE.match(s)
     if not m:

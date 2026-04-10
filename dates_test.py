@@ -4,36 +4,11 @@ from dates import (
     NEG_INF,
     POS_INF,
     duration_years,
-    normalize_ohm_date,
     overlaps,
     parse_ohm_date,
     parse_ohm_range,
     start_of_date,
 )
-
-
-class TestNormalizeOhmDate:
-    def test_removes_uncertainty_prefixes(self):
-        assert normalize_ohm_date("c. 1900") == "1900"
-        assert normalize_ohm_date("ca. 1900") == "1900"
-        assert normalize_ohm_date("~ 1900") == "1900"
-
-    def test_removes_trailing_junk(self):
-        assert normalize_ohm_date("1900?") == "1900"
-        assert normalize_ohm_date("1900 (est.)") == "1900"
-
-    def test_rejects_embedded_ranges(self):
-        assert normalize_ohm_date("1900-1910") is None
-        assert normalize_ohm_date("2000-2010") is None
-
-    def test_handles_none_and_empty(self):
-        assert normalize_ohm_date(None) is None
-        assert normalize_ohm_date("") is None
-        assert normalize_ohm_date("   ") is None
-
-    def test_strips_and_lowercases(self):
-        assert normalize_ohm_date("  1900  ") == "1900"
-        assert normalize_ohm_date("C. 1900") == "1900"
 
 
 class TestParseOhmDate:
@@ -53,14 +28,14 @@ class TestParseOhmDate:
         assert parse_ohm_date("-1234") == (-1234, None, None)
         assert parse_ohm_date("-1234-5-6") == (-1234, 5, 6)
 
-    def test_with_uncertainty_markers(self):
-        assert parse_ohm_date("c. 1900") == (1900, None, None)
-        assert parse_ohm_date("ca. 1900") == (1900, None, None)
-        assert parse_ohm_date("~ 1900") == (1900, None, None)
+    def test_rejects_uncertainty_markers(self):
+        assert parse_ohm_date("c. 1900") is None
+        assert parse_ohm_date("ca. 1900") is None
+        assert parse_ohm_date("~ 1900") is None
 
-    def test_with_trailing_junk(self):
-        assert parse_ohm_date("1900?") == (1900, None, None)
-        assert parse_ohm_date("1900 (est.)") == (1900, None, None)
+    def test_rejects_trailing_junk(self):
+        assert parse_ohm_date("1900?") is None
+        assert parse_ohm_date("1900 (est.)") is None
 
     def test_invalid_month(self):
         assert parse_ohm_date("2026-13") is None
@@ -82,6 +57,11 @@ class TestParseOhmDate:
     def test_invalid_format(self):
         assert parse_ohm_date("not a date") is None
         assert parse_ohm_date("abc-def-ghi") is None
+
+    def test_invalid_datelike(self):
+        assert parse_ohm_date("600 BC") is None
+        assert parse_ohm_date("1975..1985") is None
+        assert parse_ohm_date("1984-02..2009") is None
 
 
 class TestStartOfDate:
@@ -122,10 +102,6 @@ class TestParseOhmRange:
     def test_negative_years(self):
         result = parse_ohm_range("-1234", "-1200")
         assert result == ((-1234, 1, 1), (-1200, 1, 1))
-
-    def test_messy_input(self):
-        result = parse_ohm_range("c. 1900?", "1910 (est.)")
-        assert result == ((1900, 1, 1), (1910, 1, 1))
 
 
 class TestDurationYears:
