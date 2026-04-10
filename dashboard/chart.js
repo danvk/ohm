@@ -64,6 +64,14 @@ const METRIC_DOCS = {
     label: "end_date w/o start_date",
     help: "If a feature has end_date, then it should have start_date. Nothing is timeless.",
   },
+  "date-start-after-end": {
+    label: "start_date > end_date",
+    help: "The feature has a valid start_date and end_date, but start_date > end_date.",
+  },
+  "date-far-future": {
+    label: "Far future",
+    help: "Either start_date or end_date is after 2050. This is often a typo or placeholder, but omitting end_date is preferable."
+  },
 
   "earth-years-admin-1": { label: "admin1", help: 'See above for an explanation of this metric.' },
   "earth-years-admin-2": { label: "admin2", help: 'See above for an explanation of this metric.' },
@@ -229,11 +237,16 @@ makeChart(
 
 makeChart(
   document.getElementById("tag-errors"),
-  ["date-in-name",
-  "date-invalid",
-  "date-end-no-start"],
+  [
+    "date-in-name",
+    "date-invalid",
+    "date-end-no-start",
+    "date-far-future",
+    "date-start-after-end"
+  ],
   {
     examples: true,
+    connectSeparatedPoints: true,
     axes: { y: { valueFormatter: x => String(x) } },
   }
 );

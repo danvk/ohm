@@ -11,6 +11,7 @@ from dates import Range, overlaps, parse_ohm_date, parse_ohm_range
 from stats import log_start, write_stats
 
 NAME_RANGE_PAT = r"\(-?\d{3,}--?\d{3,}\)"
+FAR_FUTURE = 2050
 
 type OsmKey = tuple[str, int]  # {"n", "w", "r"} + ID
 
@@ -48,7 +49,9 @@ class DateExtractor(osmium.SimpleHandler):
         self.n_invalid = 0
         self.invalid_dates = []
         self.year_names = []
+        self.start_after_end = []
         self.end_no_start = list[OsmKey]()
+        self.far_future = []
         self.n_timeless = 0
 
     def handle_object(self, typ: str, f: OSMObject):
@@ -60,11 +63,12 @@ class DateExtractor(osmium.SimpleHandler):
 
         start_date = f.tags.get("start_date")
         end_date = f.tags.get("end_date")
+        name = f.tags.get("name:en") or f.tags.get("name") or ""
         if start_date:
             start_tup = parse_ohm_date(start_date)
             if not start_tup:
                 self.n_invalid += 1
-                self.invalid_dates.append((typ, f.id, start_date))
+                self.invalid_dates.append((typ, f.id, f"{start_date} {name}"))
                 self.invalid_ids.add(key)
                 return
 
@@ -72,7 +76,7 @@ class DateExtractor(osmium.SimpleHandler):
             end_tup = parse_ohm_date(end_date)
             if not end_tup:
                 self.n_invalid += 1
-                self.invalid_dates.append((typ, f.id, end_date))
+                self.invalid_dates.append((typ, f.id, f"{end_date} {name}"))
                 self.invalid_ids.add(key)
                 return
 
@@ -89,7 +93,18 @@ class DateExtractor(osmium.SimpleHandler):
             else:
                 self.end_no_start.append(key)
 
-        self.id_to_dates[key] = parse_ohm_range(start_date, end_date)
+        range = parse_ohm_range(start_date, end_date)
+        if end_date and start_date:
+            if range[0] > range[1]:
+                self.start_after_end.append(
+                    (typ, f.id, f"{start_date} > {end_date} {name}")
+                )
+        if start_date and range[0][0] > FAR_FUTURE:
+            self.far_future.append((typ, f.id, f"{start_date} {name}"))
+        if end_date and range[1][0] > FAR_FUTURE:
+            self.far_future.append((typ, f.id, f"{end_date} {name}"))
+
+        self.id_to_dates[key] = range
         self.id_to_raw_dates[key] = (start_date or "", end_date or "")
 
     def relation(self, r: Relation) -> None:
@@ -226,6 +241,8 @@ def main() -> None:
         "date-invalid": handler.invalid_dates,
         "date-in-name": handler.year_names,
         "date-end-no-start": [(typ, id, "") for typ, id in handler.end_no_start],
+        "date-start-after-end": handler.start_after_end,
+        "date-far-future": handler.far_future,
         "chronology-undated-member": ch.undated_members,
         "chronology-overlapping-members": ch.overlapping_members,
         "chronology-member-outside-range": ch.date_outside_ranges,

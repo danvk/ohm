@@ -1,9 +1,11 @@
 type,count
-dated-relations,1415
+dated-relations,1397
 dated-timeless,0
 chronology-member-outside-range,5
 chronology-overlapping-members,6
 chronology-undated-member,5
-date-end-no-start,75
+date-end-no-start,68
+date-far-future,0
 date-in-name,187
-date-invalid,29
+date-invalid,47
+date-start-after-end,0
