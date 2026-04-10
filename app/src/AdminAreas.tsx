@@ -44,9 +44,18 @@ function decodePositions(pos: number[]) {
   return coords;
 }
 
-function decodeRing(signedWayIds: number[], ways: AppData['ways']): Position[] {
+function decodeRing(b64Ring: string, ways: AppData['ways']): Position[] {
+  const binary = atob(b64Ring);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  // Big-endian int32 — swap bytes on little-endian platforms
+  const view = new DataView(bytes.buffer);
+  const count = bytes.length / 4;
   const segments: Position[][] = [];
-  for (const wayId of signedWayIds) {
+  for (let i = 0; i < count; i++) {
+    const wayId = view.getInt32(i * 4, false /* big-endian */);
     const encoded = ways[Math.abs(wayId)];
     if (!encoded) {
       throw new Error(`Missing way ${wayId}`);

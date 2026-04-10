@@ -5,7 +5,7 @@ export interface AdminLevelFilterProps {
   onChange: (adminLevels: Set<string>) => void;
 }
 
-const LEVELS = ['1', '2', '3', '4', '5', '6', '7'] as const;
+const LEVELS = ['1', '2', '3', '4', '5', '6', '7', '8'] as const;
 
 export function AdminLevelFilter({
   adminLevels,

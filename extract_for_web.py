@@ -23,7 +23,9 @@ Each file is a JSON object mapping string IDs to their data.
 """
 
 import argparse
+import base64
 import json
+import struct
 import sys
 import time
 from typing import Any
@@ -352,7 +354,13 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
         )
         for msg in poly_warnings:
             _log(f"    Warning: {msg}")
-        rel_data["ways"] = polygons
+        rel_data["ways"] = [
+            [
+                base64.b64encode(struct.pack(f">{len(ring)}i", *ring)).decode()
+                for ring in polygon
+            ]
+            for polygon in polygons
+        ]
 
     # Attach node members to each relation that has them.
     for rid, rel_data in rel_handler.relations.items():
