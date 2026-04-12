@@ -585,8 +585,7 @@ def shapely_polygon_from_rings(
         if len(outer_arr) < 3:
             continue
         hole_arrs = [
-            h for r in polygon[1:]
-            if len(h := _ring_coords_array(r, way_coords)) >= 3
+            h for r in polygon[1:] if len(h := _ring_coords_array(r, way_coords)) >= 3
         ]
         shapely_polys.append(Polygon(outer_arr, hole_arrs))
 
