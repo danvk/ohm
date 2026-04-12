@@ -3,6 +3,7 @@
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
+import numpy as np
 from shapely import MultiPolygon, Polygon
 
 # Synthetic way IDs are negative integers used to close open rings.  OSM way
@@ -562,18 +563,31 @@ def build_polygon_rings_quiet(
     return polygons
 
 
+def _ring_coords_array(
+    signed_way_ids: list[int],
+    way_coords: dict[int, list[tuple[float, float]]],
+) -> np.ndarray:
+    """Like ring_coords but returns an (N, 2) float64 numpy array directly."""
+    parts = []
+    for i, wid in enumerate(signed_way_ids):
+        wcoords = way_coords_forward(wid, way_coords)
+        parts.extend(wcoords if i == 0 else wcoords[1:])
+    return np.array(parts, dtype=np.float64)
+
+
 def shapely_polygon_from_rings(
     rings: list[list[list[int]]],
     way_coords: dict[int, list[tuple[float, float]]],
 ) -> MultiPolygon | Polygon | None:
     shapely_polys = []
     for polygon in rings:
-        outer_ring = ring_coords(polygon[0], way_coords)
-        if len(outer_ring) < 3:
+        outer_arr = _ring_coords_array(polygon[0], way_coords)
+        if len(outer_arr) < 3:
             continue
-        holes = [ring_coords(r, way_coords) for r in polygon[1:]]
-        holes = [h for h in holes if len(h) >= 3]
-        shapely_polys.append(Polygon(outer_ring, holes))
+        hole_arrs = [
+            h for r in polygon[1:] if len(h := _ring_coords_array(r, way_coords)) >= 3
+        ]
+        shapely_polys.append(Polygon(outer_arr, hole_arrs))
 
     if not shapely_polys:
         return None

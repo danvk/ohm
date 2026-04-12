@@ -13,7 +13,6 @@ import osmium
 import osmium.filter
 import osmium.io
 from osmium.osm.types import Relation
-from shapely import make_valid
 from shapely.validation import explain_validity
 from tqdm import tqdm
 
@@ -147,16 +146,20 @@ def main() -> None:
         # Compute earth-years using a valid (or make_valid'd) polygon.
         earth_years = 0.0
         if poly is not None:
-            area_poly = poly if poly.is_valid else make_valid(poly)
             start_date = parse_ohm_date(geom.start_date)
-            end_date = parse_ohm_date(geom.end_date)
             if start_date is not None:
+                end_date = parse_ohm_date(geom.end_date)
                 end_pt = (
                     start_of_date(end_date) if end_date is not None else planet_date
                 )
                 dur = duration_years((start_of_date(start_date), end_pt))
                 if math.isfinite(dur) and dur >= 0:
-                    earth_years = dur * area_km2(area_poly) / EARTH_LAND_AREA_KM2
+                    # Calculate the areak of poly directly here, even if it's invalid.
+                    # This saves the cost of a call to poly.is_valid and make_valid.
+                    # area_km2 uses shapely.transform, which works on invalid geometries
+                    # and gives a good approximation (slightly off only for
+                    # self-intersecting rings, which is acceptable for ranking).
+                    earth_years = dur * area_km2(poly) / EARTH_LAND_AREA_KM2
 
         has_problem = False
 
@@ -176,7 +179,7 @@ def main() -> None:
         if poly is None:
             raw_examples["no-shapely"].append((earth_years, "r", rid, ""))
             has_problem = True
-        elif not poly.is_valid and not poly_warnings:
+        elif not poly_warnings and not poly.is_valid:
             # avoid generating shapely warnings for polygons we've "fixed" ourselves
             reason = explain_validity(poly)
             error_type = reason.split("[")[0]  # strip out any coords
