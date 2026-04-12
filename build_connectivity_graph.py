@@ -45,6 +45,7 @@ import osmium.filter
 import osmium.osm
 from shapely.geometry import MultiPolygon, Polygon
 
+from dates import Range, overlaps, parse_ohm_range
 from geometry import build_polygon_rings_quiet, shapely_polygon_from_rings
 from stats import log_start
 
@@ -56,64 +57,6 @@ from stats import log_start
 def _log(msg: str) -> None:
     print(msg, file=sys.stderr, flush=True)
 
-
-def _parse_date_impl(
-    date_str: str | None, default_month: int, default_day: int
-) -> tuple[int, int, int] | None:
-    if not date_str:
-        return None
-    is_neg = date_str.startswith("-")
-    s = date_str[1:] if is_neg else date_str
-    parts = s.split("-")
-    try:
-        year = int(parts[0])
-        if is_neg:
-            year = -year
-        month = int(parts[1]) if len(parts) > 1 else default_month
-        day = int(parts[2]) if len(parts) > 2 else default_day
-        return (year, month, day)
-    except (ValueError, IndexError):
-        return None
-
-
-def parse_date(date_str: str | None) -> tuple[int, int, int] | None:
-    """Parse an OSM start-date string.  Missing month/day fill to 12/31.
-
-    A year-only start like "1971" becomes (1971, 12, 31), so it does NOT
-    falsely overlap with an end_date of "1971-09-03" (which is < 1971-12-31).
-    Use parse_end_date() for end-date fields.
-    """
-    return _parse_date_impl(date_str, 12, 31)
-
-
-def parse_end_date(date_str: str | None) -> tuple[int, int, int] | None:
-    """Parse an OSM end-date string.  Missing month/day fill to 1/1.
-
-    A year-only end like "1960" becomes (1960, 1, 1), so it does NOT
-    falsely overlap with a start_date of "1960-11-28" (which is > 1960-01-01).
-    Use parse_date() for start-date fields.
-    """
-    return _parse_date_impl(date_str, 1, 1)
-
-
-def dates_overlap(
-    start_a: tuple[int, ...] | None,
-    end_a: tuple[int, ...] | None,
-    start_b: tuple[int, ...] | None,
-    end_b: tuple[int, ...] | None,
-) -> bool:
-    """Return True if [start_a, end_a) and [start_b, end_b) overlap.
-
-    None for start means −∞; None for end means +∞.
-    """
-    _POS_INF: tuple[int, ...] = (9999, 12, 31)
-    _NEG_INF: tuple[int, ...] = (-9999, 1, 1)
-    sa = start_a if start_a is not None else _NEG_INF
-    ea = end_a if end_a is not None else _POS_INF
-    sb = start_b if start_b is not None else _NEG_INF
-    eb = end_b if end_b is not None else _POS_INF
-    # [sa, ea) ∩ [sb, eb) is non-empty iff sa < eb and sb < ea
-    return sa < eb and sb < ea  # type: ignore[operator]
 
 
 # ---------------------------------------------------------------------------
@@ -537,7 +480,7 @@ def main() -> None:
     # Date ranges of dropped relations, keyed by absorbing node_id.
     # Augments node_date_ranges in Step 4 so the temporal overlap check
     # considers the dropped entity's time span, not just the absorber's.
-    absorbed_dates: dict[int, list[tuple]] = defaultdict(list)
+    absorbed_dates: dict[int, list[Range]] = defaultdict(list)
 
     # Only compare pairs that share at least one way (potential border neighbours)
     checked_pairs: set[frozenset] = set()
@@ -556,11 +499,9 @@ def main() -> None:
                 db = relations[rb]
 
                 # Must have overlapping date ranges
-                if not dates_overlap(
-                    parse_date(da["start_date"]),
-                    parse_end_date(da["end_date"]),
-                    parse_date(db["start_date"]),
-                    parse_end_date(db["end_date"]),
+                if not overlaps(
+                    parse_ohm_range(da["start_date"], da["end_date"]),
+                    parse_ohm_range(db["start_date"], db["end_date"]),
                 ):
                     continue
 
@@ -606,9 +547,9 @@ def main() -> None:
                         relations[smaller_id]["all_ways"]
                     )
                     absorbed_dates[absorbing_node].append(
-                        (
-                            parse_date(relations[smaller_id]["start_date"]),
-                            parse_end_date(relations[smaller_id]["end_date"]),
+                        parse_ohm_range(
+                            relations[smaller_id]["start_date"],
+                            relations[smaller_id]["end_date"],
                         )
                     )
 
@@ -636,16 +577,13 @@ def main() -> None:
     _log("Step 4: building edges …")
 
     # Pre-compute date ranges for each relation (as parsed tuples)
-    rel_dates: dict[int, tuple] = {
-        rid: (
-            parse_date(rdata["start_date"]),
-            parse_end_date(rdata["end_date"]),
-        )
+    rel_dates: dict[int, Range] = {
+        rid: parse_ohm_range(rdata["start_date"], rdata["end_date"])
         for rid, rdata in relations.items()
     }
 
-    # node_id → list of (start, end) tuples for its member relations
-    node_date_ranges: dict[int, list[tuple]] = {}
+    # node_id → list of date ranges for its member relations
+    node_date_ranges: dict[int, list[Range]] = {}
     for node_id, members in nodes.items():
         node_date_ranges[node_id] = [rel_dates[m] for m in members if m in rel_dates]
     # Also include date ranges from dropped (contained) relations so the
@@ -656,9 +594,9 @@ def main() -> None:
 
     def nodes_overlap_in_time(na: int, nb: int) -> bool:
         """Return True if any member of na overlaps in time with any member of nb."""
-        for sa, ea in node_date_ranges.get(na, []):
-            for sb, eb in node_date_ranges.get(nb, []):
-                if dates_overlap(sa, ea, sb, eb):
+        for range_a in node_date_ranges.get(na, []):
+            for range_b in node_date_ranges.get(nb, []):
+                if overlaps(range_a, range_b):
                     return True
         return False
 
