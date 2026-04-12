@@ -1,7 +1,6 @@
 import argparse
 import itertools
 import re
-from typing import Iterable
 
 import osmium
 import osmium.filter
@@ -146,11 +145,17 @@ class ChronologyHandler(osmium.SimpleHandler):
         self.tid_to_raw_dates = tid_to_raw_dates
         self.invalid_tids = invalid_tids
         self.date_outside_ranges = []
+        self.anonymous_chronologies: list[tuple[str, int, str]] = []
 
     def relation(self, r: Relation) -> None:
         if r.tags.get("type") != "chronology":
             return
         self.chronology_count += 1
+        name = r.tags.get("name:en") or r.tags.get("name") or ""
+        name_prefix = f"{name} " if name else ""
+
+        if not name:
+            self.anonymous_chronologies.append(("r", r.id, ""))
 
         undated: list[OsmKey] = []
         member_dates: list[tuple[str, int, Range]] = []
@@ -166,7 +171,11 @@ class ChronologyHandler(osmium.SimpleHandler):
 
         if undated:
             self.undated_members.append(
-                ("r", r.id, ",".join(f"{typ}/{id}" for typ, id in undated))
+                (
+                    "r",
+                    r.id,
+                    name_prefix + ",".join(f"{typ}/{id}" for typ, id in undated),
+                )
             )
 
         fails = [
@@ -186,7 +195,8 @@ class ChronologyHandler(osmium.SimpleHandler):
                 (
                     "r",
                     r.id,
-                    ", ".join(
+                    name_prefix
+                    + ", ".join(
                         fmt_member(*a) + " + " + fmt_member(*b) for a, b in fails[:10]
                     ),
                 )
@@ -203,14 +213,13 @@ class ChronologyHandler(osmium.SimpleHandler):
                         *self.tid_to_raw_dates.get((mtyp, mid), ("", ""))
                     )
                     self.date_outside_ranges.append(
-                        ("r", r.id, f"{mtyp}/{mid} ({m_str}) outside {ch_str}")
+                        (
+                            "r",
+                            r.id,
+                            f"{name_prefix}{mtyp}/{mid} ({m_str}) outside {ch_str}",
+                        )
                     )
                     break
-
-
-def print_links(ids: Iterable[int]):
-    for id in ids:
-        print(f"    {id} https://www.openhistoricalmap.org/relation/{id}")
 
 
 def main() -> None:
@@ -243,6 +252,7 @@ def main() -> None:
         "date-end-no-start": [(typ, id, "") for typ, id in handler.end_no_start],
         "date-start-after-end": handler.start_after_end,
         "date-far-future": handler.far_future,
+        "chronology-anonymous": ch.anonymous_chronologies,
         "chronology-undated-member": ch.undated_members,
         "chronology-overlapping-members": ch.overlapping_members,
         "chronology-member-outside-range": ch.date_outside_ranges,
