@@ -3,7 +3,7 @@
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
-import numpy as np  # used in shapely_polygon_from_rings
+import numpy as np
 from shapely import MultiPolygon, Polygon
 
 # Synthetic way IDs are negative integers used to close open rings.  OSM way

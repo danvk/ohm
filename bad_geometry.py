@@ -154,9 +154,10 @@ def main() -> None:
                 )
                 dur = duration_years((start_of_date(start_date), end_pt))
                 if math.isfinite(dur) and dur >= 0:
-                    # Pass poly directly even if invalid: area_km2 uses
-                    # shapely.transform which works on invalid geometries and
-                    # gives a good approximation (slightly off only for
+                    # Calculate the areak of poly directly here, even if it's invalid.
+                    # This saves the cost of a call to poly.is_valid and make_valid.
+                    # area_km2 uses shapely.transform, which works on invalid geometries
+                    # and gives a good approximation (slightly off only for
                     # self-intersecting rings, which is acceptable for ranking).
                     earth_years = dur * area_km2(poly) / EARTH_LAND_AREA_KM2
 
