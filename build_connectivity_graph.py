@@ -97,23 +97,23 @@ def parse_end_date(date_str: str | None) -> tuple[int, int, int] | None:
 
 
 def dates_overlap(
-    start_a: tuple | None,
-    end_a: tuple | None,
-    start_b: tuple | None,
-    end_b: tuple | None,
+    start_a: tuple[int, ...] | None,
+    end_a: tuple[int, ...] | None,
+    start_b: tuple[int, ...] | None,
+    end_b: tuple[int, ...] | None,
 ) -> bool:
     """Return True if [start_a, end_a) and [start_b, end_b) overlap.
 
     None for start means −∞; None for end means +∞.
     """
-    _POS_INF = (9999, 12, 31)
-    _NEG_INF = (-9999, 1, 1)
+    _POS_INF: tuple[int, ...] = (9999, 12, 31)
+    _NEG_INF: tuple[int, ...] = (-9999, 1, 1)
     sa = start_a if start_a is not None else _NEG_INF
     ea = end_a if end_a is not None else _POS_INF
     sb = start_b if start_b is not None else _NEG_INF
     eb = end_b if end_b is not None else _POS_INF
     # [sa, ea) ∩ [sb, eb) is non-empty iff sa < eb and sb < ea
-    return sa < eb and sb < ea
+    return sa < eb and sb < ea  # type: ignore[operator]
 
 
 # ---------------------------------------------------------------------------

@@ -388,7 +388,7 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
             for _rid in _node.get("members", []) + _node.get("dropped", []):
                 rel_color[_rid] = _color
                 canonical_id[_rid] = _nid_str
-        canonical_id[_nid_str] = _nid_str
+            canonical_id[_nid_str] = _nid_str
         # Print per-color relation counts
         _color_rel_counts: dict[int, int] = {}
         for _c in rel_color.values():

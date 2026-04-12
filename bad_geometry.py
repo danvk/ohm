@@ -118,7 +118,7 @@ def main() -> None:
     with osmium.io.Reader(args.osm_file) as r:
         timestamp_str = r.header().get("timestamp") or ""
     m = re.search(r"(\d{4}-\d{2}-\d{2})", timestamp_str)
-    planet_date = start_of_date(parse_ohm_date(m.group(1))) if m else (2026, 1, 1)
+    planet_date = start_of_date(parse_ohm_date(m.group(1))) if m else (2026, 1, 1)  # type: ignore[arg-type]
 
     warning_map = {
         geometry.OpenRingWarning: "nonclosed-ring",
