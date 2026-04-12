@@ -50,33 +50,22 @@ class RelGeomCollector(osmium.SimpleHandler):
         )
 
 
-class WayNodeCollector(osmium.SimpleHandler):
-    """Pass 2: collect node ID lists for target ways (no location resolution)."""
+class WayCoordCollector(osmium.SimpleHandler):
+    """Pass 2 (locations=True): collect (lon, lat) coords for target ways."""
 
     def __init__(self, way_ids: set[int]):
         super().__init__()
         self._way_ids = way_ids
         self.way_nodes: dict[int, list[int]] = {}
+        self.way_coords: dict[int, list[tuple[float, float]]] = {}
 
     def way(self, w: Any) -> None:
         if w.id not in self._way_ids:
             return
-        node_ids = [n.ref for n in w.nodes]
-        if node_ids:
-            self.way_nodes[w.id] = node_ids
-
-
-class NodeCoordCollector(osmium.SimpleHandler):
-    """Pass 3: collect (lon, lat) for specific node IDs."""
-
-    def __init__(self, node_ids: set[int]):
-        super().__init__()
-        self._node_ids = node_ids
-        self.node_coords: dict[int, tuple[float, float]] = {}
-
-    def node(self, n: Any) -> None:
-        if n.id in self._node_ids and n.location.valid():
-            self.node_coords[n.id] = (n.location.lon, n.location.lat)
+        valid = [(n.ref, n.lon, n.lat) for n in w.nodes if n.location.valid()]
+        if valid:
+            self.way_nodes[w.id] = [v[0] for v in valid]
+            self.way_coords[w.id] = [(v[1], v[2]) for v in valid]
 
 
 def main() -> None:
@@ -116,41 +105,14 @@ def main() -> None:
         f"Loaded {len(rel_collector.relations)} relation(s) referencing {len(all_way_ids)} ways."
     )
 
-    # Pass 2: collect node ID lists for target ways (no location resolution needed)
-    way_node_collector = WayNodeCollector(all_way_ids)
-    way_node_collector.apply_file(
-        args.osm_file, filters=[osmium.filter.IdFilter(all_way_ids)]
+    # Pass 2: collect way coordinates (requires locations=True)
+    way_collector = WayCoordCollector(all_way_ids)
+    way_collector.apply_file(
+        args.osm_file, filters=[osmium.filter.IdFilter(all_way_ids)], locations=True
     )
 
-    # Gather all node IDs referenced by the target ways
-    all_node_ids: set[int] = set()
-    for nodes in way_node_collector.way_nodes.values():
-        all_node_ids.update(nodes)
-
-    print(
-        f"  Ways reference {len(all_node_ids)} unique nodes."
-    )
-
-    # Pass 3: collect coordinates for only those nodes (no planet-scale location cache)
-    node_coord_collector = NodeCoordCollector(all_node_ids)
-    node_coord_collector.apply_file(
-        args.osm_file, filters=[osmium.filter.IdFilter(all_node_ids)]
-    )
-
-    node_coords = node_coord_collector.node_coords
-    way_nodes = way_node_collector.way_nodes
-    # Reconstruct way_coords from the per-node coordinate map
-    way_coords: dict[int, list[tuple[float, float]]] = {}
-    for wid, nids in way_nodes.items():
-        coords = [node_coords[nid] for nid in nids if nid in node_coords]
-        if coords:
-            way_coords[wid] = coords
-        # Also filter way_nodes to only valid nodes (matching original WayCoordCollector)
-        valid_nids = [nid for nid in nids if nid in node_coords]
-        if valid_nids:
-            way_nodes[wid] = valid_nids
-        else:
-            del way_nodes[wid]
+    way_nodes = way_collector.way_nodes
+    way_coords = way_collector.way_coords
 
     # Read the planet timestamp from the PBF header to use as default end_date.
     with osmium.io.Reader(args.osm_file) as r:
