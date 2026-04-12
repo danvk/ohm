@@ -6,9 +6,9 @@ start_date/end_date tags.
 """
 
 import argparse
-import functools
 import heapq
 import json
+import numpy as np
 import re
 import sys
 from collections import defaultdict
@@ -19,10 +19,10 @@ import osmium.filter
 import osmium.geom
 import osmium.io
 import pyproj
+import shapely
 from osmium.osm.types import Area
 from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
-from shapely.ops import transform as shapely_transform
 from shapely.strtree import STRtree
 from tqdm import tqdm
 
@@ -44,12 +44,22 @@ class OverlapFeature:
 
 # Transformer from WGS84 lon/lat → equal-area projection (EPSG:6933) for km²
 _transformer = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:6933", always_xy=True)
-_to_equal_area = functools.partial(_transformer.transform)
+
+
+def _transform_coords(coords):
+    """Transform an (N, 2) lon/lat array to equal-area x/y in one vectorized call."""
+    x, y = _transformer.transform(coords[:, 0], coords[:, 1])
+    return np.column_stack([x, y])
 
 
 def area_km2(geom) -> float:
-    """Return the area of a Shapely geometry in square kilometres."""
-    projected = shapely_transform(_to_equal_area, geom)
+    """Return the area of a Shapely geometry in square kilometres.
+
+    Uses shapely.transform (Shapely 2.x) which passes all coordinates as a
+    numpy array in one call, avoiding the per-coordinate Python overhead of
+    the older shapely.ops.transform approach.
+    """
+    projected = shapely.transform(geom, _transform_coords, include_z=False)
     return projected.area / 1e6
 
 
