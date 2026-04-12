@@ -29,6 +29,9 @@ jobs:
       - name: Pytest
         run: uv run pytest
 
+      - name: Type check
+        run: uv run pyright
+
       - name: Integration test
         run: ./stats-test/update.sh && git diff --exit-code
 

@@ -7,7 +7,7 @@ import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import osmium
 import osmium.filter
@@ -17,7 +17,7 @@ from shapely.validation import explain_validity
 from tqdm import tqdm
 
 import geometry
-from dates import duration_years, parse_ohm_date, start_of_date
+from dates import DateTuple, duration_years, parse_ohm_date, start_of_date
 from earth_coverage import EARTH_LAND_AREA_KM2, area_km2
 from stats import write_stats
 
@@ -118,7 +118,12 @@ def main() -> None:
     with osmium.io.Reader(args.osm_file) as r:
         timestamp_str = r.header().get("timestamp") or ""
     m = re.search(r"(\d{4}-\d{2}-\d{2})", timestamp_str)
-    planet_date = start_of_date(parse_ohm_date(m.group(1))) if m else (2026, 1, 1)
+    if m:
+        parsed_date = parse_ohm_date(m.group(1))
+        assert parsed_date is not None
+        planet_date = start_of_date(parsed_date)
+    else:
+        planet_date = cast(DateTuple, (2026, 1, 1))
 
     warning_map = {
         geometry.OpenRingWarning: "nonclosed-ring",

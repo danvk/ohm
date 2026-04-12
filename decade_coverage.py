@@ -108,8 +108,8 @@ class DecadeCoverageHandler(osmium.SimpleHandler):
         except Exception:
             return
 
-        start_year = parse_year(a.tags.get("start_date", ""))
-        end_year = parse_year(a.tags.get("end_date", ""))
+        start_year = parse_year(a.tags.get("start_date") or "")
+        end_year = parse_year(a.tags.get("end_date") or "")
 
         # Skip features with no date information at all.
         if start_year is None and end_year is None:
