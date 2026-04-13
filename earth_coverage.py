@@ -7,12 +7,12 @@ start_date/end_date tags.
 
 import argparse
 import heapq
-import numpy as np
 import re
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
 
+import numpy as np
 import osmium
 import osmium.filter
 import osmium.geom
