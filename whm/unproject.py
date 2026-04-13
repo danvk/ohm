@@ -367,16 +367,21 @@ def unproject_svg(svg_path: Path, output_path: Path, layer: str | None = None) -
                 continue
 
             osm_id, name = parse_id(pid)
+            props = {
+                "id": pid,
+                "name": name,
+                "osm_id": osm_id,
+                "layer": group_id,
+                "fill-opacity": 0.5,
+            }
+            fill = path_el.get("fill")
+            if fill:
+                props["fill"] = fill
             features.append(
                 {
                     "type": "Feature",
                     "geometry": geometry,
-                    "properties": {
-                        "id": pid,
-                        "name": name,
-                        "osm_id": osm_id,
-                        "layer": group_id,
-                    },
+                    "properties": props,
                 }
             )
 
