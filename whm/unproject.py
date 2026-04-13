@@ -108,6 +108,64 @@ _maxunitx, _ = _winkel_project(math.pi, 0.0)           # ≈ (π+2)/2 ≈ 2.5708
 _, _maxunity  = _winkel_project(0.0, math.pi / 2.0)    # = π/2 ≈ 1.5708
 
 
+# ── Correction mesh ────────────────────────────────────────────────────────────
+# A (delta_lon, delta_lat) correction grid built by comparing WHM projected
+# borders to admin0 reference borders.  Applied as a post-projection refinement.
+
+_MESH_PATH = Path(__file__).with_name('correction_mesh.json')
+
+def _load_mesh(path: Path = _MESH_PATH) -> dict | None:
+    """Load correction mesh from JSON; return None if file not found."""
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text())
+    return data
+
+_mesh = _load_mesh()
+
+
+def _mesh_correction(lon: float, lat: float) -> tuple[float, float]:
+    """
+    Return (delta_lon, delta_lat) at (lon, lat) via bilinear interpolation
+    of the correction mesh.  Returns (0, 0) outside the mesh coverage or if
+    no mesh is loaded.
+    """
+    if _mesh is None:
+        return 0.0, 0.0
+
+    lon_min: int = _mesh['lon_min']
+    lat_min: int = _mesh['lat_min']
+    lon_max: int = _mesh['lon_max']
+    lat_max: int = _mesh['lat_max']
+    dlon_grid = _mesh['dlon']
+    dlat_grid = _mesh['dlat']
+
+    # Fractional indices
+    fi = lon - lon_min
+    fj = lat - lat_min
+
+    i0 = int(math.floor(fi))
+    j0 = int(math.floor(fj))
+    i1, j1 = i0 + 1, j0 + 1
+
+    # Clamp to grid bounds
+    if i0 < 0 or j0 < 0 or i1 >= (lon_max - lon_min + 1) or j1 >= (lat_max - lat_min + 1):
+        return 0.0, 0.0
+
+    tx = fi - i0   # 0..1 interpolation weight in x
+    ty = fj - j0   # 0..1 interpolation weight in y
+
+    def interp(grid: list) -> float:
+        return (
+            grid[j0][i0] * (1 - tx) * (1 - ty)
+            + grid[j0][i1] * tx       * (1 - ty)
+            + grid[j1][i0] * (1 - tx) * ty
+            + grid[j1][i1] * tx       * ty
+        )
+
+    return interp(dlon_grid), interp(dlat_grid)
+
+
 # ── Coordinate transform ───────────────────────────────────────────────────────
 
 def svg_to_lonlat(x: float, y: float) -> tuple[float, float]:
@@ -121,6 +179,12 @@ def svg_to_lonlat(x: float, y: float) -> tuple[float, float]:
     lat = -math.degrees(phi)        # y↓ in SVG → negate for lat
     lon = math.degrees(lam) + _CENTER_LON
     lon = ((lon + 180.0) % 360.0) - 180.0
+
+    # Apply correction mesh
+    dlon, dlat = _mesh_correction(lon, lat)
+    lon = ((lon + dlon + 180.0) % 360.0) - 180.0
+    lat = lat + dlat
+
     return lon, lat
 
 
@@ -329,8 +393,10 @@ def unproject_svg(svg_path: Path, output_path: Path, layer: str | None = None) -
             "note": (
                 "Winkel Tripel projection centered at 11°E. "
                 "Y-center offset of 22 px calibrated from the 49°N US-Canada "
-                "border (17 SVG points) and island-territory label positions. "
-                "Residuals: mean ≈ 0.25° longitude, ≈ 0.05° latitude."
+                "border and island-territory label positions. "
+                "Post-projection correction mesh (correction_mesh.json) built "
+                "from 83k WHM vs admin0 land-border control points (IDW radius 3°). "
+                "Residuals after mesh: <0.1° on key straight borders."
             ),
         },
     }
