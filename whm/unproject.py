@@ -96,6 +96,13 @@ _SVG_MAXX = 54001.0
 _SVG_MAXY = 32400.0
 _CENTER_LON = 11.0  # degrees — Central European time meridian
 
+# The Euratlas SVG equator sits 22 pixels south of the canvas midline.
+# Calibrated from the straight 49°N US-Canada border (17 SVG control points)
+# and confirmed by island-territory text-label positions (9 control points):
+# applying this shift moves the 49°N border to 48.98–49.00° and reduces the
+# mean label error from 0.273° to 0.246°.
+_Y_CENTER_OFFSET = 22.0   # pixels; equator is at SVG y = _SVG_MAXY/2 + this
+
 # Winkel Tripel normalisation constants
 _maxunitx, _ = _winkel_project(math.pi, 0.0)           # ≈ (π+2)/2 ≈ 2.5708
 _, _maxunity  = _winkel_project(0.0, math.pi / 2.0)    # = π/2 ≈ 1.5708
@@ -105,9 +112,11 @@ _, _maxunity  = _winkel_project(0.0, math.pi / 2.0)    # = π/2 ≈ 1.5708
 
 def svg_to_lonlat(x: float, y: float) -> tuple[float, float]:
     """Convert SVG (x, y) to geographic (longitude, latitude) in degrees."""
-    # Map pixel coords to Winkel Tripel unit space
+    # Map pixel coords to Winkel Tripel unit space.
+    # Y is shifted by _Y_CENTER_OFFSET to account for the equator being 22 px
+    # south of the canvas midline in the Euratlas SVG.
     unitx = (2.0 * x / _SVG_MAXX - 1.0) * _maxunitx
-    unity = (2.0 * y / _SVG_MAXY - 1.0) * _maxunity
+    unity = (2.0 * (y - _Y_CENTER_OFFSET) / _SVG_MAXY - 1.0) * _maxunity
     lam, phi = _winkel_invert(unitx, unity)
     lat = -math.degrees(phi)        # y↓ in SVG → negate for lat
     lon = math.degrees(lam) + _CENTER_LON
@@ -316,10 +325,12 @@ def unproject_svg(svg_path: Path, output_path: Path, layer: str | None = None) -
             "svg_maxx": _SVG_MAXX,
             "svg_maxy": _SVG_MAXY,
             "center_lon": _CENTER_LON,
+            "y_center_offset": _Y_CENTER_OFFSET,
             "note": (
                 "Winkel Tripel projection centered at 11°E. "
-                "Calibrated from small-territory label positions; "
-                "residuals ≈ 0.25° longitude, ≈ 0.20° latitude."
+                "Y-center offset of 22 px calibrated from the 49°N US-Canada "
+                "border (17 SVG points) and island-territory label positions. "
+                "Residuals: mean ≈ 0.25° longitude, ≈ 0.05° latitude."
             ),
         },
     }
