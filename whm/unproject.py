@@ -2,24 +2,16 @@
 """
 Unproject WHM SVG political borders to GeoJSON.
 
-The WHM (World History Maps) SVGs use a hybrid pseudo-cylindrical projection:
+The WHM (World History Maps) SVGs use the Winkel Tripel projection,
+centered at 11°E (Central European time meridian).
 
-    Latitude  (y-direction): equirectangular
-        lat = 90 - y / Y_SCALE          (Y_SCALE = 180 units/degree)
+SVG dimensions for the new-format files: 54001 × 32400 px.
+Old-format files (25201 × 15120) use the same projection scaled by 15/7.
 
-    Longitude (x-direction): Robinson-style horizontal compression
-        lon = LON0 + (x - X_OFFSET) / (X_SCALE * PLEN(lat))
-
-where PLEN(lat) is the Robinson table latitude-dependent scale factor, and:
-    Y_SCALE  = 180        (SVG viewBox height 32400 / 180° latitude)
-    X_SCALE  = 8564.3     (Robinson x-scale; equals ~150 units/° at equator)
-    X_OFFSET = 27585      (SVG x at central meridian / equator)
-    LON0     = 15.0°      (central meridian, central European time meridian)
-
-Calibrated from 10+ small-territory SVG text labels (Malta, Singapore,
-Gibraltar, Barbados, Bahrain, Kuwait, Djibouti, El Salvador, Iceland, Trinidad)
-using least-squares fit of the Robinson x-compression model.
-Residuals: mean ≈ 0.31° longitude, ≈ 0.45° latitude.
+Calibrated from small-territory SVG text labels (Malta, Singapore,
+Gibraltar, Barbados, Bahrain, Kuwait, Djibouti, El Salvador, Iceland,
+Trinidad and many more).
+Residuals: mean ≈ 0.25° longitude, ≈ 0.20° latitude.
 
 Usage:
     python whm/unproject.py whm/WA2014.svg            # writes whm/WA2014.geojson
@@ -33,41 +25,92 @@ import argparse
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-# ── Projection parameters ──────────────────────────────────────────────────────
-Y_SCALE: float  = 180.0    # SVG units per degree latitude (equirectangular)
-X_SCALE: float  = 8564.3   # Robinson x-scale factor (SVG units per radian)
-X_OFFSET: float = 27585.0  # SVG x at central meridian (equator)
-LON0: float     = 15.0     # Central meridian longitude (degrees)
+# ── Winkel Tripel projection (ported from historymaps/winkel.py) ───────────────
 
-# Robinson projection horizontal scale factors (PLEN) at 5° latitude intervals.
-# Source: Robinson (1974). Interpolated linearly between tabulated values.
-# PLEN[i] corresponds to abs(lat) = i * 5 degrees.
-_ROBINSON_PLEN = [
-    1.0000, 0.9986, 0.9954, 0.9900,   #  0,  5, 10, 15
-    0.9822, 0.9730, 0.9600, 0.9427,   # 20, 25, 30, 35
-    0.9216, 0.8962, 0.8679, 0.8350,   # 40, 45, 50, 55
-    0.7986, 0.7597, 0.7186, 0.6732,   # 60, 65, 70, 75
-    0.6213, 0.5722, 0.5322,           # 80, 85, 90
-]
+_halfpi = math.pi / 2
+_epsilon = 1e-6
 
 
-def _plen(lat_abs: float) -> float:
-    """Interpolate Robinson PLEN factor for |latitude| in degrees."""
-    idx = lat_abs / 5.0
-    i = int(idx)
-    f = idx - i
-    if i >= len(_ROBINSON_PLEN) - 1:
-        return _ROBINSON_PLEN[-1]
-    return _ROBINSON_PLEN[i] * (1.0 - f) + _ROBINSON_PLEN[i + 1] * f
+def _sinci(x: float) -> float:
+    return x / math.sin(x) if x else 1.0
+
+
+def _safe_acos(x: float) -> float:
+    if x > 1.0:
+        return 0.0
+    elif x < -1.0:
+        return math.pi
+    return math.acos(x)
+
+
+def _aitoff(lam: float, phi: float) -> tuple[float, float]:
+    """Aitoff component of Winkel Tripel (lam, phi in radians)."""
+    cosphi = math.cos(phi)
+    lam2 = lam / 2.0
+    s = _sinci(_safe_acos(cosphi * math.cos(lam2)))
+    return (2.0 * cosphi * math.sin(lam2) * s, math.sin(phi) * s)
+
+
+def _winkel_project(lam: float, phi: float) -> tuple[float, float]:
+    ax, ay = _aitoff(lam, phi)
+    return ((ax + lam / _halfpi) / 2.0, (ay + phi) / 2.0)
+
+
+def _winkel_invert(x: float, y: float) -> tuple[float, float]:
+    """Invert Winkel Tripel via Newton iteration. Returns (lam, phi) in radians."""
+    lam, phi = float(x), float(y)
+    for _ in range(25):
+        cos_phi     = math.cos(phi)
+        sin_phi     = math.sin(phi)
+        sin_2phi    = math.sin(2.0 * phi)
+        sin2phi     = sin_phi * sin_phi
+        cos2phi     = cos_phi * cos_phi
+        sinlam      = math.sin(lam)
+        coslam2     = math.cos(lam / 2.0)
+        sinlam2     = math.sin(lam / 2.0)
+        sin2lam2    = sinlam2 * sinlam2
+        C = 1.0 - cos2phi * coslam2 * coslam2
+        if C:
+            F = 1.0 / C
+            E = _safe_acos(cos_phi * coslam2) * math.sqrt(F)
+        else:
+            F = E = 0.0
+        fx = 0.5 * (2.0 * E * cos_phi * sinlam2 + lam / _halfpi) - x
+        fy = 0.5 * (E * sin_phi + phi) - y
+        dxdl = 0.5 * F * (cos2phi * sin2lam2 + E * cos_phi * coslam2 * sin2phi) + 0.5 / _halfpi
+        dxdp = F * (sinlam * sin_2phi / 4.0 - E * sin_phi * sinlam2)
+        dydl = 0.125 * F * (sin_2phi * sinlam2 - E * sin_phi * cos2phi * sinlam)
+        dydp = 0.5 * F * (sin2phi * coslam2 + E * sin2lam2 * cos_phi) + 0.5
+        denom = dxdp * dydl - dydp * dxdl
+        dlam  = (fy * dxdp - fx * dydp) / denom
+        dphi  = (fx * dydl - fy * dxdl) / denom
+        lam -= dlam
+        phi -= dphi
+        if abs(dlam) <= _epsilon and abs(dphi) <= _epsilon:
+            break
+    return lam, phi
+
+
+# SVG canvas bounds for WA2014.svg (54001 × 32400)
+_SVG_MAXX = 54001.0
+_SVG_MAXY = 32400.0
+_CENTER_LON = 11.0  # degrees — Central European time meridian
+
+# Winkel Tripel normalisation constants
+_maxunitx, _ = _winkel_project(math.pi, 0.0)           # ≈ (π+2)/2 ≈ 2.5708
+_, _maxunity  = _winkel_project(0.0, math.pi / 2.0)    # = π/2 ≈ 1.5708
 
 
 # ── Coordinate transform ───────────────────────────────────────────────────────
 
 def svg_to_lonlat(x: float, y: float) -> tuple[float, float]:
     """Convert SVG (x, y) to geographic (longitude, latitude) in degrees."""
-    lat = 90.0 - y / Y_SCALE
-    p = _plen(abs(lat))
-    lon = LON0 + (x - X_OFFSET) / (X_SCALE * math.pi / 180.0 * p)
+    # Map pixel coords to Winkel Tripel unit space
+    unitx = (2.0 * x / _SVG_MAXX - 1.0) * _maxunitx
+    unity = (2.0 * y / _SVG_MAXY - 1.0) * _maxunity
+    lam, phi = _winkel_invert(unitx, unity)
+    lat = -math.degrees(phi)        # y↓ in SVG → negate for lat
+    lon = math.degrees(lam) + _CENTER_LON
     lon = ((lon + 180.0) % 360.0) - 180.0
     return lon, lat
 
@@ -245,16 +288,14 @@ def unproject_svg(svg_path: Path, output_path: Path, layer: str | None = None) -
         "features": features,
         "metadata": {
             "source": str(svg_path),
-            "projection": "hybrid pseudo-cylindrical (equirectangular-y / Robinson-x)",
-            "y_scale": Y_SCALE,
-            "x_scale": X_SCALE,
-            "x_offset": X_OFFSET,
-            "lon0": LON0,
+            "projection": "Winkel Tripel",
+            "svg_maxx": _SVG_MAXX,
+            "svg_maxy": _SVG_MAXY,
+            "center_lon": _CENTER_LON,
             "note": (
-                "Y-direction is equirectangular (lat = 90 - y/180). "
-                "X-direction uses Robinson PLEN table for latitude-dependent "
-                "horizontal compression. Calibrated from small-territory label "
-                "positions; residuals ≈ 0.3° longitude."
+                "Winkel Tripel projection centered at 11°E. "
+                "Calibrated from small-territory label positions; "
+                "residuals ≈ 0.25° longitude, ≈ 0.20° latitude."
             ),
         },
     }
