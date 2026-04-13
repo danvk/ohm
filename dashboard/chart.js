@@ -78,6 +78,11 @@ const METRIC_DOCS = {
   "earth-years-admin-3": { label: "admin3", help: 'See above for an explanation of this metric.' },
   "earth-years-admin-4": { label: "admin4", help: 'See above for an explanation of this metric.' },
 
+  'double-covered-admin-1': { label: "admin1", help: '' },
+  'double-covered-admin-2': { label: "admin2", help: '' },
+  'double-covered-admin-3': { label: "admin3", help: '' },
+  'double-covered-admin-4': { label: "admin4", help: '' },
+
   "num-nodes": { label: "Nodes" },
   "num-ways": { label: "Ways" },
   "num-relations": { label: "Relations" },
@@ -253,14 +258,33 @@ makeChart(
 
 makeChart(
   document.getElementById('earth-coverage'),
-  ["earth-years-admin-1",
-  "earth-years-admin-2",
-  "earth-years-admin-3",
-  "earth-years-admin-4"],
+  [
+    "earth-years-admin-1",
+    "earth-years-admin-2",
+    "earth-years-admin-3",
+    "earth-years-admin-4"
+  ],
   {
     ylabel: 'Earth Years',
     examples: true,
     labelsKMB: false,
+  }
+);
+
+makeChart(
+  document.getElementById('overlap'),
+  [
+    "double-covered-admin-1",
+    "double-covered-admin-2",
+    "double-covered-admin-3",
+    "double-covered-admin-4"
+  ],
+  {
+    ylabel: 'Earth Years',
+    examples: true,
+    labelsKMB: false,
+    connectSeparatedPoints: true,
+    dateWindow: [Date.parse('2026-01-01'), Date.now()]
   }
 );
 
