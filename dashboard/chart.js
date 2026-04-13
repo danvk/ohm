@@ -225,7 +225,7 @@ makeChart(
   {
     examples: true,
     axes: { y: { valueFormatter: x => String(x) } },
-    dateWindow: [oneYearAgoMs, Date.now()]
+    dateWindow: [Date.parse('2026-01-01'), Date.now()]
   }
 );
 
@@ -253,6 +253,7 @@ makeChart(
     examples: true,
     connectSeparatedPoints: true,
     axes: { y: { valueFormatter: x => String(x) } },
+    dateWindow: [Date.parse('2026-01-01'), Date.now()]
   }
 );
 

@@ -7,13 +7,12 @@ start_date/end_date tags.
 
 import argparse
 import heapq
-import json
-import numpy as np
 import re
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
 
+import numpy as np
 import osmium
 import osmium.filter
 import osmium.geom
@@ -21,7 +20,6 @@ import osmium.io
 import pyproj
 import shapely
 from osmium.osm.types import Area
-from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
 from shapely.strtree import STRtree
 from tqdm import tqdm
@@ -69,7 +67,7 @@ ADMIN_LEVELS = ("1", "2", "3", "4")
 class CoverageHandler(osmium.SimpleHandler):
     def __init__(self, planet_timestamp: str):
         super().__init__()
-        self.geojson = osmium.geom.GeoJSONFactory()
+        self.wkb = osmium.geom.WKBFactory()
         self.skipped_no_date = 0
         self.skipped_no_start = 0
         self.planet_date = parse_ohm_date(planet_timestamp[:10])
@@ -118,11 +116,11 @@ class CoverageHandler(osmium.SimpleHandler):
         orig_type = "w" if a.from_way() else "r"
         orig_id = a.orig_id()
         try:
-            geometry_str = self.geojson.create_multipolygon(a)
+            wkb = self.wkb.create_multipolygon(a)
         except Exception:
             return
 
-        geom = shape(json.loads(geometry_str))
+        geom = shapely.from_wkb(wkb)
         if not geom.is_valid:
             geom = geom.buffer(0)
 
