@@ -198,6 +198,29 @@ def parse_svg_path(d: str) -> list[list[tuple[float, float]]]:
 
 # ── GeoJSON helpers ────────────────────────────────────────────────────────────
 
+def _unwrap_ring(coords: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """
+    Unwrap longitude jumps > 180° so antimeridian-crossing rings stay contiguous.
+
+    Consecutive points that jump more than 180° in longitude are assumed to have
+    crossed the antimeridian; their longitude is shifted by ±360° to keep the
+    ring geometrically coherent.  The resulting coordinates may lie outside the
+    canonical [-180, 180] range, which is intentional — it preserves the correct
+    polygon shape for renderers that handle it (e.g. geojson.io / Mapbox GL).
+    """
+    if len(coords) < 2:
+        return coords
+    result = [coords[0]]
+    for lon, lat in coords[1:]:
+        prev_lon = result[-1][0]
+        while lon - prev_lon > 180.0:
+            lon -= 360.0
+        while lon - prev_lon < -180.0:
+            lon += 360.0
+        result.append((lon, lat))
+    return result
+
+
 def rings_to_geometry(rings: list[list[tuple[float, float]]]) -> dict | None:
     """Convert SVG rings to a GeoJSON Polygon or MultiPolygon geometry."""
     geo_rings: list[list[tuple[float, float]]] = []
@@ -205,6 +228,7 @@ def rings_to_geometry(rings: list[list[tuple[float, float]]]) -> dict | None:
         coords = [svg_to_lonlat(x, y) for x, y in ring]
         if not coords:
             continue
+        coords = _unwrap_ring(coords)
         if coords[0] != coords[-1]:
             coords.append(coords[0])   # close the ring
         geo_rings.append(coords)
