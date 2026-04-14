@@ -385,13 +385,13 @@ def write_osm(
         seg = way_id_to_seg[wid]
         used_node_ids.update(seg)
 
-    # Use negative IDs — the OSM convention for temporary/unsaved objects.
-    # Each type gets its own negative ID space; no offsets needed since
-    # nodes, ways and relations occupy separate namespaces in OSM.
-    # node internal ID n  →  OSM node ID  -n
-    # way  internal ID w  →  OSM way  ID  -w
-    # relation index  r   →  OSM rel  ID  -(r+1)
-    # chronology rel  c   →  OSM rel  ID  -(len(features) + c + 1)
+    # Use positive IDs — osmium tools (IdFilter, etc.) require non-negative IDs.
+    # Each type gets its own ID space; nodes, ways and relations occupy separate
+    # namespaces in OSM so there is no collision.
+    # node internal ID n  →  OSM node ID   n
+    # way  internal ID w  →  OSM way  ID   w
+    # relation index  r   →  OSM rel  ID   r+1
+    # chronology rel  c   →  OSM rel  ID   len(features) + c + 1
 
     n_node, n_way, n_rel = 0, 0, 0
 
@@ -404,7 +404,7 @@ def write_osm(
             lon, lat = _dequantize(qlon, qlat)
             writer.add_node(
                 mutable.Node(
-                    id=-nid,
+                    id=nid,
                     location=(lon, lat),
                     tags={},
                     version=1,
@@ -417,10 +417,10 @@ def write_osm(
         for canon_seg, wid in way_map.items():
             if wid not in used_way_ids:
                 continue
-            node_refs = [-nid for nid in canon_seg]
+            node_refs = [nid for nid in canon_seg]
             writer.add_way(
                 mutable.Way(
-                    id=-wid,
+                    id=wid,
                     nodes=node_refs,
                     tags={"source": "ned"},
                     version=1,
@@ -439,11 +439,11 @@ def write_osm(
             for ring_way_refs in feature_way_refs[feat_idx]:
                 for way_id, is_reversed in ring_way_refs:
                     role = "outer"  # all rings are outer (holes ignored)
-                    members.append(("w", -way_id, role))
+                    members.append(("w", way_id, role))
 
             writer.add_relation(
                 mutable.Relation(
-                    id=-(feat_idx + 1),
+                    id=feat_idx + 1,
                     members=members,
                     tags=tags,
                     version=1,
@@ -455,9 +455,9 @@ def write_osm(
         # --- Chronology relations ---
         if chronology_relations:
             for chron_idx, chron in enumerate(chronology_relations):
-                chron_id = -(len(features) + chron_idx + 1)
+                chron_id = len(features) + chron_idx + 1
                 members = [
-                    ("r", -(fi + 1), "")
+                    ("r", fi + 1, "")
                     for fi in chron["member_feat_indices"]
                 ]
                 writer.add_relation(
