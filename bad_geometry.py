@@ -31,6 +31,15 @@ class RelationGeom:
     name: str | None
     admin_level: str | None
 
+    def label_prefix(self):
+        """Label to prepend to error messages involving this relation"""
+        label = ""
+        if self.admin_level:
+            label += f"[{self.admin_level}] "
+        if self.name:
+            label += f"{self.name} "
+        return label
+
 
 class RelGeomCollector(osmium.SimpleHandler):
     """Pass 1: collect tags and outer/inner way member IDs for target relations."""
@@ -171,31 +180,28 @@ def main() -> None:
         has_problem = False
 
         for typ in {type(w) for w in poly_warnings}:
-            label = ""
-            if geom.admin_level:
-                label += f"[{geom.admin_level}] "
-            if geom.name:
-                label += f"{geom.name} "
             raw_examples[warning_map[typ]].append(
                 (
                     earth_years,
                     "r",
                     rid,
-                    label
+                    geom.label_prefix()
                     + ", ".join(str(w) for w in poly_warnings if isinstance(w, typ)),
                 )
             )
             has_problem = True
 
         if poly is None:
-            raw_examples["no-shapely"].append((earth_years, "r", rid, ""))
+            raw_examples["no-shapely"].append(
+                (earth_years, "r", rid, geom.label_prefix().strip())
+            )
             has_problem = True
         elif not poly_warnings and not poly.is_valid:
             # avoid generating shapely warnings for polygons we've "fixed" ourselves
             reason = explain_validity(poly)
             error_type = reason.split("[")[0]  # strip out any coords
             error_code = warning_map.get(error_type, "other")
-            message = (geom.name or "") + " " + reason
+            message = geom.label_prefix() + reason
             raw_examples[error_code].append((earth_years, "r", rid, message))
             has_problem = True
 
