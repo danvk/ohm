@@ -19,6 +19,7 @@ const EXACT_TAGS = [
   'wikipedia',
   'color',
   'color:id',
+  'whmid',
 ];
 const PREFIX_TAGS = [
   'start_date',

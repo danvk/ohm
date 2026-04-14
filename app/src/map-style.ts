@@ -82,9 +82,9 @@ type FillPaintStyle = Exclude<
   undefined
 >;
 
-const DFEAULT_COLOR = '#6080C0'; // — blue
+const DEFAULT_COLOR = '#6080C0'; // — blue
 const PALETTE = [
-  DFEAULT_COLOR,
+  DEFAULT_COLOR,
   '#E15759', // — red
   '#4E9F3D', // — green
   '#F28E2B', // — orange
@@ -106,9 +106,9 @@ export const PAINT_STYLE: FillPaintStyle = {
     'case',
     ['boolean', ['feature-state', 'selected'], false],
     HIGHLIGHT_COLOR,
-    ['match', ['get', 'color'], ...ID_PALETTE, DFEAULT_COLOR],
+    ['coalesce', ['get', 'fill'], DEFAULT_COLOR],
   ],
-  'fill-opacity': 0.5,
+  'fill-opacity': 0.75,
 };
 
 type LinePaintStyle = Exclude<
@@ -120,7 +120,7 @@ export const LINE_STYLE: LinePaintStyle = {
     'case',
     ['boolean', ['feature-state', 'selected'], false],
     HIGHLIGHT_COLOR,
-    ['match', ['get', 'color'], ...ID_PALETTE, DFEAULT_COLOR],
+    ['coalesce', ['get', 'fill'], DEFAULT_COLOR],
   ],
   'line-width': [
     'case',

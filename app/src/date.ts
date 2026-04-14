@@ -19,7 +19,7 @@ export function isDateInRange(
   }
   if (endDate) {
     const decEnd = toDecimal(endDate);
-    if (decEnd !== null && decDate >= decEnd) return false;
+    if (decEnd !== null && decDate > decEnd) return false;
   }
   return true;
 }
