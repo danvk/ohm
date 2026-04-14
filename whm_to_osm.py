@@ -189,12 +189,11 @@ def main() -> None:
             "type": "boundary",
             "boundary": "administrative",
             "admin_level": "2",
-            "name": name,
+            "name": state.get("title") or name,
+            "whmid": pid,
             "start_date": _fmt_year(state["start_date"]),
             "end_date": _fmt_year(state["end_date"]),
         }
-        if state.get("title"):
-            props["description"] = state["title"]
         if state.get("fill"):
             props["fill"] = state["fill"]
 

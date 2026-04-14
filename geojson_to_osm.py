@@ -113,7 +113,16 @@ def build_node_index(
                 if qpt not in node_map:
                     node_map[qpt] = len(node_map) + 1  # 1-based
                 ring_ids.append(node_map[qpt])
-            feat_ring_ids.append(ring_ids)
+            # Deduplicate consecutive identical nodes (can arise from shapely
+            # needle rings where two vertices quantize to the same grid cell).
+            deduped: list[int] = [ring_ids[0]] if ring_ids else []
+            for nid in ring_ids[1:]:
+                if nid != deduped[-1]:
+                    deduped.append(nid)
+            # Discard degenerate rings: fewer than 3 nodes, or a node appears
+            # more than once (spike/self-intersecting ring, e.g. [A, B, A]).
+            if len(deduped) >= 3 and len(set(deduped)) == len(deduped):
+                feat_ring_ids.append(deduped)
         feature_rings.append(feat_ring_ids)
 
     return node_map, feature_rings
