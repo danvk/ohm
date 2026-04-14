@@ -1,7 +1,7 @@
-r/2803197: 0.0000 earth-yr
-r/2803546: 0.0000 earth-yr
-r/2810171: 0.0000 earth-yr
-r/2812125: 0.0000 earth-yr
-r/2812126: 0.0000 earth-yr
-r/2812127: 0.0000 earth-yr
-r/2828577: 0.0000 earth-yr
+r/2803197: (0.0000ey) [6] Provincia di Fiume
+r/2803546: (0.0000ey) [7] Cividale
+r/2810171: (0.0000ey) [2] Holy Roman Empire (1512-1648)
+r/2812125: (0.0000ey) [4] County of Namur
+r/2812126: (0.0000ey) [4] Duchy of Brabant (1648-1797)
+r/2812127: (0.0000ey) [4] County of Flanders (1659-1797)
+r/2828577: (0.0000ey) [8] North Kingstown

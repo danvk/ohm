@@ -5,7 +5,9 @@ set -x
 date=$1  # 2026-03-01
 dashdir=$2
 
-# latest=$(ls -d $dashdir/daily/????-??-?? | tail -1)
+# remove yesterday's download
+rm $(ls planet-*.osm.pbf | tail -1)
+
 yymmdd=${date//-/}
 yymmdd=${yymmdd/#20/}  # 260301
 
@@ -20,4 +22,5 @@ mkdir -p $dir
 uv run collate_stats.py --start_fresh '' $dashdir/daily/'????-??-??'
 cp $dir/stats.csv $dashdir/dashboard/
 
-rm $planet
+# leave today's download for followup work
+# rm $planet

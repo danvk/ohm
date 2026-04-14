@@ -191,14 +191,17 @@ function makeChart(container, series, options) {
       e.stopPropagation();
       const value = a.textContent;
       const { label, help } = METRIC_DOCS[metric];
-      const r = await fetch(`/daily/${date}/${metric}.examples.txt`);
+      const examplesUrl = `/daily/${date}/${metric}.examples.txt`;
+      const r = await fetch(examplesUrl);
       const text = await r.text();
       const examples = text.split("\n");
       const lis = examples.map((txt) => `<li>${formatExample(txt)}</li>`);
       examplesEl.innerHTML = `
         <div class="close-example">&times;</div>
         <div class="example-header">${label}: ${value} on ${date}</div>
-        <div class="example-explanation">${help} (${metric})</div>
+        <div class="example-explanation">
+          ${help} (${metric}) <a href="${examplesUrl}" target="_blank">raw</a>
+        </div>
         <ul>
           ${lis.join("")}
         </ul>
