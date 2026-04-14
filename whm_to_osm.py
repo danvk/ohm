@@ -224,6 +224,10 @@ def main() -> None:
     way_map, feature_way_refs = g2o.build_ways(feature_rings, junctions)
     print(f"  {len(way_map):,} unique ways")
 
+    print("Removing spur ways …")
+    way_map, feature_way_refs = g2o.remove_spur_ways(way_map, feature_way_refs)
+    print(f"  {len(way_map):,} ways after spur removal")
+
     print(f"Writing {args.output} …")
     g2o.write_osm(str(args.output), features, node_map, way_map, feature_way_refs)
     print("Done.")

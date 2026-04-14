@@ -258,6 +258,68 @@ def build_ways(
 
 
 # ---------------------------------------------------------------------------
+# Step 5b – Remove spur ways
+# ---------------------------------------------------------------------------
+
+
+def remove_spur_ways(
+    way_map: dict[SegKey, int],
+    feature_way_refs: list[list[list[tuple[int, bool]]]],
+) -> tuple[dict[SegKey, int], list[list[list[tuple[int, bool]]]]]:
+    """Remove spur way segments — those with a dead-end (degree-1) endpoint.
+
+    A spur arises when a polygon ring has a spike: the boundary goes out to a
+    tip node and returns along the same path.  Because edges are stored as
+    unordered pairs, both traversals collapse to one edge, leaving the tip
+    with degree 1 in the edge graph.  The segment from the last junction to
+    the tip is then a dangling way that has no topological role.
+
+    Removal is iterated until no more spurs exist (pruning one spur can expose
+    the next node in the chain as a new dead-end).
+
+    Closed segments (first node == last node, i.e. a ring with no junctions)
+    are never considered spurs.
+    """
+    n_removed = 0
+    while True:
+        # Count how many (open) ways use each endpoint node
+        endpoint_count: dict[int, int] = defaultdict(int)
+        for canon_seg in way_map:
+            if canon_seg[0] == canon_seg[-1]:
+                continue  # closed loop – not a spur candidate
+            endpoint_count[canon_seg[0]] += 1
+            endpoint_count[canon_seg[-1]] += 1
+
+        spur_ids = {
+            wid
+            for canon_seg, wid in way_map.items()
+            if canon_seg[0] != canon_seg[-1]
+            and (
+                endpoint_count[canon_seg[0]] == 1
+                or endpoint_count[canon_seg[-1]] == 1
+            )
+        }
+
+        if not spur_ids:
+            break
+
+        n_removed += len(spur_ids)
+        way_map = {seg: wid for seg, wid in way_map.items() if wid not in spur_ids}
+        feature_way_refs = [
+            [
+                [(wid, rev) for wid, rev in ring if wid not in spur_ids]
+                for ring in feat_rings
+            ]
+            for feat_rings in feature_way_refs
+        ]
+
+    if n_removed:
+        print(f"  Removed {n_removed} spur way(s)", file=sys.stderr)
+
+    return way_map, feature_way_refs
+
+
+# ---------------------------------------------------------------------------
 # Step 6 – Write OSM PBF
 # ---------------------------------------------------------------------------
 
