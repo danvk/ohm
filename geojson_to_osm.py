@@ -193,8 +193,13 @@ def split_ring_at_junctions(
     junction_indices = [i for i, nid in enumerate(ring) if nid in junctions]
 
     if not junction_indices:
-        # no junctions – entire ring is one segment; close it
-        return [tuple(ring) + (ring[0],)]
+        # No junctions – entire ring is one segment.  Rotate to the minimum
+        # node ID so that two traversals of the same closed ring (starting at
+        # different positions) produce the same canonical segment and are
+        # deduplicated correctly (e.g. an island shared between two features).
+        min_idx = ring.index(min(ring))
+        rotated = ring[min_idx:] + ring[:min_idx]
+        return [tuple(rotated) + (rotated[0],)]
 
     segments: list[tuple[int, ...]] = []
     num_j = len(junction_indices)
