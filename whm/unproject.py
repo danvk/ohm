@@ -329,8 +329,73 @@ def parse_id(path_id: str) -> tuple[str, str]:
 SVG_NS = "http://www.w3.org/2000/svg"
 
 
-def unproject_svg(svg_path: Path, output_path: Path, layer: str | None = None) -> None:
+def _load_land(land_path: Path):
+    """
+    Load a land-mask GeoJSON and return (shapely_union, STRtree, list_of_geoms).
+
+    The STRtree + list allow fast per-feature intersection: query the tree for
+    candidates whose bounding box overlaps the feature, union only those, then
+    intersect.  This avoids a full global union of all 1400+ land polygons.
+    """
+    from shapely.geometry import shape
+    from shapely.strtree import STRtree
+
+    data = json.loads(land_path.read_text())
+    geoms = [shape(f["geometry"]) for f in data["features"]]
+    tree = STRtree(geoms)
+    return tree, geoms
+
+
+def _clip_to_land(geometry: dict, tree, land_geoms) -> dict | None:
+    """
+    Intersect a GeoJSON geometry dict with the land mask.
+
+    Returns a (possibly different type) GeoJSON geometry dict, or None if the
+    intersection is empty.
+    """
+    from shapely.geometry import shape, mapping
+    from shapely.ops import unary_union
+
+    import shapely
+    feat_geom = shape(geometry)
+    if not feat_geom.is_valid:
+        feat_geom = shapely.make_valid(feat_geom)
+    candidate_idxs = tree.query(feat_geom)
+    if len(candidate_idxs) == 0:
+        return None
+
+    land_union = unary_union([land_geoms[i] for i in candidate_idxs])
+    clipped = feat_geom.intersection(land_union)
+
+    if clipped.is_empty:
+        return None
+
+    # Normalise to only polygon types (drop points/lines from boundary touches)
+    from shapely.geometry import (
+        GeometryCollection, MultiPolygon, Polygon,
+    )
+    if isinstance(clipped, (Polygon, MultiPolygon)):
+        pass
+    elif isinstance(clipped, GeometryCollection):
+        polys = [g for g in clipped.geoms if isinstance(g, (Polygon, MultiPolygon))]
+        if not polys:
+            return None
+        clipped = unary_union(polys)
+    else:
+        return None
+
+    return mapping(clipped)
+
+
+def unproject_svg(
+    svg_path: Path,
+    output_path: Path,
+    layer: str | None = None,
+    land_path: Path | None = None,
+) -> None:
     """Parse an SVG file and write un-projected political borders as GeoJSON."""
+    land_tree, land_geoms = _load_land(land_path) if land_path else (None, None)
+
     tree = ET.parse(svg_path)
     root = tree.getroot()
 
@@ -365,6 +430,11 @@ def unproject_svg(svg_path: Path, output_path: Path, layer: str | None = None) -
             geometry = rings_to_geometry(rings)
             if geometry is None:
                 continue
+
+            if land_tree is not None:
+                geometry = _clip_to_land(geometry, land_tree, land_geoms)
+                if geometry is None:
+                    continue
 
             osm_id, name = parse_id(pid)
             props = {
@@ -429,7 +499,11 @@ if __name__ == "__main__":
         "--layer", choices=["terr", "ctry"], default=None,
         help="Only process one layer (default: both terr and ctry)",
     )
+    parser.add_argument(
+        "--clip-land", type=Path, metavar="LAND_GEOJSON", default=None,
+        help="Clip features to land polygons (e.g. whm/land.geojson)",
+    )
     args = parser.parse_args()
 
     out = args.output or args.svg.with_suffix(".geojson")
-    unproject_svg(args.svg, out, args.layer)
+    unproject_svg(args.svg, out, args.layer, land_path=args.clip_land)
