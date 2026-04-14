@@ -25,6 +25,8 @@ import argparse
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from svg import parse_id, svg_tag
+
 # ── Winkel Tripel projection (ported from historymaps/winkel.py) ───────────────
 
 _halfpi = math.pi / 2
@@ -313,20 +315,7 @@ def rings_to_geometry(rings: list[list[tuple[float, float]]]) -> dict | None:
     return {"type": "MultiPolygon", "coordinates": [[r] for r in geo_rings]}
 
 
-def parse_id(path_id: str) -> tuple[str, str]:
-    """
-    Split a path id like '30439186-egypt' into (osm_id, name).
-    Handles plain names without a numeric prefix.
-    """
-    m = re.match(r'^(\d+)-(.+)$', path_id)
-    if m:
-        return m.group(1), m.group(2)
-    return "", path_id
-
-
 # ── Main conversion ────────────────────────────────────────────────────────────
-
-SVG_NS = "http://www.w3.org/2000/svg"
 
 
 def _load_land(land_path: Path):
@@ -399,25 +388,20 @@ def unproject_svg(
     tree = ET.parse(svg_path)
     root = tree.getroot()
 
-    # Strip namespace prefix from tag comparisons
-    def tag(local: str) -> str:
-        return f"{{{SVG_NS}}}{local}"
-
     features: list[dict] = []
 
     for group_id in ("terr", "ctry"):
         if layer and layer != group_id:
             continue
 
-        # Find the group element regardless of namespace prefix
-        group = root.find(f'.//{tag("g")}[@id="{group_id}"]')
+        group = root.find(f'.//{svg_tag("g")}[@id="{group_id}"]')
         if group is None:
             group = root.find(f'.//*[@id="{group_id}"]')
         if group is None:
             print(f"  Warning: group '{group_id}' not found")
             continue
 
-        paths = list(group.iter(tag("path")))
+        paths = list(group.iter(svg_tag("path")))
         print(f"  Layer '{group_id}': {len(paths)} path elements")
 
         for path_el in paths:
