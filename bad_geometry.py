@@ -29,6 +29,7 @@ class RelationGeom:
     start_date: str | None
     end_date: str | None
     name: str | None
+    admin_level: str | None
 
 
 class RelGeomCollector(osmium.SimpleHandler):
@@ -47,6 +48,7 @@ class RelGeomCollector(osmium.SimpleHandler):
             start_date=r.tags.get("start_date"),
             end_date=r.tags.get("end_date"),
             name=r.tags.get("name:en") or r.tags.get("name"),
+            admin_level=r.tags.get("admin_level"),
         )
 
 
@@ -139,7 +141,7 @@ def main() -> None:
     n_valid = 0
     n_invalid = 0
     rids = [*rel_collector.relations.keys()]
-    random.shuffle(rids)
+    random.shuffle(rids)  # this produces more accurate time estimates from tqdm
     for rid in tqdm(rids, smoothing=0):
         geom = rel_collector.relations[rid]
         rings, poly_warnings = geometry.build_polygon_rings(
@@ -169,13 +171,17 @@ def main() -> None:
         has_problem = False
 
         for typ in {type(w) for w in poly_warnings}:
+            label = ""
+            if geom.admin_level:
+                label += f"[{geom.admin_level}] "
+            if geom.name:
+                label += f"{geom.name} "
             raw_examples[warning_map[typ]].append(
                 (
                     earth_years,
                     "r",
                     rid,
-                    (geom.name or "")
-                    + " "
+                    label
                     + ", ".join(str(w) for w in poly_warnings if isinstance(w, typ)),
                 )
             )
