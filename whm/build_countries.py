@@ -2,14 +2,20 @@
 """
 Build countries.json from all WHM SVG files.
 
-Scans ~/Documents/ohm/whm/W[AB]*.svg, extracts the raw SVG path data
-for every <path> in the 'ctry' and 'terr' groups, and groups consecutive
-years where the (fill, path) pair is unchanged into a single segment.
+Scans ~/Documents/ohm/whm/W[AB]*.svg, extracts the raw SVG path data,
+fill colour, and tooltip title for every <path> in the 'ctry' and 'terr'
+groups, and groups consecutive years where all three properties are unchanged
+into a single segment.
+
+To minimise repetition, each segment only carries the properties that changed
+relative to the previous segment for the same ID.  The first segment always
+carries all three.  start_date and end_date are always present.
 
 Output: whm/countries.json
   {
     "<path-id>": [
-      {"fill": "#RRGGBB", "path": "M ...", "start_date": <year>, "end_date": <year>},
+      {"fill": "#RRGGBB", "path": "M ...", "title": "Egypt, ...", "start_date": -3000, "end_date": -2500},
+      {"title": "Egypt (Roman Province), ...",                     "start_date": -2499, "end_date": -30},
       ...
     ],
     ...
@@ -36,6 +42,8 @@ from svg import extract_paths
 
 DEFAULT_SVG_DIR = Path.home() / "Documents/ohm/whm"
 OUTPUT = Path(__file__).parent / "countries.json"
+
+PROPS = ("fill", "path", "title")
 
 
 def year_from_name(name: str) -> int:
@@ -76,9 +84,11 @@ def main() -> None:
           f"(years {year_from_name(svg_files[0].name)} "
           f"to {year_from_name(svg_files[-1].name)})…")
 
-    # current[id] = open segment dict with keys fill, path, start_date, end_date
-    current: dict[str, dict] = {}
-    segments: dict[str, list] = defaultdict(list)
+    # current_values[id] = full current state of all three tracked properties.
+    # current_seg[id]    = the open segment dict (only changed props + dates).
+    current_values: dict[str, dict] = {}
+    current_seg:    dict[str, dict] = {}
+    segments:       dict[str, list] = defaultdict(list)
 
     for i, svg_path in enumerate(svg_files):
         year = year_from_name(svg_path.name)
@@ -86,33 +96,36 @@ def main() -> None:
         current_ids = {p["id"] for p in paths}
 
         # Close segments for IDs absent from this year
-        for pid in list(current.keys()):
+        for pid in list(current_seg.keys()):
             if pid not in current_ids:
-                segments[pid].append(current.pop(pid))
+                segments[pid].append(current_seg.pop(pid))
+                del current_values[pid]
 
         for p in paths:
             pid = p["id"]
-            fill = p.get("fill", "")
-            path = p["path"]
+            new_vals = {prop: p.get(prop, "") for prop in PROPS}
 
-            seg = current.get(pid)
-            if seg and seg["fill"] == fill and seg["path"] == path:
-                seg["end_date"] = year          # extend existing segment
+            if pid not in current_values:
+                # First appearance: emit all properties
+                current_values[pid] = new_vals
+                current_seg[pid] = {**new_vals, "start_date": year, "end_date": year}
             else:
-                if seg:
-                    segments[pid].append(seg)   # close changed segment
-                current[pid] = {
-                    "fill": fill,
-                    "path": path,
-                    "start_date": year,
-                    "end_date": year,
-                }
+                changed = {k: v for k, v in new_vals.items()
+                           if v != current_values[pid][k]}
+                if changed:
+                    # At least one property changed: close old segment, open new one
+                    segments[pid].append(current_seg[pid])
+                    current_values[pid].update(changed)
+                    current_seg[pid] = {**changed, "start_date": year, "end_date": year}
+                else:
+                    # Nothing changed: extend the current segment
+                    current_seg[pid]["end_date"] = year
 
         if (i + 1) % 500 == 0:
             print(f"  {i + 1}/{len(svg_files)}")
 
     # Flush still-open segments
-    for pid, seg in current.items():
+    for pid, seg in current_seg.items():
         segments[pid].append(seg)
 
     result = dict(segments)

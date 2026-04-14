@@ -30,15 +30,26 @@ def extract_paths(
     Extract raw path data from a WHM SVG file.
 
     Returns a list of dicts with keys:
-      'id'   – the path element's id attribute
-      'path' – the raw SVG d= string (unprojected pixel coordinates)
-      'fill' – the fill attribute, if present
+      'id'    – the path element's id attribute
+      'path'  – the raw SVG d= string (unprojected pixel coordinates)
+      'fill'  – the fill attribute (may be absent)
+      'title' – from the matching <text id="…"><title> element (may be absent)
 
     Only <path> elements inside the named group elements are returned.
     Groups that don't exist in a given file are silently skipped.
     """
     tree = ET.parse(svg_path)
     root = tree.getroot()
+
+    # Build id -> title lookup from <text> elements (one pass)
+    titles: dict[str, str] = {}
+    for text_el in root.iter(svg_tag("text")):
+        tid = text_el.get("id", "")
+        if not tid:
+            continue
+        title_el = text_el.find(svg_tag("title"))
+        if title_el is not None and title_el.text:
+            titles[tid] = title_el.text
 
     results: list[dict] = []
     for group_id in groups:
@@ -54,6 +65,8 @@ def extract_paths(
             fill = path_el.get("fill")
             if fill:
                 entry["fill"] = fill
+            if pid in titles:
+                entry["title"] = titles[pid]
             results.append(entry)
 
     return results
