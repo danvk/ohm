@@ -345,8 +345,17 @@ def write_osm(
     way_map: dict[SegKey, int],
     feature_way_refs: list[list[list[tuple[int, bool]]]],
     tag_filter: tuple[str, set[str]] | None = None,
+    chronology_relations: list[dict] | None = None,
 ) -> None:
-    """Write nodes, ways and relations to an OSM PBF file."""
+    """Write nodes, ways and relations to an OSM PBF file.
+
+    Optional ``chronology_relations`` is a list of dicts, each with:
+      ``tags``               – tag dict for the chronology relation
+      ``member_feat_indices`` – ordered list of indices into ``features``
+                               whose relations will become members (role "")
+    Chronology relations are written after all feature relations and reference
+    them by their OSM relation IDs (``-(feat_idx + 1)``).
+    """
 
     # Reverse lookups needed for filtering
     # canonical_seg -> way_id is way_map; we need way_id -> canonical_seg
@@ -382,6 +391,7 @@ def write_osm(
     # node internal ID n  →  OSM node ID  -n
     # way  internal ID w  →  OSM way  ID  -w
     # relation index  r   →  OSM rel  ID  -(r+1)
+    # chronology rel  c   →  OSM rel  ID  -(len(features) + c + 1)
 
     n_node, n_way, n_rel = 0, 0, 0
 
@@ -419,12 +429,11 @@ def write_osm(
             )
             n_way += 1
 
-        # --- Relations ---
+        # --- Feature relations ---
         for feat_idx in kept_feat_indices:
             feat = features[feat_idx]
             props = feat.get("properties") or {}
             tags = {str(k): str(v) for k, v in props.items() if v is not None}
-            # tags["type"] = "multipolygon"
 
             members: list[tuple[str, int, str]] = []
             for ring_way_refs in feature_way_refs[feat_idx]:
@@ -442,6 +451,25 @@ def write_osm(
                 )
             )
             n_rel += 1
+
+        # --- Chronology relations ---
+        if chronology_relations:
+            for chron_idx, chron in enumerate(chronology_relations):
+                chron_id = -(len(features) + chron_idx + 1)
+                members = [
+                    ("r", -(fi + 1), "")
+                    for fi in chron["member_feat_indices"]
+                ]
+                writer.add_relation(
+                    mutable.Relation(
+                        id=chron_id,
+                        members=members,
+                        tags={str(k): str(v) for k, v in chron["tags"].items()},
+                        version=1,
+                        visible=True,
+                    )
+                )
+                n_rel += 1
 
     # Summary
     print(

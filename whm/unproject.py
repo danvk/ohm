@@ -363,7 +363,10 @@ def _clip_to_land(geometry: dict, tree, land_geoms) -> dict | None:
     from shapely.geometry import mapping, shape
     from shapely.ops import unary_union
 
-    feat_geom = shape(geometry)
+    try:
+        feat_geom = shape(geometry)
+    except (ValueError, Exception):
+        return None
     if not feat_geom.is_valid:
         feat_geom = shapely.make_valid(feat_geom)
     candidate_idxs = tree.query(feat_geom)

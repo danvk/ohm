@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Convert a year-slice of WHM countries.json to OSM PBF format.
+Convert WHM countries.json to OSM PBF format.
 
-Reads whm/countries.json, finds all entities active at the given year,
-projects their SVG paths to lat/lon (Winkel Tripel + correction mesh),
-optionally clips to land, then writes an OSM PBF using the shared-topology
-pipeline from geojson_to_osm.py (nodes and ways are deduplicated so adjacent
-countries share the same way objects along their common border).
+Reads whm/countries.json, projects SVG paths to lat/lon (Winkel Tripel +
+correction mesh), optionally clips to land, then writes an OSM PBF using the
+shared-topology pipeline from geojson_to_osm.py (nodes and ways are
+deduplicated so adjacent countries share the same way objects along their
+common border).
 
 Usage:
     # Sample: Central Europe at AD 2014
@@ -18,6 +18,9 @@ Usage:
 
     # All 219 countries at AD 2014
     python whm_to_osm.py --year 2014 -o whm_2014.osm.pbf
+
+    # All data across all years (produces chronology relations)
+    python whm_to_osm.py -o whm_all.osm.pbf
 """
 
 import argparse
@@ -43,6 +46,30 @@ def _fmt_year(year: int) -> str:
     if year < 0:
         return f"-{abs(year):04d}"
     return f"{year:04d}"
+
+
+def all_states(segments: list[dict]) -> list[dict]:
+    """Reconstruct the full property state for every segment.
+
+    Segments carry only *changed* properties, so we accumulate them in
+    chronological order to produce a full snapshot for each segment.
+    """
+    result: list[dict] = []
+    state: dict = {}
+    for seg in segments:
+        state = {**state, **seg}
+        result.append(state)
+    return result
+
+
+def extract_base_name(title: str) -> str:
+    """Extract the entity name from a WHM title.
+
+    Takes everything before the first comma:
+      'Egypt, Old Kingdom, 2925 - c2150BCE'  →  'Egypt'
+      'Uruk, c2900 - 2335BCE.'               →  'Uruk'
+    """
+    return title.split(",")[0].strip()
 
 
 def state_at_year(segments: list[dict], year: int) -> dict | None:
@@ -105,8 +132,8 @@ def main() -> None:
     ap.add_argument(
         "--year",
         type=int,
-        default=2014,
-        help="Astronomical year to export (default: 2014; use 0 for 1 BC, -1 for 2 BC, …)",
+        default=None,
+        help="Astronomical year to export (omit to export all years; use 0 for 1 BC, -1 for 2 BC, …)",
     )
     ap.add_argument(
         "--ids",
@@ -161,29 +188,18 @@ def main() -> None:
         else:
             print(f"Warning: land mask {args.clip_land} not found; skipping clip.")
 
-    # ── Project and clip each active entity ───────────────────────────────────
-    features: list[dict] = []
-    n_active = n_projected = n_after_clip = 0
+    # ── Project and clip entities ─────────────────────────────────────────────
 
-    for pid, segments in all_entities.items():
-        state = state_at_year(segments, args.year)
-        if state is None or not state.get("path"):
-            continue
-        n_active += 1
-
+    def _make_feature(pid: str, state: dict) -> dict | None:
+        """Project, clip, and wrap one entity state as a GeoJSON Feature."""
         geom = project_path(state["path"])
         if geom is None:
-            continue
-        n_projected += 1
-
+            return None
         if land_tree is not None:
             geom = _clip_to_land(geom, land_tree, land_geoms)
             if geom is None:
-                continue
-        n_after_clip += 1
-
+                return None
         geom = drop_holes(geom)
-
         name = pid.split("-", 1)[1] if "-" in pid else pid
         props: dict = {
             "type": "boundary",
@@ -196,15 +212,62 @@ def main() -> None:
         }
         if state.get("fill"):
             props["fill"] = state["fill"]
+        return {"type": "Feature", "geometry": geom, "properties": props}
 
-        features.append({"type": "Feature", "geometry": geom, "properties": props})
+    features: list[dict] = []
+    chronology_relations: list[dict] = []
 
-    print(
-        f"Year {args.year}: {n_active} active"
-        f" → {n_projected} projected"
-        f" → {n_after_clip} after land clip"
-        f" → {len(features)} features"
-    )
+    if args.year is not None:
+        # ── Single-year mode ──────────────────────────────────────────────────
+        n_active = 0
+        for pid, segments in all_entities.items():
+            state = state_at_year(segments, args.year)
+            if state is None or not state.get("path"):
+                continue
+            n_active += 1
+            feat = _make_feature(pid, state)
+            if feat is None:
+                continue
+            features.append(feat)
+
+        print(
+            f"Year {args.year}: {n_active} active → {len(features)} features"
+        )
+
+    else:
+        # ── All-years mode ────────────────────────────────────────────────────
+        n_segments = n_with_path = 0
+        for pid, segments in all_entities.items():
+            pid_feat_indices: list[int] = []
+            for state in all_states(segments):
+                if not state.get("path"):
+                    continue
+                n_segments += 1
+                feat = _make_feature(pid, state)
+                if feat is None:
+                    continue
+                n_with_path += 1
+                pid_feat_indices.append(len(features))
+                features.append(feat)
+
+            if len(pid_feat_indices) > 1:
+                first_title = features[pid_feat_indices[0]]["properties"].get("name", "")
+                chronology_relations.append(
+                    {
+                        "tags": {
+                            "type": "chronology",
+                            "whmid": pid,
+                            "name": extract_base_name(first_title),
+                        },
+                        "member_feat_indices": pid_feat_indices,
+                    }
+                )
+
+        print(
+            f"All years: {n_segments} segments with path"
+            f" → {len(features)} features"
+            f", {len(chronology_relations)} chronology relations"
+        )
 
     if not features:
         print("No features to write; exiting.")
@@ -228,7 +291,14 @@ def main() -> None:
     print(f"  {len(way_map):,} ways after spur removal")
 
     print(f"Writing {args.output} …")
-    g2o.write_osm(str(args.output), features, node_map, way_map, feature_way_refs)
+    g2o.write_osm(
+        str(args.output),
+        features,
+        node_map,
+        way_map,
+        feature_way_refs,
+        chronology_relations=chronology_relations or None,
+    )
     print("Done.")
 
 
