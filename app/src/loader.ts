@@ -1,7 +1,8 @@
 import type { Relation, Node } from './ohm-data';
 
 // const BASE_URL = '//ohmdash.pages.dev/boundary/';
-const BASE_URL = 'http://localhost:8081/whm-boundary/';
+// const BASE_URL = 'http://localhost:8081/whm-boundary/';
+const BASE_URL = '//ohmdash.pages.dev/whm-boundary/';
 
 export interface AppData {
   relations: Relation[];

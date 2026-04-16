@@ -23,6 +23,7 @@ export const MINIMAL_STYLE: maplibregl.StyleSpecification = {
       'source-layer': 'ocean',
       paint: {
         'fill-color': '#beddf3',
+        // 'fill-color': 'rgb(196,255,255)',
       },
     },
     {

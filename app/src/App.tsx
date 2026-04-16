@@ -273,11 +273,16 @@ export default function App() {
     <>
       {isLoading && <div className="loading">Loading…</div>}
       <div className="title">
-        <img src={Logo} width={30} height={30} className="logo" />
-        <h3>Boundary Viewer</h3>
-        <a href="https://github.com/danvk/ohm/tree/main/app" target="_blank">
-          About
-        </a>
+        <h3>WHM Boundary Viewer</h3>
+        <div className="about">
+          Source:{' '}
+          <a
+            href="http://www.worldhistorymaps.com/timeline.html"
+            target="_blank"
+          >
+            WorldHistoryMaps.com
+          </a>
+        </div>
       </div>
       <TimeControl
         year={date}
