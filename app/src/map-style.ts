@@ -121,13 +121,14 @@ export const LINE_STYLE: LinePaintStyle = {
     'case',
     ['boolean', ['feature-state', 'selected'], false],
     HIGHLIGHT_COLOR,
-    ['coalesce', ['get', 'fill'], DEFAULT_COLOR],
+    // ['coalesce', ['get', 'fill'], DEFAULT_COLOR],
+    DEFAULT_COLOR,
   ],
   'line-width': [
     'case',
     ['boolean', ['feature-state', 'selected'], false],
     2,
-    ['match', ['get', 'admin_level'], '2', 1.5, '1', 2, '3', 1.25, 1],
+    1,
   ],
 };
 
