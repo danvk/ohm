@@ -1,15 +1,36 @@
 import argparse
 import itertools
 import re
+import time
 
+import edtf as edtf_lib
 import osmium
 import osmium.filter
 from osmium.osm import Node, OSMObject, Relation, Way
 
-from dates import Range, overlaps, parse_ohm_date, parse_ohm_range
+from dates import DateTuple, Range, overlaps, parse_ohm_date, parse_ohm_range, start_of_date
 from stats import log_start, write_stats
 
 NAME_RANGE_PAT = r"\(-?\d{3,}--?\d{3,}\)"
+
+
+def edtf_interval(edtf_str: str) -> tuple[DateTuple, DateTuple] | None:
+    """Parse an EDTF string and return (lower, upper) as DateTuples, or None on failure.
+
+    Returns None if the string is not valid EDTF, or if the library cannot compute
+    strict bounds (e.g. partially-unspecified dates like '1X00-1X-1X').
+    """
+    try:
+        parsed = edtf_lib.parse_edtf(edtf_str)  # type: ignore[attr-defined]
+        lo = parsed.lower_strict()  # type: ignore[attr-defined]
+        hi = parsed.upper_strict()  # type: ignore[attr-defined]
+    except Exception:
+        return None
+    lo_tup: DateTuple = (lo.tm_year, lo.tm_mon, lo.tm_mday) if isinstance(lo, time.struct_time) else (-(10**12), 1, 1)
+    hi_tup: DateTuple = (hi.tm_year, hi.tm_mon, hi.tm_mday) if isinstance(hi, time.struct_time) else (10**12, 1, 1)
+    return lo_tup, hi_tup
+
+
 FAR_FUTURE = 2050
 
 type OsmKey = tuple[str, int]  # {"n", "w", "r"} + ID
@@ -52,6 +73,8 @@ class DateExtractor(osmium.SimpleHandler):
         self.end_no_start = list[OsmKey]()
         self.far_future = []
         self.n_timeless = 0
+        self.invalid_edtf = []
+        self.edtf_mismatch = []
 
     def handle_object(self, typ: str, f: OSMObject):
         name = f.tags.get("name")
@@ -102,6 +125,34 @@ class DateExtractor(osmium.SimpleHandler):
             self.far_future.append((typ, f.id, f"{start_date} {name}"))
         if end_date and range[1][0] > FAR_FUTURE:
             self.far_future.append((typ, f.id, f"{end_date} {name}"))
+
+        for plain_tag, edtf_tag in (
+            ("start_date", "start_date:edtf"),
+            ("end_date", "end_date:edtf"),
+        ):
+            plain = f.tags.get(plain_tag)
+            edtf_str = f.tags.get(edtf_tag)
+            if not edtf_str:
+                continue
+            interval = edtf_interval(edtf_str)
+            if interval is None:
+                self.invalid_edtf.append(
+                    (typ, f.id, f"{edtf_tag}={edtf_str} {name}")
+                )
+                continue
+            if plain:
+                plain_parsed = parse_ohm_date(plain)
+                if plain_parsed:
+                    plain_tup = start_of_date(plain_parsed)
+                    lo, hi = interval
+                    if not (lo <= plain_tup <= hi):
+                        self.edtf_mismatch.append(
+                            (
+                                typ,
+                                f.id,
+                                f"{plain_tag}={plain} vs {edtf_tag}={edtf_str} {name}",
+                            )
+                        )
 
         self.id_to_dates[key] = range
         self.id_to_raw_dates[key] = (start_date or "", end_date or "")
@@ -234,7 +285,12 @@ def main() -> None:
 
     handler = DateExtractor()
     handler.apply_file(
-        args.osm_file, filters=[osmium.filter.KeyFilter("start_date", "end_date")]
+        args.osm_file,
+        filters=[
+            osmium.filter.KeyFilter(
+                "start_date", "end_date", "start_date:edtf", "end_date:edtf"
+            )
+        ],
     )
 
     n_dated_rels = len(handler.id_to_dates)
@@ -252,6 +308,8 @@ def main() -> None:
         "date-end-no-start": [(typ, id, "") for typ, id in handler.end_no_start],
         "date-start-after-end": handler.start_after_end,
         "date-far-future": handler.far_future,
+        "date-edtf-invalid": handler.invalid_edtf,
+        "date-edtf-mismatch": handler.edtf_mismatch,
         "chronology-anonymous": ch.anonymous_chronologies,
         "chronology-undated-member": ch.undated_members,
         "chronology-overlapping-members": ch.overlapping_members,

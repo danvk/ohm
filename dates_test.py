@@ -1,5 +1,6 @@
 import pytest
 
+from chrono_stats import edtf_interval
 from dates import (
     NEG_INF,
     POS_INF,
@@ -192,3 +193,73 @@ class TestOverlaps:
         B = parse_ohm_range("1925", "1975")
         assert overlaps(A, B)
         assert overlaps(B, A)
+
+
+class TestEdtfInterval:
+    def test_exact_day(self):
+        assert edtf_interval("1948-05-08") == ((1948, 5, 8), (1948, 5, 8))
+
+    def test_year_month(self):
+        assert edtf_interval("1948-05") == ((1948, 5, 1), (1948, 5, 31))
+
+    def test_year_only(self):
+        assert edtf_interval("1948") == ((1948, 1, 1), (1948, 12, 31))
+
+    def test_approximate_year(self):
+        # 1948~ is uncertain/approximate but still bounded to that year
+        lo, hi = edtf_interval("1948~")
+        assert lo == (1948, 1, 1)
+        assert hi == (1948, 12, 31)
+
+    def test_interval(self):
+        assert edtf_interval("1944/1950") == ((1944, 1, 1), (1950, 12, 31))
+
+    def test_open_ended_upper(self):
+        lo, hi = edtf_interval("1948/..")
+        assert lo == (1948, 1, 1)
+        assert hi == (10**12, 1, 1)
+
+    def test_invalid_returns_none(self):
+        # Strings that are not valid EDTF at all
+        assert edtf_interval("not a date") is None
+        assert edtf_interval("unknown") is None
+
+    def test_invalid_ohm_style_qualifiers(self):
+        # OHM plain-date qualifiers are not valid EDTF
+        assert edtf_interval("c. 1900") is None
+        assert edtf_interval("ca. 1900") is None
+        assert edtf_interval("1900 (est.)") is None
+        assert edtf_interval("600 BC") is None
+
+    def test_invalid_ohm_range_in_edtf_field(self):
+        # OHM date ranges written with a dash are not valid EDTF
+        assert edtf_interval("1900-1910") is None
+
+    def test_unspecified_month_day_digits(self):
+        # Partially-unspecified dates with X in month/day parse successfully
+        # but lower_strict()/upper_strict() raise ValueError inside the library.
+        # edtf_interval must catch this and return None.
+        assert edtf_interval("1X00-1X-1X") is None
+
+    def test_mismatch_day_off_by_one(self):
+        """The motivating example from the issue: end_date=1948-05-08, end_date:edtf=1948-05-09."""
+        plain = (1948, 5, 8)
+        lo, hi = edtf_interval("1948-05-09")
+        assert not (lo <= plain <= hi)
+
+    def test_match_day_within_month(self):
+        """A day-level plain date is within a month-level EDTF interval."""
+        plain = (1948, 5, 8)
+        lo, hi = edtf_interval("1948-05")
+        assert lo <= plain <= hi
+
+    def test_match_day_within_year(self):
+        """A day-level plain date is within a year-level EDTF interval."""
+        plain = (1948, 5, 8)
+        lo, hi = edtf_interval("1948")
+        assert lo <= plain <= hi
+
+    def test_mismatch_wrong_year(self):
+        plain = (1949, 1, 1)
+        lo, hi = edtf_interval("1948")
+        assert not (lo <= plain <= hi)
