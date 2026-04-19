@@ -72,6 +72,14 @@ const METRIC_DOCS = {
     label: "Far future",
     help: "Either start_date or end_date is after 2050. This is often a typo or placeholder, but omitting end_date is preferable."
   },
+  "date-edtf-invalid": {
+    label: "Invalid EDTF date",
+    help: "Features with start_date:edtf or end_date:edtf that cannot be parsed as EDTF."
+  },
+  "date-edtf-mismatch": {
+    label: "Mismatched EDTF date",
+    help: "A feature specifies both start_date and start_date:edtf (or end_date/end_date:edtf), but the two do not overlap."
+  },
 
   "earth-years-admin-1": { label: "admin1", help: 'See above for an explanation of this metric.' },
   "earth-years-admin-2": { label: "admin2", help: 'See above for an explanation of this metric.' },
@@ -250,11 +258,13 @@ makeChart(
     "date-invalid",
     "date-end-no-start",
     "date-far-future",
-    "date-start-after-end"
+    "date-start-after-end",
+    "date-edtf-invalid",
+    "date-edtf-mismatch",
   ],
   {
     examples: true,
-    connectSeparatedPoints: true,
+    // connectSeparatedPoints: true,
     axes: { y: { valueFormatter: x => String(x) } },
     dateWindow: [Date.parse('2026-01-01'), Date.now()]
   }
