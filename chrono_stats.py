@@ -46,14 +46,14 @@ def edtf_interval(edtf_str: str) -> tuple[DateTuple, DateTuple] | None:
     # instead of infinity.  Detect and override to the correct infinite bound.
     if (
         hasattr(parsed, "lower")
-        and isinstance(parsed.lower, UnspecifiedIntervalSection)
-        and str(parsed.lower) == ""
+        and isinstance(parsed.lower, UnspecifiedIntervalSection)  # type: ignore[attr-defined]
+        and str(parsed.lower) == ""  # type: ignore[attr-defined]
     ):
         lo = float("-inf")
     if (
         hasattr(parsed, "upper")
-        and isinstance(parsed.upper, UnspecifiedIntervalSection)
-        and str(parsed.upper) == ""
+        and isinstance(parsed.upper, UnspecifiedIntervalSection)  # type: ignore[attr-defined]
+        and str(parsed.upper) == ""  # type: ignore[attr-defined]
     ):
         hi = float("inf")
     lo_tup: DateTuple = (

@@ -4,6 +4,7 @@ from chrono_stats import _is_one_day_off, edtf_interval
 from dates import (
     NEG_INF,
     POS_INF,
+    DateTuple,
     duration_years,
     end_of_date,
     overlaps,
@@ -11,6 +12,20 @@ from dates import (
     parse_ohm_range,
     start_of_date,
 )
+
+
+def safe_edtf_interval(s: str) -> tuple[DateTuple, DateTuple]:
+    """Unwrap edtf_interval(), asserting the result is not None."""
+    result = edtf_interval(s)
+    assert result is not None, f"ei({s!r}) returned None"
+    return result
+
+
+def safe_parse_ohm_date(s: str) -> tuple[int, int | None, int | None]:
+    """Unwrap parse_ohm_date(), asserting the result is not None."""
+    result = parse_ohm_date(s)
+    assert result is not None, f"parse_ohm_date({s!r}) returned None"
+    return result
 
 
 class TestParseOhmDate:
@@ -224,26 +239,26 @@ class TestOverlaps:
 
 class TestEdtfInterval:
     def test_exact_day(self):
-        assert edtf_interval("1948-05-08") == ((1948, 5, 8), (1948, 5, 8))
+        assert safe_edtf_interval("1948-05-08") == ((1948, 5, 8), (1948, 5, 8))
 
     def test_year_month(self):
-        assert edtf_interval("1948-05") == ((1948, 5, 1), (1948, 5, 31))
+        assert safe_edtf_interval("1948-05") == ((1948, 5, 1), (1948, 5, 31))
 
     def test_year_only(self):
-        assert edtf_interval("1948") == ((1948, 1, 1), (1948, 12, 31))
+        assert safe_edtf_interval("1948") == ((1948, 1, 1), (1948, 12, 31))
 
     def test_approximate_year(self):
         # 1948~ uses lower_fuzzy/upper_fuzzy, which extends ~1 year in each direction
-        lo, hi = edtf_interval("1948~")
+        lo, hi = safe_edtf_interval("1948~")
         assert lo == (1947, 1, 1)
         assert hi == (1949, 12, 31)
 
     def test_interval(self):
-        assert edtf_interval("1944/1950") == ((1944, 1, 1), (1950, 12, 31))
+        assert safe_edtf_interval("1944/1950") == ((1944, 1, 1), (1950, 12, 31))
 
     def test_open_ended_upper_dotdot(self):
         # "1948/.." — explicit open end with ".."
-        lo, hi = edtf_interval("1948/..")
+        lo, hi = safe_edtf_interval("1948/..")
         assert lo == (1948, 1, 1)
         assert hi == (10**12, 1, 1)
 
@@ -251,21 +266,21 @@ class TestEdtfInterval:
         # "1752/" — open end written without ".."; the library returns a
         # computed fuzzy date (~10 years out) rather than infinity, so we
         # must override it.  end_date=1799 should be compatible.
-        lo, hi = edtf_interval("1752/")
+        lo, hi = safe_edtf_interval("1752/")
         assert lo == (1752, 1, 1)
         assert hi == (10**12, 1, 1)
         assert lo <= (1799, 1, 1) <= hi
 
     def test_open_ended_lower_dotdot(self):
         # "../1818" — explicit open start with ".."
-        lo, hi = edtf_interval("../1818")
+        lo, hi = safe_edtf_interval("../1818")
         assert lo == (-(10**12), 1, 1)
         assert hi == (1818, 12, 31)
 
     def test_open_ended_lower_bare_slash(self):
         # "/1818" — open start written without ".."; same library quirk as
         # the upper case.  start_date=1500 should be compatible.
-        lo, hi = edtf_interval("/1818")
+        lo, hi = safe_edtf_interval("/1818")
         assert lo == (-(10**12), 1, 1)
         assert hi == (1818, 12, 31)
         assert lo <= (1500, 1, 1) <= hi
@@ -295,34 +310,33 @@ class TestEdtfInterval:
     def test_mismatch_day_off_by_one(self):
         """The motivating example from the issue: end_date=1948-05-08, end_date:edtf=1948-05-09."""
         plain = (1948, 5, 8)
-        lo, hi = edtf_interval("1948-05-09")
+        lo, hi = safe_edtf_interval("1948-05-09")
         assert not (lo <= plain <= hi)
 
     def test_match_day_within_month(self):
         """A day-level plain date is within a month-level EDTF interval."""
         plain = (1948, 5, 8)
-        lo, hi = edtf_interval("1948-05")
+        lo, hi = safe_edtf_interval("1948-05")
         assert lo <= plain <= hi
 
     def test_match_day_within_year(self):
         """A day-level plain date is within a year-level EDTF interval."""
         plain = (1948, 5, 8)
-        lo, hi = edtf_interval("1948")
+        lo, hi = safe_edtf_interval("1948")
         assert lo <= plain <= hi
 
     def test_mismatch_wrong_year(self):
         plain = (1949, 1, 1)
-        lo, hi = edtf_interval("1948")
+        lo, hi = safe_edtf_interval("1948")
         assert not (lo <= plain <= hi)
 
     def test_year_plain_overlaps_edtf_sub_interval(self):
         # start_date=1971 covers [1971-01-01, 1971-12-31].
         # start_date:edtf=1971-07-02/1972-03-31 covers [1971-07-02, 1972-03-31].
         # These overlap, so this should NOT be flagged as a mismatch.
-        plain_parsed = parse_ohm_date("1971")
-        plain_lo = start_of_date(plain_parsed)
-        plain_hi = end_of_date(plain_parsed)
-        lo, hi = edtf_interval("1971-07-02/1972-03-31")
+        plain_lo = start_of_date(safe_parse_ohm_date("1971"))
+        plain_hi = end_of_date(safe_parse_ohm_date("1971"))
+        lo, hi = safe_edtf_interval("1971-07-02/1972-03-31")
         assert plain_lo <= hi and lo <= plain_hi  # overlaps — no mismatch
 
 
@@ -339,72 +353,72 @@ class TestEdtfWikiExamples:
 
     def test_year_only(self):
         # "Year only" — start_date=1970, start_date:edtf=1970
-        lo, hi = edtf_interval("1970")
+        lo, hi = safe_edtf_interval("1970")
         assert lo == (1970, 1, 1) and hi == (1970, 12, 31)
-        assert lo <= start_of_date(parse_ohm_date("1970")) <= hi
+        assert lo <= start_of_date(safe_parse_ohm_date("1970")) <= hi
 
     def test_approximate_date(self):
         # "Approximate date" — start_date=1849, start_date:edtf=1849~
-        lo, hi = edtf_interval("1849~")
-        assert lo <= start_of_date(parse_ohm_date("1849")) <= hi
+        lo, hi = safe_edtf_interval("1849~")
+        assert lo <= start_of_date(safe_parse_ohm_date("1849")) <= hi
 
     def test_uncertain_date(self):
         # "Uncertain date" — start_date=1804, start_date:edtf=1804?
-        lo, hi = edtf_interval("1804?")
-        assert lo <= start_of_date(parse_ohm_date("1804")) <= hi
+        lo, hi = safe_edtf_interval("1804?")
+        assert lo <= start_of_date(safe_parse_ohm_date("1804")) <= hi
 
     def test_date_range_interval(self):
         # "Date range" — start_date=1908, start_date:edtf=1906/1908
-        lo, hi = edtf_interval("1906/1908")
-        assert lo <= start_of_date(parse_ohm_date("1908")) <= hi
+        lo, hi = safe_edtf_interval("1906/1908")
+        assert lo <= start_of_date(safe_parse_ohm_date("1908")) <= hi
 
     def test_date_range_set(self):
         # "Date range" — start_date=1908, start_date:edtf=[1906..1908]
-        lo, hi = edtf_interval("[1906..1908]")
-        assert lo <= start_of_date(parse_ohm_date("1908")) <= hi
+        lo, hi = safe_edtf_interval("[1906..1908]")
+        assert lo <= start_of_date(safe_parse_ohm_date("1908")) <= hi
 
     def test_century_midpoint_interval(self):
         # "Century midpoint" — start_date=1750, start_date:edtf=1730/1770
-        lo, hi = edtf_interval("1730/1770")
-        assert lo <= start_of_date(parse_ohm_date("1750")) <= hi
+        lo, hi = safe_edtf_interval("1730/1770")
+        assert lo <= start_of_date(safe_parse_ohm_date("1750")) <= hi
 
     def test_century_midpoint_set(self):
         # "Century midpoint" — start_date=1750, start_date:edtf=[1730..1770]
-        lo, hi = edtf_interval("[1730..1770]")
-        assert lo <= start_of_date(parse_ohm_date("1750")) <= hi
+        lo, hi = safe_edtf_interval("[1730..1770]")
+        assert lo <= start_of_date(safe_parse_ohm_date("1750")) <= hi
 
     def test_decade(self):
         # "Decade" — start_date=1895, start_date:edtf=189X
-        lo, hi = edtf_interval("189X")
-        assert lo <= start_of_date(parse_ohm_date("1895")) <= hi
+        lo, hi = safe_edtf_interval("189X")
+        assert lo <= start_of_date(safe_parse_ohm_date("1895")) <= hi
 
     def test_date_before_interval(self):
         # "Date before" — start_date=1800, start_date:edtf=/1800
-        lo, hi = edtf_interval("/1800")
-        assert lo <= start_of_date(parse_ohm_date("1800")) <= hi
+        lo, hi = safe_edtf_interval("/1800")
+        assert lo <= start_of_date(safe_parse_ohm_date("1800")) <= hi
 
     def test_date_before_set(self):
         # "Date before" — start_date=1800, start_date:edtf=[..1800]
-        lo, hi = edtf_interval("[..1800]")
-        assert lo <= start_of_date(parse_ohm_date("1800")) <= hi
+        lo, hi = safe_edtf_interval("[..1800]")
+        assert lo <= start_of_date(safe_parse_ohm_date("1800")) <= hi
 
     def test_early_month_range(self):
         # "Early April 1992" — start_date=1992-04, start_date:edtf=1992-04-01/1992-04-10
-        lo, hi = edtf_interval("1992-04-01/1992-04-10")
-        assert lo <= start_of_date(parse_ohm_date("1992-04")) <= hi
+        lo, hi = safe_edtf_interval("1992-04-01/1992-04-10")
+        assert lo <= start_of_date(safe_parse_ohm_date("1992-04")) <= hi
 
     def test_season_autumn(self):
         # "Season" — start_date=1814, start_date:edtf=1814-23 (EDTF season 23 = autumn)
         # Season codes resolve to a sub-year interval, so a year-level plain date
         # (which maps to Jan 1 via start_of_date) falls before the autumn window.
         # This is a known limitation of the compatibility check for season-coded EDTF.
-        lo, hi = edtf_interval("1814-23")
+        lo, hi = safe_edtf_interval("1814-23")
         assert lo == (1814, 9, 1) and hi == (1814, 11, 30)
 
     def test_late_season(self):
         # "Late season" — start_date=1887, start_date:edtf=1887-39 (late autumn/winter)
         # Same caveat as test_season_autumn: year-level plain date falls outside interval.
-        lo, hi = edtf_interval("1887-39")
+        lo, hi = safe_edtf_interval("1887-39")
         assert lo == (1887, 9, 1) and hi == (1887, 12, 31)
 
     def test_datetime_not_supported_start(self):
@@ -418,63 +432,63 @@ class TestEdtfWikiExamples:
 
     def test_year_only_end(self):
         # "Year only" — end_date=1272, end_date:edtf=1272
-        lo, hi = edtf_interval("1272")
-        assert lo <= start_of_date(parse_ohm_date("1272")) <= hi
+        lo, hi = safe_edtf_interval("1272")
+        assert lo <= start_of_date(safe_parse_ohm_date("1272")) <= hi
 
     def test_circa(self):
         # "circa 1871" — end_date=1871, end_date:edtf=1871~
-        lo, hi = edtf_interval("1871~")
-        assert lo <= start_of_date(parse_ohm_date("1871")) <= hi
+        lo, hi = safe_edtf_interval("1871~")
+        assert lo <= start_of_date(safe_parse_ohm_date("1871")) <= hi
 
     def test_mid_century(self):
         # "Mid sixteenth century" — end_date=1550, end_date:edtf=1550~
-        lo, hi = edtf_interval("1550~")
-        assert lo <= start_of_date(parse_ohm_date("1550")) <= hi
+        lo, hi = safe_edtf_interval("1550~")
+        assert lo <= start_of_date(safe_parse_ohm_date("1550")) <= hi
 
     def test_decade_unknown_year(self):
         # "1960s" — end_date=1960, end_date:edtf=196X
-        lo, hi = edtf_interval("196X")
-        assert lo <= start_of_date(parse_ohm_date("1960")) <= hi
+        lo, hi = safe_edtf_interval("196X")
+        assert lo <= start_of_date(safe_parse_ohm_date("1960")) <= hi
 
     def test_century_unknown_decade(self):
         # "15th century" — end_date=1450, end_date:edtf=14XX
-        lo, hi = edtf_interval("14XX")
-        assert lo <= start_of_date(parse_ohm_date("1450")) <= hi
+        lo, hi = safe_edtf_interval("14XX")
+        assert lo <= start_of_date(safe_parse_ohm_date("1450")) <= hi
 
     def test_between_dates_interval(self):
         # "Between 1908 and 1909" — end_date=1908, end_date:edtf=1908/1909
-        lo, hi = edtf_interval("1908/1909")
-        assert lo <= start_of_date(parse_ohm_date("1908")) <= hi
+        lo, hi = safe_edtf_interval("1908/1909")
+        assert lo <= start_of_date(safe_parse_ohm_date("1908")) <= hi
 
     def test_between_dates_set(self):
         # "Between 1908 and 1909" — end_date=1908, end_date:edtf=[1908..1909]
-        lo, hi = edtf_interval("[1908..1909]")
-        assert lo <= start_of_date(parse_ohm_date("1908")) <= hi
+        lo, hi = safe_edtf_interval("[1908..1909]")
+        assert lo <= start_of_date(safe_parse_ohm_date("1908")) <= hi
 
     def test_early_period(self):
         # "Early 1840s" — end_date=1840, end_date:edtf=1840/1845
-        lo, hi = edtf_interval("1840/1845")
-        assert lo <= start_of_date(parse_ohm_date("1840")) <= hi
+        lo, hi = safe_edtf_interval("1840/1845")
+        assert lo <= start_of_date(safe_parse_ohm_date("1840")) <= hi
 
     def test_indefinite_end_interval(self):
         # "On or before 2000" — end_date=2000, end_date:edtf=/2000
-        lo, hi = edtf_interval("/2000")
-        assert lo <= start_of_date(parse_ohm_date("2000")) <= hi
+        lo, hi = safe_edtf_interval("/2000")
+        assert lo <= start_of_date(safe_parse_ohm_date("2000")) <= hi
 
     def test_indefinite_end_set(self):
         # "On or before 2000" — end_date=2000, end_date:edtf=[..2000]
-        lo, hi = edtf_interval("[..2000]")
-        assert lo <= start_of_date(parse_ohm_date("2000")) <= hi
+        lo, hi = safe_edtf_interval("[..2000]")
+        assert lo <= start_of_date(safe_parse_ohm_date("2000")) <= hi
 
     def test_as_of(self):
         # "Building shown on 1935 map" — end_date=1935, end_date:edtf=/1935
-        lo, hi = edtf_interval("/1935")
-        assert lo <= start_of_date(parse_ohm_date("1935")) <= hi
+        lo, hi = safe_edtf_interval("/1935")
+        assert lo <= start_of_date(safe_parse_ohm_date("1935")) <= hi
 
     def test_season_winter(self):
         # "Winter of 1940" — end_date=1940, end_date:edtf=1940-24 (EDTF season 24 = winter)
         # Same caveat as test_season_autumn: year-level plain date falls outside interval.
-        lo, hi = edtf_interval("1940-24")
+        lo, hi = safe_edtf_interval("1940-24")
         assert lo == (1940, 12, 1) and hi == (1940, 12, 31)
 
     def test_datetime_not_supported_end(self):
