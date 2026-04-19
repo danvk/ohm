@@ -1,0 +1,313 @@
+n/2091745580: end_date=1806-08-12 vs end_date:edtf=1806-08-13 Dresden
+n/2094763029: end_date=1614-11-11 vs end_date:edtf=1614-11-12 Duchy of Berg
+n/2104261172: end_date=1379 vs end_date:edtf=1380~ County of Berg
+n/2104261174: end_date=1614-11-11 vs end_date:edtf=1614-11-12 County of Mark
+n/2104341367: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Duchy of Luxembourg (Austria)
+n/2108636960: end_date=1766-02-22 vs end_date:edtf=1766-02-23 Duchy of Lorraine
+n/2108765013: end_date=1805-12-31 vs end_date:edtf=1806-01-01 Electorate of Bavaria
+n/2118104232: end_date=1918-11-21 vs end_date:edtf=1918-11-22 Principality of Schwarzburg-Sondershausen
+n/2118104235: end_date=1918-11-21 vs end_date:edtf=1918-11-22 Principality of Schwarzburg-Rudolstadt
+n/2118104237: end_date=1920-04-30 vs end_date:edtf=1920-05-01 Arnstadt (Schwarzburg-Sondershausen)
+n/2118104238: end_date=1920-04-30 vs end_date:edtf=1920-05-01 Frankenhausen (Schwarzburg-Rudolstadt)
+n/2118104239: end_date=1920-04-30 vs end_date:edtf=1920-05-01 Leutenberg (Schwarzburg-Rudolstadt)
+n/2118104240: end_date=1920-04-30 vs end_date:edtf=1920-05-01 Immenrode (Schwarzburg-Rudolstadt)
+n/2118104241: end_date=1920-04-30 vs end_date:edtf=1920-05-01 Schlotheim (Schwarzburg-Rudolstadt)
+n/2118105361: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Duchy of Mecklenburg-Strelitz
+n/2118134090: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Provostry of Berchtesgaden
+n/2118134100: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Archbishopric of Salzburg
+n/2118137736: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Principality of Hohenzollern-Hechingen
+n/2118145420: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Freising
+n/2118145421: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Grafschaft Werdenfels (Hochstift Freising)
+n/2118153454: end_date=1806-08-12 vs end_date:edtf=1806-08-13 Landgraviate of Hesse-Darmstadt
+n/2118153455: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Landgraviate of Hesse-Kassel
+n/2118153460: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Electorate of Saxony
+n/2118159024: end_date=1806-03-14 vs end_date:edtf=1806-03-15 County of Gimborn
+n/2118160117: end_date=1802-07-31 vs end_date:edtf=1802-08-01 Prince-Bishopric of Paderborn
+n/2118160354: end_date=1807-07-06 vs end_date:edtf=1807-07-07 County of Rietberg
+n/2118165979: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Hildesheim
+n/2118179986: end_date=1701-01-17 vs end_date:edtf=1701-01-18 Principality of Minden (to Electorate of Brandenburg)
+n/2118179987: end_date=1807-07-06 vs end_date:edtf=1807-07-07 Principality of Minden (to Kingdom of Prussia)
+n/2118180939: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Herrschaft Schmalkalden (Hessen-Cassel)
+n/2118181436: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Münster
+n/2118182115: end_date=1720-01-20 vs end_date:edtf=1720-01-21 Swedish Pomerania
+n/2118221793: end_date=1807-07-06 vs end_date:edtf=1807-07-07 County of Diepholz
+n/2118311555: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Lordship of Cottbus
+n/2118367336: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Duchy of Anhalt-Köthen
+n/2118367338: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Duchy of Anhalt-Bernburg
+n/2118367340: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Duchy of Anhalt-Bernburg
+n/2118367341: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Duchy of Anhalt-Dessau
+n/2118367343: end_date=1793-03-02 vs end_date:edtf=1793-03-03 Principality of Anhalt-Zerbst
+n/2118439207: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Standesherrschaft Baruth
+n/2118439208: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Standesherrschaft Sonnewalde
+n/2118439219: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Amt Dahme
+n/2118439220: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Amt Jüterbog
+n/2118439487: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Amt Belzig
+n/2118496042: end_date=1807-07-06 vs end_date:edtf=1807-07-07 Altmark
+n/2118568087: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishipric of Fulda
+n/2118568751: end_date=1812-12-23 vs end_date:edtf=1812-12-24 Principality of Anhalt-Bernburg-Schaumburg-Hoym
+n/2118568753: end_date=1807-07-06 vs end_date:edtf=1807-07-07 Anhalt-Dessauischen Amt Alsleben (preußische Landeshoheit)
+n/2118569875: end_date=1807-07-08 vs end_date:edtf=1807-07-09 Herrschaft Jever (Russland)
+n/2118569876: end_date=1793-03-02 vs end_date:edtf=1793-03-03 Herrschaft Jever (Anhalt-Zerbst)
+n/2118569877: end_date=1807-07-08 vs end_date:edtf=1807-07-09 County of East Frisia (Kingdom of Prussia)
+n/2118569878: end_date=1744-05-24 vs end_date:edtf=1744-05-25 County of East Frisia
+n/2118576721: end_date=1807-07-08 vs end_date:edtf=1807-07-09 Principality of Hildesheim (Kd. Prussia)
+n/2118576722: end_date=1618-08-26 vs end_date:edtf=1618-08-27 Duchy of Cleves (Brandenburg)
+n/2118576723: end_date=1701-01-17 vs end_date:edtf=1701-01-18 Duchy of Cleves (Brandenburg-Prussia)
+n/2118576726: end_date=1618-08-26 vs end_date:edtf=1618-08-27 County of Mark (Brandenburg)
+n/2118576758: end_date=1701-01-17 vs end_date:edtf=1701-01-18 County of Mark (Brandenburg-Prussia)
+n/2118589692: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Paderborn (Prussian occupation)
+n/2118631212: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Princely Abbey of Stavelot-Malmedy
+n/2118633091: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Hochbank Spirmont (Limburg)
+n/2118633258: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Duchy of Limburg (Austria)
+n/2119120054: end_date=1678-09-16 vs end_date:edtf=1678-09-17 Free County of Burgundy (Spain)
+n/2119120055: end_date=1556-01-15 vs end_date:edtf=1556-01-16 Free County of Burgundy (Habsburg)
+n/2119122783: end_date=1556-01-15 vs end_date:edtf=1556-01-16 County of Namur
+n/2119122784: end_date=1797-10-16 vs end_date:edtf=1797-10-17 County of Namur (Austria)
+n/2119122788: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Duchy of Brabant (Austria)
+n/2119122791: end_date=1797-10-16 vs end_date:edtf=1797-10-17 County of Hainaut (Austria)
+n/2119122792: end_date=1797-10-16 vs end_date:edtf=1797-10-17 County of Flanders (Austria)
+n/2119123002: end_date=1800-12-31 vs end_date:edtf=1801-01-01 Electorate of Hanover (Great Britain)
+n/2119123003: end_date=1805-12-14 vs end_date:edtf=1805-12-15 Electorate of Hanover (United Kingdom)
+n/2125021252: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Neustädtischer Kreis
+n/2125021253: end_date=1835-04-30 vs end_date:edtf=1835-05-01 Vogtländischer Kreis
+n/2125039435: end_date=1806-04-14 vs end_date:edtf=1806-04-15 Imperial Lordship of Bonndorf (Abbey of Saint Blaise)
+n/2125071883: end_date=1604-08-28 vs end_date:edtf=1604-08-29 Principality of Palatinate-Sulzbach
+n/2125071884: end_date=1742-12-30 vs end_date:edtf=1742-12-31 Principality of Pfalz-Sulzbach
+n/2125097285: end_date=1806-07-11 vs end_date:edtf=1806-07-12 Principality of Sayn-Wittgenstein-Hohenstein
+n/2125097286: end_date=1741-07-25 vs end_date:edtf=1741-07-26 County of Sayn-W.-S.-Altenkirchen
+n/2125105757: end_date=1808-06-20 vs end_date:edtf=1808-06-21 Hft. Hohenwaldeck
+n/2125105758: end_date=1808-06-20 vs end_date:edtf=1808-06-21 Hft. Türkheim (Churbaiern)
+n/2125105759: end_date=1808-06-20 vs end_date:edtf=1808-06-21 Hft. Mindelheim (Churbaiern)
+n/2125147232: end_date=1597-09-29 vs end_date:edtf=1597-09-30 Immenrode (Schwarzburg-Frankenhausen)
+n/2125147233: end_date=1597-09-29 vs end_date:edtf=1597-09-30 Schlotheim (Schwarzburg-Frankenhausen)
+n/2125147234: end_date=1597-09-29 vs end_date:edtf=1597-09-30 Gft. Schwarzburg-Frankenhausen
+n/2125157979: end_date=1806-08-12 vs end_date:edtf=1806-08-13 Landgraviate of Hesse-Darmstadt
+n/2125184544: end_date=1806-08-29 vs end_date:edtf=1806-08-30 Principality of Nassau-Weilburg
+n/2125221077: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Lordship of Kirchheim (Nassau-Weilburg)
+n/2125221193: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Margraviate of Baden
+n/2125221194: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Lordship of Grafenstein (Baden)
+n/2125233168: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Austrian Upper Guelders
+n/2125233169: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Austrian Upper Guelders
+n/2125255768: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Landgrafschaft Hessen-Rotenburg (Hessen-Cassel)
+n/2125278446: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Österreichisch-Obergeldern
+n/2125286470: end_date=1678-09-16 vs end_date:edtf=1678-09-17 Cambrésis (España)
+n/2125288770: end_date=1648-10-23 vs end_date:edtf=1648-10-24 Sundgau
+n/2125335163: end_date=1791-01-23 vs end_date:edtf=1791-01-24 Grafschaft Lützelstein (Pfalz-Zweibrücken)
+n/2125335672: end_date=1766-02-22 vs end_date:edtf=1766-02-23 County of Saarwerden (Nassau-Saarbrücken)
+n/2125335799: end_date=1723-12-05 vs end_date:edtf=1723-12-06 Gft. Nassau-Saarbrücken
+n/2125349553: end_date=1673-07-17 vs end_date:edtf=1673-07-18 County of Rappoltstein/Ribeaupierre
+n/2125349554: end_date=1791-09-20 vs end_date:edtf=1791-09-21 Grafschaft Rappoltstein (Pfalz-Zweibrücken)
+n/2125375002: end_date=1777-12-29 vs end_date:edtf=1777-12-30 Duchy of Berg (Electoral Palatinate)
+n/2125381841: end_date=1556-01-15 vs end_date:edtf=1556-01-16 Duchy of Guelders
+n/2125381842: end_date=1393-12-12 vs end_date:edtf=1393-12-13 Duchy of Guelders
+n/2125381845: end_date=1423-06-24 vs end_date:edtf=1423-06-25 Duchy of Guelders
+n/2125381846: end_date=1581-07-25 vs end_date:edtf=1581-07-26 Duchy of Guelders
+n/2125381848: end_date=1581-07-25 vs end_date:edtf=1581-07-26 Lordship of Overijssel
+n/2125381852: end_date=1581-07-25 vs end_date:edtf=1581-07-26 Lordship of Utrecht
+n/2125381853: end_date=1795-01-17 vs end_date:edtf=1795-01-18 Utrecht
+n/2125392419: end_date=1581-07-25 vs end_date:edtf=1581-07-26 Lordship of Drenthe
+n/2125429008: end_date=1554-02-23 vs end_date:edtf=1554-02-24 Duchy of Saxony
+n/2125429145: end_date=1554-02-23 vs end_date:edtf=1554-02-24 Duchy of Saxony
+n/2125532669: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Speyer
+n/2125542283: end_date=1771-10-20 vs end_date:edtf=1771-10-21 Margraviate of Baden-Durlach
+n/2125542284: end_date=1771-10-20 vs end_date:edtf=1771-10-21 Margraviate of Baden-Baden
+n/2125543529: end_date=1771-10-20 vs end_date:edtf=1771-10-21 Lower County of Sponheim (Baden-Baden)
+n/2125543530: end_date=1771-10-20 vs end_date:edtf=1771-10-21 Upper County of Sponheim (Baden-Baden)
+n/2125555936: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Upper County of Sponheim (Baden)
+n/2125555937: end_date=1771-10-20 vs end_date:edtf=1771-10-21 Upper County of Sponheim (Baden-Baden)
+n/2125555939: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Lower County of Sponheim (Baden)
+n/2125555941: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Lower County of Sponheim (Baden)
+n/2125555943: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Upper County of Sponheim (Baden)
+n/2125555944: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Upper County of Sponheim (Baden)
+n/2125555947: end_date=1771-10-20 vs end_date:edtf=1771-10-21 Upper County of Sponheim (Baden-Baden)
+n/2125555948: end_date=1771-10-20 vs end_date:edtf=1771-10-21 Lower County of Sponheim (Baden-Baden)
+n/2125590005: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Duchy of Palatinate-Zweibrücken
+n/2125648100: end_date=1771-10-20 vs end_date:edtf=1771-10-21 Lordship of Grafenstein (Baden-Baden)
+n/2125649595: end_date=1712-01-05 vs end_date:edtf=1712-01-06 Imperial County of Waldeck
+n/2125922417: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Lübeck
+n/2125922418: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Lübeck
+n/2125922419: end_date=1810-07-08 vs end_date:edtf=1810-07-09 Principality of Lübeck (Oldenburg)
+n/2125922420: end_date=1810-07-08 vs end_date:edtf=1810-07-09 Principality of Lübeck (Oldenburg)
+n/2126415899: end_date=1556-01-15 vs end_date:edtf=1556-01-16 County of Lingen (Habsburg)
+n/2126415900: end_date=1556-01-15 vs end_date:edtf=1556-01-16 County of Lingen (Habsburg)
+n/2126415904: end_date=1702-03-18 vs end_date:edtf=1702-03-19 County of Lingen (Nassau-Orange)
+n/2126415908: end_date=1702-03-18 vs end_date:edtf=1702-03-19 County of Lingen (Nassau-Orange)
+n/2130398958: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Passau
+r/2661252: end_date=1806-07-11 vs end_date:edtf=1806-07-12 County of Hohengeroldseck (1711-1806)
+r/2683539: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Margraviate of Baden (1771-1797)
+r/2693576: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Principality of Schwarzburg-Sondershausen (1697-1806)
+r/2693577: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Principality of Schwarzburg-Rudolstadt (1710-1806)
+r/2693977: end_date=1814-01-13 vs end_date:edtf=1814-01-14 Swedish Pomerania
+r/2694703: end_date=1613 vs end_date:edtf=1614~ County of Ravensberg (1346-1614)
+r/2694705: end_date=1614-11-11 vs end_date:edtf=1614-11-12 County of Mark (1521-1614)
+r/2694912: end_date=1648-05-14 vs end_date:edtf=1648-05-15 Prince-Archbishopric of Bremen (1381-1648)
+r/2695999: end_date=1807-07-06 vs end_date:edtf=1807-07-07 County of East Frisia (1600-1807)
+r/2696468: end_date=1806-03-14 vs end_date:edtf=1806-03-15 Duchy of Berg (1380-1806)
+r/2696471: end_date=1718 vs end_date:edtf=1719~ County of Ravensberg (1701-1719)
+r/2696473: end_date=1700 vs end_date:edtf=1701~ County of Ravensberg (1666-1701)
+r/2696474: end_date=1665 vs end_date:edtf=1666~ County of Ravensberg (1614-1666)
+r/2697882: end_date=1807-07-06 vs end_date:edtf=1807-07-07 Amt Freudenberg (1582-1807)
+r/2698297: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Hohenzollern-Hechingen (1623-1806)
+r/2744511: end_date=1795-04-04 vs end_date:edtf=1795-04-05 Duchy of Cleves (1614-1795)
+r/2748501: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Duchy of Luxembourg (1769-1797)
+r/2804283: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Duchy of Carniola
+r/2806819: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Provostry of Berchtesgaden
+r/2806820: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Archbishopric of Salzburg (1565-1803)
+r/2806961: end_date=1806-03-14 vs end_date:edtf=1806-03-15 County of Gimborn (1631-1806)
+r/2806963: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Paderborn
+r/2806964: end_date=1807-07-06 vs end_date:edtf=1807-07-07 County of Rietberg
+r/2806976: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Hildesheim (1623-1803)
+r/2806988: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Hesse-Kassel (1736-1797)
+r/2807022: end_date=1807-07-06 vs end_date:edtf=1807-07-07 Principality of Minden
+r/2807026: end_date=1805-12-14 vs end_date:edtf=1805-12-15 Hanover (1803-1805)
+r/2807027: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Hanover (1733-1803)
+r/2807028: end_date=1807-07-06 vs end_date:edtf=1807-07-07 Herrschaft Schmalkalden (1583-1807)
+r/2807030: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Münster (1654-1803)
+r/2807242: end_date=1807-07-06 vs end_date:edtf=1807-07-07 Duchy of Saxe-Lauenburg (1689-1807)
+r/2807493: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Neustädtischer Kreis (1660-1815)
+r/2807589: end_date=1807-07-06 vs end_date:edtf=1807-07-07 County of Diepholz (1585-1807)
+r/2808062: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Lordship of Cottbus
+r/2808135: end_date=1806-12-10 vs end_date:edtf=1806-12-11 Electoral Circle (1746-1806)
+r/2808388: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Lordship of Baruth
+r/2808389: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Lordship of Sonnewalde
+r/2808390: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Amt Dahme
+r/2808391: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Amt Jüterbog
+r/2808392: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Amt Belzig
+r/2808493: end_date=1807-07-08 vs end_date:edtf=1807-07-09 Altmark (1318-1807)
+r/2808803: end_date=1648-10-23 vs end_date:edtf=1648-10-24 Herrschaft Blumenegg (1391-1648)
+r/2809488: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Free Imperial City of Dortmund
+r/2809505: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Passau
+r/2809510: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Free Imperial City of Regensburg
+r/2809511: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Regensburg
+r/2809680: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Fulda
+r/2809681: end_date=1752-10-04 vs end_date:edtf=1752-10-05 Princely Abbey of Fulda
+r/2809685: end_date=1793-03-02 vs end_date:edtf=1793-03-03 Principality of Anhalt-Bernburg (1603-1793)
+r/2809686: end_date=1793-03-02 vs end_date:edtf=1793-03-03 Principality of Anhalt-Köthen (1603-1793)
+r/2809694: end_date=1812-12-23 vs end_date:edtf=1812-12-24 Anhalt-Bernburg-Schaumburg-Hoym
+r/2809696: end_date=1807-07-06 vs end_date:edtf=1807-07-07 Amt Alsleben
+r/2809702: end_date=1807-07-08 vs end_date:edtf=1807-07-09 Herrschaft Jever (1667-1807)
+r/2809746: end_date=1807-07-08 vs end_date:edtf=1807-07-09 Principality of Hildesheim
+r/2809747: end_date=1807-07-08 vs end_date:edtf=1807-07-09 County of Mark (1631-1807)
+r/2809748: end_date=1521-03-14 vs end_date:edtf=1521-03-15 County of Mark (1449-1521)
+r/2810078: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Princely Abbey of Stavelot-Malmedy
+r/2810096: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Duchy of Limburg (1648-1797)
+r/2810172: end_date=1678-09-16 vs end_date:edtf=1678-09-17 Burgundian Circle (1659-1678)
+r/2810173: end_date=1797-10-17 vs end_date:edtf=1797-10-16 Burgundian Circle (1769-1797)
+r/2810174: end_date=1779-05-12 vs end_date:edtf=1779-05-13 Bavarian Circle (1565-1779)
+r/2810435: end_date=1798-12-12 vs end_date:edtf=1798-12-13 French Republic (1798 01-12)
+r/2810439: end_date=1738-11-22 vs end_date:edtf=1738-11-23 Wild- and Rhinegraviate of Salm-Salm
+r/2810440: end_date=1797-02-18 vs end_date:edtf=1797-02-19 Principality of Salm-Salm
+r/2810446: end_date=1792-11-25 vs end_date:edtf=1792-11-26 Duchy of Savoy (1601-1792)
+r/2812123: end_date=1679-02-04 vs end_date:edtf=1679-02-05 Lower Rhenish–Westphalian Circle (1548-1679)
+r/2812125: end_date=1797-10-16 vs end_date:edtf=1797-10-17 County of Namur
+r/2812126: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Duchy of Brabant (1648-1797)
+r/2812127: end_date=1797-10-16 vs end_date:edtf=1797-10-17 County of Flanders (1659-1797)
+r/2812128: end_date=1797-10-16 vs end_date:edtf=1797-10-17 County of Hainaut (1659-1797)
+r/2815083: end_date=1661-02-27 vs end_date:edtf=1661-02-28 Barrois non mouvant (1301-1661)
+r/2815329: end_date=1661-02-27 vs end_date:edtf=1661-02-28 Duchy of Lorraine (?-1661)
+r/2815331: end_date=1766-02-22 vs end_date:edtf=1766-02-23 Barrois non mouvant (1718-1766)
+r/2815357: end_date=1697-09-19 vs end_date:edtf=1697-09-20 Barrois non mouvant (1661-1697)
+r/2815358: end_date=1697-09-19 vs end_date:edtf=1697-09-20 Duchy of Lorraine (1661-1697)
+r/2815359: end_date=1766-02-22 vs end_date:edtf=1766-02-23 Duchy of Lorraine (1718-1766)
+r/2830392: end_date=1742-07-27 vs end_date:edtf=1742-07-28 Lands of the Bohemian Crown (1635-1742)
+r/2830427: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Vogtländischer Kreis (1577-1815)
+r/2830429: end_date=1742-07-27 vs end_date:edtf=1742-07-28 Bohemia (1557-1742)
+r/2830430: end_date=1635-05-29 vs end_date:edtf=1635-05-30 Lands of the Bohemian Crown (1557-1635)
+r/2830431: end_date=1718-11-14 vs end_date:edtf=1718-11-15 Duchy of Saxe-Zeitz
+r/2830453: end_date=1806-04-14 vs end_date:edtf=1806-04-15 Reichsherrschaft Bonndorf
+r/2830460: end_date=1827-01-05 vs end_date:edtf=1827-01-06 County of Sayn-Hachenburg
+r/2830462: end_date=1803-04-26 vs end_date:edtf=1803-04-27 County of Sayn-Altenkirchen
+r/2830504: end_date=1742-07-27 vs end_date:edtf=1742-07-28 Moravia (1182-1742)
+r/2830505: end_date=1604-08-28 vs end_date:edtf=1604-08-29 Principality of Palatinate-Sulzbach (1569-1604)
+r/2830506: end_date=1742-12-30 vs end_date:edtf=1742-12-31 Principality of Palatinate-Sulzbach (1614-1742)
+r/2830563: end_date=1806-07-11 vs end_date:edtf=1806-07-12 Sayn-Wittgenstein-Hohenstein
+r/2830564: end_date=1810-02-15 vs end_date:edtf=1810-02-16 Hesse-Hanau (1760-1810)
+r/2830571: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Princely Abbey of Kempten (1289-1803)
+r/2830572: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Imperial Abbey of Irsee
+r/2830573: end_date=1624 vs end_date:edtf=1803-04-27 Imperial Abbey of Ottobeuren (1299-1624)
+r/2830574: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Imperial Abbey of Ottobeuren (1710-1803)
+r/2830576: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Free Imperial City of Kempten
+r/2830577: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Free Imperial City of Kaufbeuren
+r/2830580: end_date=1808-06-20 vs end_date:edtf=1808-06-21 Lordship of Hohenwaldeck
+r/2830581: end_date=1808-06-20 vs end_date:edtf=1808-06-21 Herrschaft Türkheim
+r/2830582: end_date=1808-06-20 vs end_date:edtf=1808-06-21 Herrschaft Mindelheim
+r/2830583: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Free Imperial City of Augsburg
+r/2830590: end_date=1705-03-19 vs end_date:edtf=1705-03-20 Electorate of Bavaria (1663-1705)
+r/2830593: end_date=1779-05-12 vs end_date:edtf=1779-05-13 Electorate of Bavaria (1764-1779)
+r/2830619: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Free Imperial City of Wetzlar
+r/2830659: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Free Imperial City of Mühlhausen
+r/2830672: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Free Imperial City of Nordhausen
+r/2830684: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Upper Saxon Circle (1593-1806)
+r/2830685: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Lower Saxon Circle (1593-1806)
+r/2830687: end_date=1597-09-29 vs end_date:edtf=1597-09-30 County of Schwarzburg-Frankenhausen
+r/2830688: end_date=1597-09-29 vs end_date:edtf=1597-09-30 County of Schwarzburg-Rudolstadt (1571-1597)
+r/2830709: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Hesse-Darmstadt (1736-1797)
+r/2830710: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Free Imperial City of Speyer
+r/2830712: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Free Imperial City of Friedberg
+r/2830736: end_date=1797-10-09 vs end_date:edtf=1797-10-10 Prince-Bishopric of Worms
+r/2830737: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Free Imperial City of Worms
+r/2830776: end_date=1723-12-05 vs end_date:edtf=1723-12-06 County of Nassau-Saarbrücken (1651-1723)
+r/2830777: end_date=1797-10-16 vs end_date:edtf=1797-10-17 County of Leiningen
+r/2830781: end_date=1679-02-04 vs end_date:edtf=1679-02-05 Free Imperial City of Weissenburg
+r/2830782: end_date=1679-02-04 vs end_date:edtf=1679-02-05 Free Imperial City of Landau
+r/2830880: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Margraviate of Baden (1797-1803)
+r/2830916: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Austrian Upper Guelders
+r/2830968: end_date=1815-06-08 vs end_date:edtf=1815-06-09 Vogtei Kreuzberg
+r/2830970: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Landgraviate of Hesse-Rotenburg (1627-1797)
+r/2830971: end_date=1736-03-27 vs end_date:edtf=1736-03-28 Hesse-Kassel (1648-1736)
+r/2830972: end_date=1648-10-23 vs end_date:edtf=1648-10-24 Hesse-Kassel (1640-1648)
+r/2830973: end_date=1648-10-23 vs end_date:edtf=1648-10-24 Imperial Abbey of Hersfeld
+r/2831006: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Imperial Abbey of Essen
+r/2831007: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Imperial Abbey of Werden
+r/2831008: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Free Imperial City of Cologne
+r/2831009: end_date=1795-04-05 vs end_date:edtf=1795-04-04 County of Moers
+r/2831013: end_date=1713-04-01 vs end_date:edtf=1713-04-02 Lower Rhenish–Westphalian Circle (1679-1713)
+r/2831130: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Imperial Abbey of Thorn
+r/2831136: end_date=1785-11-07 vs end_date:edtf=1785-11-08 County of Dalhem (Habsburg, 1661-1785)
+r/2831138: end_date=1785-11-07 vs end_date:edtf=1785-11-08 Landen van Overmaas (1661-1785)
+r/2831139: end_date=1785-11-07 vs end_date:edtf=1785-11-08 's-Hertogenrode (1661-1785)
+r/2831140: end_date=1785-11-07 vs end_date:edtf=1785-11-08 Land van Valkenburg (1661-1785)
+r/2831144: end_date=1678-09-16 vs end_date:edtf=1678-09-17 Cambrésis (948-1678)
+r/2831155: end_date=1798-01-27 vs end_date:edtf=1798-01-28 Republic of Mulhouse
+r/2831156: end_date=1679-02-04 vs end_date:edtf=1679-02-05 Free Imperial City of Munster
+r/2831157: end_date=1679-02-04 vs end_date:edtf=1679-02-05 Free Imperial City of Colmar
+r/2831158: end_date=1648-10-23 vs end_date:edtf=1648-10-24 Sundgau (13c.-1648)
+r/2831159: end_date=1648-05-14 vs end_date:edtf=1648-05-15 Austrian Circle (1618-1648)
+r/2831172: end_date=1679-02-04 vs end_date:edtf=1679-02-05 Free Imperial City of Schlettstadt
+r/2831223: end_date=1681-09-29 vs end_date:edtf=1681-09-30 Free Imperial City of Strasbourg
+r/2831258: end_date=1791-01-23 vs end_date:edtf=1791-01-24 County of Lützelstein
+r/2831333: end_date=1679-02-04 vs end_date:edtf=1679-02-05 Free Imperial City of Kaysersberg
+r/2831334: end_date=1679-02-04 vs end_date:edtf=1679-02-05 Free Imperial City of Turckheim
+r/2831336: end_date=1679-02-04 vs end_date:edtf=1679-02-05 Free Imperial City of Rosheim
+r/2831337: end_date=1679-02-04 vs end_date:edtf=1679-02-05 Free Imperial City of Obernai
+r/2831375: end_date=1791-09-13 vs end_date:edtf=1791-09-14 County of Rappoltstein
+r/2831381: end_date=1679-02-04 vs end_date:edtf=1679-02-05 Free Imperial City of Hagenau
+r/2831618: end_date=1581-07-25 vs end_date:edtf=1581-07-26 Duchy of Guelders
+r/2831685: end_date=1536-08-04 vs end_date:edtf=1536-08-05 County of Drenthe
+r/2831691: end_date=1548-06-25 vs end_date:edtf=1548-06-26 Lower Rhenish–Westphalian Circle (1500-1548)
+r/2831954: end_date=1815-06-08 vs end_date:edtf=1815-06-09 County of (Upper) Schönburg
+r/2832004: end_date=1554-02-23 vs end_date:edtf=1554-02-24 Duchy of Saxony (1547-1554)
+r/2832638: end_date=1803-03-24 vs end_date:edtf=1803-04-27 Free Imperial City of Esslingen
+r/2832639: end_date=1803-03-24 vs end_date:edtf=1803-04-27 Free Imperial City of Weil
+r/2832640: end_date=1803-03-24 vs end_date:edtf=1803-04-27 Free Imperial City of Heilbronn
+r/2832641: end_date=1803-03-24 vs end_date:edtf=1803-04-27 Free Imperial City of Reutlingen
+r/2832689: end_date=1803-03-24 vs end_date:edtf=1803-04-27 Free Imperial City of Ulm
+r/2832706: end_date=1360-12-02 vs end_date:edtf=1360-12-03 Free Imperial City of Gmünd (1250-1360)
+r/2832713: end_date=1803-03-24 vs end_date:edtf=1803-04-27 Free Imperial City of Dinkelsbühl
+r/2832714: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Swabian Circle
+r/2832737: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Prince-Bishopric of Speyer (1697-1797)
+r/2832827: end_date=1803-03-24 vs end_date:edtf=1803-04-27 Free Imperial City of Rottweil
+r/2832841: end_date=1797-10-16 vs end_date:edtf=1797-10-17 County of Sponheim (1437-1797)
+r/2832842: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Rhinegraviate
+r/2832926: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Lordship of Reipoltskirchen
+r/2833825: end_date=1797-10-16 vs end_date:edtf=1797-10-17 County of Blieskastel
+r/2834738: end_date=1771-10-20 vs end_date:edtf=1771-10-21 Margraviate of Baden-Durlach
+r/2834739: end_date=1771-10-20 vs end_date:edtf=1771-10-21 Margraviate of Baden-Baden
+r/2834849: end_date=1712-01-05 vs end_date:edtf=1712-01-06 Waldeck (1526-1712)
+r/2835925: end_date=1803-04-26 vs end_date:edtf=1803-04-27 Prince-Bishopric of Lübeck
+r/2835926: end_date=1810-07-08 vs end_date:edtf=1810-07-09 Principality of Lübeck (1803-1810)
+r/2839759: end_date=1678-09-16 vs end_date:edtf=1678-09-17 Free County of Burgundy (1654-1678)
+r/2840436: end_date=1806-07-11 vs end_date:edtf=1806-07-12 County of Steinfurt
+r/2852002: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Free Imperial City of Aachen
+r/2853878: end_date=1713-04-10 vs end_date:edtf=1713-04-11 Upper Rhenish Circle
+w/199296850: start_date=1916 vs start_date:edtf=1945/1953 
