@@ -1,6 +1,5 @@
 n/2091745580: end_date=1806-08-12 vs end_date:edtf=1806-08-13 Dresden
 n/2094763029: end_date=1614-11-11 vs end_date:edtf=1614-11-12 Duchy of Berg
-n/2104261172: end_date=1379 vs end_date:edtf=1380~ County of Berg
 n/2104261174: end_date=1614-11-11 vs end_date:edtf=1614-11-12 County of Mark
 n/2104341367: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Duchy of Luxembourg (Austria)
 n/2108636960: end_date=1766-02-22 vs end_date:edtf=1766-02-23 Duchy of Lorraine
@@ -138,14 +137,10 @@ r/2683539: end_date=1797-10-16 vs end_date:edtf=1797-10-17 Margraviate of Baden 
 r/2693576: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Principality of Schwarzburg-Sondershausen (1697-1806)
 r/2693577: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Principality of Schwarzburg-Rudolstadt (1710-1806)
 r/2693977: end_date=1814-01-13 vs end_date:edtf=1814-01-14 Swedish Pomerania
-r/2694703: end_date=1613 vs end_date:edtf=1614~ County of Ravensberg (1346-1614)
 r/2694705: end_date=1614-11-11 vs end_date:edtf=1614-11-12 County of Mark (1521-1614)
 r/2694912: end_date=1648-05-14 vs end_date:edtf=1648-05-15 Prince-Archbishopric of Bremen (1381-1648)
 r/2695999: end_date=1807-07-06 vs end_date:edtf=1807-07-07 County of East Frisia (1600-1807)
 r/2696468: end_date=1806-03-14 vs end_date:edtf=1806-03-15 Duchy of Berg (1380-1806)
-r/2696471: end_date=1718 vs end_date:edtf=1719~ County of Ravensberg (1701-1719)
-r/2696473: end_date=1700 vs end_date:edtf=1701~ County of Ravensberg (1666-1701)
-r/2696474: end_date=1665 vs end_date:edtf=1666~ County of Ravensberg (1614-1666)
 r/2697882: end_date=1807-07-06 vs end_date:edtf=1807-07-07 Amt Freudenberg (1582-1807)
 r/2698297: end_date=1806-08-05 vs end_date:edtf=1806-08-06 Hohenzollern-Hechingen (1623-1806)
 r/2744511: end_date=1795-04-04 vs end_date:edtf=1795-04-05 Duchy of Cleves (1614-1795)
