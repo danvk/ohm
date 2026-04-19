@@ -14,6 +14,7 @@ from osmium.osm import Node, OSMObject, Relation, Way
 from dates import (
     DateTuple,
     Range,
+    end_of_date,
     overlaps,
     parse_ohm_date,
     parse_ohm_range,
@@ -72,14 +73,19 @@ FAR_FUTURE = 2050
 ONE_DAY = datetime.timedelta(days=1)
 
 
-def _is_one_day_off(plain_tup: DateTuple, lo: DateTuple, hi: DateTuple) -> bool:
-    """Return True if plain_tup is exactly one day before lo or one day after hi."""
+def _is_one_day_off(
+    plain_lo: DateTuple, plain_hi: DateTuple, lo: DateTuple, hi: DateTuple
+) -> bool:
+    """Return True if the plain date range misses the EDTF interval by exactly one day.
+
+    Covers two cases: the plain range ends one day before the EDTF interval
+    starts, or starts one day after the EDTF interval ends.
+    """
     try:
-        plain_date = datetime.date(*plain_tup)
-        if plain_tup < lo:
-            return datetime.date(*lo) - plain_date == ONE_DAY
+        if plain_hi < lo:
+            return datetime.date(*lo) - datetime.date(*plain_hi) == ONE_DAY
         else:
-            return plain_date - datetime.date(*hi) == ONE_DAY
+            return datetime.date(*plain_lo) - datetime.date(*hi) == ONE_DAY
     except (ValueError, OverflowError):
         return False
 
@@ -199,9 +205,10 @@ class DateExtractor(osmium.SimpleHandler):
             if plain:
                 plain_parsed = parse_ohm_date(plain)
                 if plain_parsed:
-                    plain_tup = start_of_date(plain_parsed)
+                    plain_lo = start_of_date(plain_parsed)
+                    plain_hi = end_of_date(plain_parsed)
                     lo, hi = interval
-                    if not (lo <= plain_tup <= hi):
+                    if not (plain_lo <= hi and lo <= plain_hi):
                         self.edtf_mismatch.append(
                             (
                                 typ,
@@ -209,7 +216,7 @@ class DateExtractor(osmium.SimpleHandler):
                                 f"{plain_tag}={plain} vs {edtf_tag}={edtf_str} {name}",
                             )
                         )
-                        if _is_one_day_off(plain_tup, lo, hi):
+                        if _is_one_day_off(plain_lo, plain_hi, lo, hi):
                             self.n_edtf_off_by_one += 1
 
         if has_edtf:

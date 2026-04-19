@@ -1,3 +1,4 @@
+import calendar
 import re
 from typing import Optional, Tuple
 
@@ -52,6 +53,17 @@ def start_of_date(parsed: Tuple[int, Optional[int], Optional[int]]) -> DateTuple
         return (year, 1, 1)
     if day is None:
         return (year, month, 1)
+    return (year, month, day)
+
+
+def end_of_date(parsed: Tuple[int, Optional[int], Optional[int]]) -> DateTuple:
+    year, month, day = parsed
+
+    if month is None:
+        return (year, 12, 31)
+    if day is None:
+        last_day = calendar.monthrange(year, month)[1]
+        return (year, month, last_day)
     return (year, month, day)
 
 

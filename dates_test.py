@@ -5,6 +5,7 @@ from dates import (
     NEG_INF,
     POS_INF,
     duration_years,
+    end_of_date,
     overlaps,
     parse_ohm_date,
     parse_ohm_range,
@@ -63,6 +64,32 @@ class TestParseOhmDate:
         assert parse_ohm_date("600 BC") is None
         assert parse_ohm_date("1975..1985") is None
         assert parse_ohm_date("1984-02..2009") is None
+
+
+class TestEndOfDate:
+    def test_year_only(self):
+        assert end_of_date((2026, None, None)) == (2026, 12, 31)
+
+    def test_year_month_regular(self):
+        assert end_of_date((1971, 7, None)) == (1971, 7, 31)
+
+    def test_year_month_thirty_days(self):
+        assert end_of_date((1971, 6, None)) == (1971, 6, 30)
+
+    def test_year_month_february_leap(self):
+        assert end_of_date((1972, 2, None)) == (1972, 2, 29)
+
+    def test_year_month_february_non_leap(self):
+        assert end_of_date((1971, 2, None)) == (1971, 2, 28)
+
+    def test_year_month_day(self):
+        assert end_of_date((2026, 5, 15)) == (2026, 5, 15)
+
+    def test_negative_year(self):
+        assert end_of_date((-500, None, None)) == (-500, 12, 31)
+
+    def test_negative_year_month(self):
+        assert end_of_date((-500, 7, None)) == (-500, 7, 31)
 
 
 class TestStartOfDate:
@@ -288,6 +315,16 @@ class TestEdtfInterval:
         lo, hi = edtf_interval("1948")
         assert not (lo <= plain <= hi)
 
+    def test_year_plain_overlaps_edtf_sub_interval(self):
+        # start_date=1971 covers [1971-01-01, 1971-12-31].
+        # start_date:edtf=1971-07-02/1972-03-31 covers [1971-07-02, 1972-03-31].
+        # These overlap, so this should NOT be flagged as a mismatch.
+        plain_parsed = parse_ohm_date("1971")
+        plain_lo = start_of_date(plain_parsed)
+        plain_hi = end_of_date(plain_parsed)
+        lo, hi = edtf_interval("1971-07-02/1972-03-31")
+        assert plain_lo <= hi and lo <= plain_hi  # overlaps — no mismatch
+
 
 class TestEdtfWikiExamples:
     """Test cases drawn from the OHM wiki:
@@ -447,35 +484,41 @@ class TestEdtfWikiExamples:
 
 
 class TestIsOneDayOff:
+    """_is_one_day_off(plain_lo, plain_hi, lo, hi) — all args are DateTuples."""
+
     def test_one_day_before_lo(self):
         # The motivating case: end_date=1948-05-08, end_date:edtf=1948-05-09
+        # Both are exact days, so plain_lo == plain_hi and lo == hi.
         lo = hi = (1948, 5, 9)
-        assert _is_one_day_off((1948, 5, 8), lo, hi)
+        assert _is_one_day_off((1948, 5, 8), (1948, 5, 8), lo, hi)
 
     def test_one_day_after_hi(self):
         lo = hi = (1948, 5, 8)
-        assert _is_one_day_off((1948, 5, 9), lo, hi)
+        assert _is_one_day_off((1948, 5, 9), (1948, 5, 9), lo, hi)
 
     def test_two_days_off_is_false(self):
         lo = hi = (1948, 5, 9)
-        assert not _is_one_day_off((1948, 5, 7), lo, hi)
+        assert not _is_one_day_off((1948, 5, 7), (1948, 5, 7), lo, hi)
 
     def test_exact_match_is_false(self):
         # Inside the interval — not a mismatch at all, so not off-by-one
         lo = hi = (1948, 5, 8)
-        assert not _is_one_day_off((1948, 5, 8), lo, hi)
+        assert not _is_one_day_off((1948, 5, 8), (1948, 5, 8), lo, hi)
 
     def test_one_day_across_month_boundary(self):
         lo = hi = (1948, 6, 1)
-        assert _is_one_day_off((1948, 5, 31), lo, hi)
+        assert _is_one_day_off((1948, 5, 31), (1948, 5, 31), lo, hi)
 
     def test_one_day_across_year_boundary(self):
         lo = hi = (1949, 1, 1)
-        assert _is_one_day_off((1948, 12, 31), lo, hi)
+        assert _is_one_day_off((1948, 12, 31), (1948, 12, 31), lo, hi)
 
-    def test_interval_not_just_point(self):
-        # plain is one day before a range interval's lower bound
-        lo, hi = (1948, 5, 9), (1948, 5, 20)
-        assert _is_one_day_off((1948, 5, 8), lo, hi)
-        # plain is one day after the upper bound
-        assert _is_one_day_off((1948, 5, 21), lo, hi)
+    def test_plain_range_ends_one_day_before_edtf(self):
+        # plain=1948-05 → [1948-05-01, 1948-05-31]; edtf starts 1948-06-01
+        lo, hi = (1948, 6, 1), (1948, 6, 30)
+        assert _is_one_day_off((1948, 5, 1), (1948, 5, 31), lo, hi)
+
+    def test_plain_range_starts_one_day_after_edtf(self):
+        # plain=1948-06 → [1948-06-01, 1948-06-30]; edtf ends 1948-05-31
+        lo, hi = (1948, 5, 1), (1948, 5, 31)
+        assert _is_one_day_off((1948, 6, 1), (1948, 6, 30), lo, hi)
