@@ -5,6 +5,7 @@ import re
 import time
 
 import edtf as edtf_lib
+from edtf.parser.parser_classes import UnspecifiedIntervalSection
 import osmium
 import osmium.filter
 from osmium.osm import Node, OSMObject, Relation, Way
@@ -38,6 +39,21 @@ def edtf_interval(edtf_str: str) -> tuple[DateTuple, DateTuple] | None:
         hi = parsed.upper_fuzzy()  # type: ignore[attr-defined]
     except Exception:
         return None
+    # "1752/" and "/1818" use an empty UnspecifiedIntervalSection for the open
+    # end.  The library resolves this to a computed fuzzy date (~10 years out)
+    # instead of infinity.  Detect and override to the correct infinite bound.
+    if (
+        hasattr(parsed, "lower")
+        and isinstance(parsed.lower, UnspecifiedIntervalSection)
+        and str(parsed.lower) == ""
+    ):
+        lo = float("-inf")
+    if (
+        hasattr(parsed, "upper")
+        and isinstance(parsed.upper, UnspecifiedIntervalSection)
+        and str(parsed.upper) == ""
+    ):
+        hi = float("inf")
     lo_tup: DateTuple = (
         (lo.tm_year, lo.tm_mon, lo.tm_mday)
         if isinstance(lo, time.struct_time)

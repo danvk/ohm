@@ -206,18 +206,42 @@ class TestEdtfInterval:
         assert edtf_interval("1948") == ((1948, 1, 1), (1948, 12, 31))
 
     def test_approximate_year(self):
-        # 1948~ is uncertain/approximate but still bounded to that year
+        # 1948~ uses lower_fuzzy/upper_fuzzy, which extends ~1 year in each direction
         lo, hi = edtf_interval("1948~")
-        assert lo == (1948, 1, 1)
-        assert hi == (1948, 12, 31)
+        assert lo == (1947, 1, 1)
+        assert hi == (1949, 12, 31)
 
     def test_interval(self):
         assert edtf_interval("1944/1950") == ((1944, 1, 1), (1950, 12, 31))
 
-    def test_open_ended_upper(self):
+    def test_open_ended_upper_dotdot(self):
+        # "1948/.." — explicit open end with ".."
         lo, hi = edtf_interval("1948/..")
         assert lo == (1948, 1, 1)
         assert hi == (10**12, 1, 1)
+
+    def test_open_ended_upper_bare_slash(self):
+        # "1752/" — open end written without ".."; the library returns a
+        # computed fuzzy date (~10 years out) rather than infinity, so we
+        # must override it.  end_date=1799 should be compatible.
+        lo, hi = edtf_interval("1752/")
+        assert lo == (1752, 1, 1)
+        assert hi == (10**12, 1, 1)
+        assert lo <= (1799, 1, 1) <= hi
+
+    def test_open_ended_lower_dotdot(self):
+        # "../1818" — explicit open start with ".."
+        lo, hi = edtf_interval("../1818")
+        assert lo == (-(10**12), 1, 1)
+        assert hi == (1818, 12, 31)
+
+    def test_open_ended_lower_bare_slash(self):
+        # "/1818" — open start written without ".."; same library quirk as
+        # the upper case.  start_date=1500 should be compatible.
+        lo, hi = edtf_interval("/1818")
+        assert lo == (-(10**12), 1, 1)
+        assert hi == (1818, 12, 31)
+        assert lo <= (1500, 1, 1) <= hi
 
     def test_invalid_returns_none(self):
         # Strings that are not valid EDTF at all
