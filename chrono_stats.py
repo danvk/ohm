@@ -30,12 +30,12 @@ def edtf_interval(edtf_str: str) -> tuple[DateTuple, DateTuple] | None:
     """Parse an EDTF string and return (lower, upper) as DateTuples, or None on failure.
 
     Returns None if the string is not valid EDTF, or if the library cannot compute
-    strict bounds (e.g. partially-unspecified dates like '1X00-1X-1X').
+    fuzzy bounds (e.g. partially-unspecified dates like '1X00-1X-1X').
     """
     try:
         parsed = edtf_lib.parse_edtf(edtf_str)  # type: ignore[attr-defined]
-        lo = parsed.lower_strict()  # type: ignore[attr-defined]
-        hi = parsed.upper_strict()  # type: ignore[attr-defined]
+        lo = parsed.lower_fuzzy()  # type: ignore[attr-defined]
+        hi = parsed.upper_fuzzy()  # type: ignore[attr-defined]
     except Exception:
         return None
     lo_tup: DateTuple = (
