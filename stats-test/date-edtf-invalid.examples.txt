@@ -1,0 +1,8 @@
+n/2119122783: start_date:edtf=~981 County of Namur
+n/2147219669: end_date:edtf=1974-03-31T24:00 County of York, West Riding
+r/2809511: start_date:edtf=c13 Prince-Bishopric of Regensburg
+r/2812125: start_date:edtf=~981 County of Namur
+r/2815085: start_date:edtf=mid c10 County of Clermont-en-Argonne
+r/2840420: end_date:edtf=Lingen lost County of Tecklenburg (1400-1548)
+r/2902380: end_date:edtf=1974-03-31T24:00 Yorkshire
+w/200622259: start_date:edtf=C18 Rhine
