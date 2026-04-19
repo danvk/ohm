@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import functools
 import itertools
 import re
@@ -68,6 +69,19 @@ def edtf_interval(edtf_str: str) -> tuple[DateTuple, DateTuple] | None:
 
 
 FAR_FUTURE = 2050
+ONE_DAY = datetime.timedelta(days=1)
+
+
+def _is_one_day_off(plain_tup: DateTuple, lo: DateTuple, hi: DateTuple) -> bool:
+    """Return True if plain_tup is exactly one day before lo or one day after hi."""
+    try:
+        plain_date = datetime.date(*plain_tup)
+        if plain_tup < lo:
+            return datetime.date(*lo) - plain_date == ONE_DAY
+        else:
+            return plain_date - datetime.date(*hi) == ONE_DAY
+    except (ValueError, OverflowError):
+        return False
 
 type OsmKey = tuple[str, int]  # {"n", "w", "r"} + ID
 
@@ -113,6 +127,7 @@ class DateExtractor(osmium.SimpleHandler):
         self.invalid_edtf = []
         self.n_dot_dot_edtf = 0
         self.edtf_mismatch = []
+        self.n_edtf_off_by_one = 0
 
     def handle_object(self, typ: str, f: OSMObject):
         name = f.tags.get("name")
@@ -194,6 +209,8 @@ class DateExtractor(osmium.SimpleHandler):
                                 f"{plain_tag}={plain} vs {edtf_tag}={edtf_str} {name}",
                             )
                         )
+                        if _is_one_day_off(plain_tup, lo, hi):
+                            self.n_edtf_off_by_one += 1
 
         if has_edtf:
             self.n_edtf += 1
@@ -369,6 +386,7 @@ def main() -> None:
             "dated-timeless": handler.n_timeless,
             "edtf-features": handler.n_edtf,
             "edtf-invalid-dot-dot": handler.n_dot_dot_edtf,
+            "edtf-mismatch-off-by-one-day": handler.n_edtf_off_by_one,
         },
     )
 

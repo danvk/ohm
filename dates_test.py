@@ -1,6 +1,6 @@
 import pytest
 
-from chrono_stats import edtf_interval
+from chrono_stats import _is_one_day_off, edtf_interval
 from dates import (
     NEG_INF,
     POS_INF,
@@ -444,3 +444,38 @@ class TestEdtfWikiExamples:
         # "Date and time" — end_date:edtf=2011-10-04T05:00
         # The edtf library does not support the datetime (T) format.
         assert edtf_interval("2011-10-04T05:00") is None
+
+
+class TestIsOneDayOff:
+    def test_one_day_before_lo(self):
+        # The motivating case: end_date=1948-05-08, end_date:edtf=1948-05-09
+        lo = hi = (1948, 5, 9)
+        assert _is_one_day_off((1948, 5, 8), lo, hi)
+
+    def test_one_day_after_hi(self):
+        lo = hi = (1948, 5, 8)
+        assert _is_one_day_off((1948, 5, 9), lo, hi)
+
+    def test_two_days_off_is_false(self):
+        lo = hi = (1948, 5, 9)
+        assert not _is_one_day_off((1948, 5, 7), lo, hi)
+
+    def test_exact_match_is_false(self):
+        # Inside the interval — not a mismatch at all, so not off-by-one
+        lo = hi = (1948, 5, 8)
+        assert not _is_one_day_off((1948, 5, 8), lo, hi)
+
+    def test_one_day_across_month_boundary(self):
+        lo = hi = (1948, 6, 1)
+        assert _is_one_day_off((1948, 5, 31), lo, hi)
+
+    def test_one_day_across_year_boundary(self):
+        lo = hi = (1949, 1, 1)
+        assert _is_one_day_off((1948, 12, 31), lo, hi)
+
+    def test_interval_not_just_point(self):
+        # plain is one day before a range interval's lower bound
+        lo, hi = (1948, 5, 9), (1948, 5, 20)
+        assert _is_one_day_off((1948, 5, 8), lo, hi)
+        # plain is one day after the upper bound
+        assert _is_one_day_off((1948, 5, 21), lo, hi)
