@@ -263,3 +263,160 @@ class TestEdtfInterval:
         plain = (1949, 1, 1)
         lo, hi = edtf_interval("1948")
         assert not (lo <= plain <= hi)
+
+
+class TestEdtfWikiExamples:
+    """Test cases drawn from the OHM wiki:
+    https://wiki.openstreetmap.org/wiki/OpenHistoricalMap/Tags/Key/start_date:edtf
+    https://wiki.openstreetmap.org/wiki/OpenHistoricalMap/Tags/Key/end_date:edtf
+    Each case is a valid start_date / start_date:edtf (or end_date / end_date:edtf) pair.
+    """
+
+    # ------------------------------------------------------------------
+    # start_date:edtf examples
+    # ------------------------------------------------------------------
+
+    def test_year_only(self):
+        # "Year only" — start_date=1970, start_date:edtf=1970
+        lo, hi = edtf_interval("1970")
+        assert lo == (1970, 1, 1) and hi == (1970, 12, 31)
+        assert lo <= start_of_date(parse_ohm_date("1970")) <= hi
+
+    def test_approximate_date(self):
+        # "Approximate date" — start_date=1849, start_date:edtf=1849~
+        lo, hi = edtf_interval("1849~")
+        assert lo <= start_of_date(parse_ohm_date("1849")) <= hi
+
+    def test_uncertain_date(self):
+        # "Uncertain date" — start_date=1804, start_date:edtf=1804?
+        lo, hi = edtf_interval("1804?")
+        assert lo <= start_of_date(parse_ohm_date("1804")) <= hi
+
+    def test_date_range_interval(self):
+        # "Date range" — start_date=1908, start_date:edtf=1906/1908
+        lo, hi = edtf_interval("1906/1908")
+        assert lo <= start_of_date(parse_ohm_date("1908")) <= hi
+
+    def test_date_range_set(self):
+        # "Date range" — start_date=1908, start_date:edtf=[1906..1908]
+        lo, hi = edtf_interval("[1906..1908]")
+        assert lo <= start_of_date(parse_ohm_date("1908")) <= hi
+
+    def test_century_midpoint_interval(self):
+        # "Century midpoint" — start_date=1750, start_date:edtf=1730/1770
+        lo, hi = edtf_interval("1730/1770")
+        assert lo <= start_of_date(parse_ohm_date("1750")) <= hi
+
+    def test_century_midpoint_set(self):
+        # "Century midpoint" — start_date=1750, start_date:edtf=[1730..1770]
+        lo, hi = edtf_interval("[1730..1770]")
+        assert lo <= start_of_date(parse_ohm_date("1750")) <= hi
+
+    def test_decade(self):
+        # "Decade" — start_date=1895, start_date:edtf=189X
+        lo, hi = edtf_interval("189X")
+        assert lo <= start_of_date(parse_ohm_date("1895")) <= hi
+
+    def test_date_before_interval(self):
+        # "Date before" — start_date=1800, start_date:edtf=/1800
+        lo, hi = edtf_interval("/1800")
+        assert lo <= start_of_date(parse_ohm_date("1800")) <= hi
+
+    def test_date_before_set(self):
+        # "Date before" — start_date=1800, start_date:edtf=[..1800]
+        lo, hi = edtf_interval("[..1800]")
+        assert lo <= start_of_date(parse_ohm_date("1800")) <= hi
+
+    def test_early_month_range(self):
+        # "Early April 1992" — start_date=1992-04, start_date:edtf=1992-04-01/1992-04-10
+        lo, hi = edtf_interval("1992-04-01/1992-04-10")
+        assert lo <= start_of_date(parse_ohm_date("1992-04")) <= hi
+
+    def test_season_autumn(self):
+        # "Season" — start_date=1814, start_date:edtf=1814-23 (EDTF season 23 = autumn)
+        # Season codes resolve to a sub-year interval, so a year-level plain date
+        # (which maps to Jan 1 via start_of_date) falls before the autumn window.
+        # This is a known limitation of the compatibility check for season-coded EDTF.
+        lo, hi = edtf_interval("1814-23")
+        assert lo == (1814, 9, 1) and hi == (1814, 11, 30)
+
+    def test_late_season(self):
+        # "Late season" — start_date=1887, start_date:edtf=1887-39 (late autumn/winter)
+        # Same caveat as test_season_autumn: year-level plain date falls outside interval.
+        lo, hi = edtf_interval("1887-39")
+        assert lo == (1887, 9, 1) and hi == (1887, 12, 31)
+
+    def test_datetime_not_supported_start(self):
+        # "Specific date with time" — start_date:edtf=1960-05-01T13:00
+        # The edtf library does not support the datetime (T) format.
+        assert edtf_interval("1960-05-01T13:00") is None
+
+    # ------------------------------------------------------------------
+    # end_date:edtf examples
+    # ------------------------------------------------------------------
+
+    def test_year_only_end(self):
+        # "Year only" — end_date=1272, end_date:edtf=1272
+        lo, hi = edtf_interval("1272")
+        assert lo <= start_of_date(parse_ohm_date("1272")) <= hi
+
+    def test_circa(self):
+        # "circa 1871" — end_date=1871, end_date:edtf=1871~
+        lo, hi = edtf_interval("1871~")
+        assert lo <= start_of_date(parse_ohm_date("1871")) <= hi
+
+    def test_mid_century(self):
+        # "Mid sixteenth century" — end_date=1550, end_date:edtf=1550~
+        lo, hi = edtf_interval("1550~")
+        assert lo <= start_of_date(parse_ohm_date("1550")) <= hi
+
+    def test_decade_unknown_year(self):
+        # "1960s" — end_date=1960, end_date:edtf=196X
+        lo, hi = edtf_interval("196X")
+        assert lo <= start_of_date(parse_ohm_date("1960")) <= hi
+
+    def test_century_unknown_decade(self):
+        # "15th century" — end_date=1450, end_date:edtf=14XX
+        lo, hi = edtf_interval("14XX")
+        assert lo <= start_of_date(parse_ohm_date("1450")) <= hi
+
+    def test_between_dates_interval(self):
+        # "Between 1908 and 1909" — end_date=1908, end_date:edtf=1908/1909
+        lo, hi = edtf_interval("1908/1909")
+        assert lo <= start_of_date(parse_ohm_date("1908")) <= hi
+
+    def test_between_dates_set(self):
+        # "Between 1908 and 1909" — end_date=1908, end_date:edtf=[1908..1909]
+        lo, hi = edtf_interval("[1908..1909]")
+        assert lo <= start_of_date(parse_ohm_date("1908")) <= hi
+
+    def test_early_period(self):
+        # "Early 1840s" — end_date=1840, end_date:edtf=1840/1845
+        lo, hi = edtf_interval("1840/1845")
+        assert lo <= start_of_date(parse_ohm_date("1840")) <= hi
+
+    def test_indefinite_end_interval(self):
+        # "On or before 2000" — end_date=2000, end_date:edtf=/2000
+        lo, hi = edtf_interval("/2000")
+        assert lo <= start_of_date(parse_ohm_date("2000")) <= hi
+
+    def test_indefinite_end_set(self):
+        # "On or before 2000" — end_date=2000, end_date:edtf=[..2000]
+        lo, hi = edtf_interval("[..2000]")
+        assert lo <= start_of_date(parse_ohm_date("2000")) <= hi
+
+    def test_as_of(self):
+        # "Building shown on 1935 map" — end_date=1935, end_date:edtf=/1935
+        lo, hi = edtf_interval("/1935")
+        assert lo <= start_of_date(parse_ohm_date("1935")) <= hi
+
+    def test_season_winter(self):
+        # "Winter of 1940" — end_date=1940, end_date:edtf=1940-24 (EDTF season 24 = winter)
+        # Same caveat as test_season_autumn: year-level plain date falls outside interval.
+        lo, hi = edtf_interval("1940-24")
+        assert lo == (1940, 12, 1) and hi == (1940, 12, 31)
+
+    def test_datetime_not_supported_end(self):
+        # "Date and time" — end_date:edtf=2011-10-04T05:00
+        # The edtf library does not support the datetime (T) format.
+        assert edtf_interval("2011-10-04T05:00") is None
