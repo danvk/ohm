@@ -397,9 +397,9 @@ def main() -> None:
             "dated-relations": n_dated_rels,
             "dated-features": handler.n_dated,
             "dated-timeless": handler.n_timeless,
-            "edtf-features": handler.n_edtf,
-            "edtf-invalid-dot-dot": handler.n_dot_dot_edtf,
-            "edtf-mismatch-off-by-one-day": handler.n_edtf_off_by_one,
+            "date-edtf-features": handler.n_edtf,
+            "date-edtf-invalid-dot-dot": handler.n_dot_dot_edtf,
+            "date-edtf-mismatch-off-by-one-day": handler.n_edtf_off_by_one,
         },
     )
 

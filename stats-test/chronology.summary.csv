@@ -1,10 +1,10 @@
 type,count
+date-edtf-features,432
+date-edtf-invalid-dot-dot,0
+date-edtf-mismatch-off-by-one-day,299
 dated-features,1444
 dated-relations,1400
 dated-timeless,0
-edtf-features,432
-edtf-invalid-dot-dot,0
-edtf-mismatch-off-by-one-day,299
 chronology-anonymous,7
 chronology-member-outside-range,5
 chronology-overlapping-members,6
