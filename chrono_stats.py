@@ -1,4 +1,5 @@
 import argparse
+import functools
 import itertools
 import re
 import time
@@ -24,6 +25,7 @@ NAME_RANGE_PAT = r"\(-?\d{3,}--?\d{3,}\)"
 DOT_DOT_EDTF_PAT = re.compile(r"^(-?\d[\d-]*)?\.\.(-?\d[\d-]*)?$")
 
 
+@functools.lru_cache(maxsize=None)
 def edtf_interval(edtf_str: str) -> tuple[DateTuple, DateTuple] | None:
     """Parse an EDTF string and return (lower, upper) as DateTuples, or None on failure.
 
