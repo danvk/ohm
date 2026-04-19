@@ -6,9 +6,9 @@ import re
 import time
 
 import edtf as edtf_lib
-from edtf.parser.parser_classes import UnspecifiedIntervalSection
 import osmium
 import osmium.filter
+from edtf.parser.parser_classes import UnspecifiedIntervalSection
 from osmium.osm import Node, OSMObject, Relation, Way
 
 from dates import (
@@ -89,6 +89,7 @@ def _is_one_day_off(
     except (ValueError, OverflowError):
         return False
 
+
 type OsmKey = tuple[str, int]  # {"n", "w", "r"} + ID
 
 # https://github.com/OpenHistoricalMap/iD/blob/7177516c0356f12a35a3a01e8ef599bada802d7f/modules/osm/tags.js#L389-L392
@@ -128,6 +129,7 @@ class DateExtractor(osmium.SimpleHandler):
         self.start_after_end = []
         self.end_no_start = list[OsmKey]()
         self.far_future = []
+        self.n_dated = 0
         self.n_timeless = 0
         self.n_edtf = 0
         self.invalid_edtf = []
@@ -145,6 +147,9 @@ class DateExtractor(osmium.SimpleHandler):
         start_date = f.tags.get("start_date")
         end_date = f.tags.get("end_date")
         name = f.tags.get("name:en") or f.tags.get("name") or ""
+        if start_date or end_date:
+            self.n_dated += 1
+
         if start_date:
             start_tup = parse_ohm_date(start_date)
             if not start_tup:
@@ -390,6 +395,7 @@ def main() -> None:
         by_type,
         {
             "dated-relations": n_dated_rels,
+            "dated-features": handler.n_dated,
             "dated-timeless": handler.n_timeless,
             "edtf-features": handler.n_edtf,
             "edtf-invalid-dot-dot": handler.n_dot_dot_edtf,
