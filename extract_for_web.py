@@ -30,6 +30,7 @@ import sys
 import time
 from typing import Any
 
+import json5
 import osmium
 import osmium.filter
 import osmium.osm
@@ -281,13 +282,17 @@ def write_json(path: str, data: Any) -> None:
     log(f"  Wrote {len(data):,} entries to {path}")
 
 
-def process_admin_level(level: str, args, tag_filter, chrono_to_members, graph):
+def process_admin_level(level: str, args, config, tag_filter, chrono_to_members, graph):
     osm_file = args.osm_file
+    level_config = config.get("by_level", {}).get(level)
+    config = {**config, **(level_config or {})}
+    log(f"{level} {config=}")
 
     # --- Pass 1: Relations ---
     log(f"{level} Pass 1: scanning relations …")
     t0 = time.monotonic()
     rel_handler = RelationHandler({level}, tag_filter=tag_filter)
+    # TODO: add more key filters here
     rel_handler.apply_file(osm_file, filters=[osmium.filter.KeyFilter("name")])
     elapsed = time.monotonic() - t0
     log(
@@ -297,8 +302,8 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members, graph):
     )
 
     # Convert meters → quantized units (1 unit ≈ 10 m, 1 unit² ≈ 100 m²)
-    rdp_tolerance = args.simplify_tolerance_m / 10.0
-    vw_tolerance = args.vw_tolerance_m2 / 100.0
+    rdp_tolerance = config["simplify_tolerance_m"] / 10.0
+    vw_tolerance = config["vw_tolerance_m2"] / 100.0
 
     # --- Pass 2: Ways ---
     log("Pass 2: scanning ways …")
@@ -389,19 +394,19 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members, graph):
 
 def color_graph(args):
     """Load graph data and produce ID->color, ID->canonical ID mappings."""
-    if not args.graph:
+    graph_file = args.get("graph")
+    if not graph_file:
         return None
 
     log("Loading graph and computing coloring …")
-    with open(args.graph, encoding="utf-8") as f:
+    with open(graph_file, encoding="utf-8") as f:
         graph = json.load(f)
-    # Build adjacency and run coloring
+
     adj = build_adjacency(graph)
-    if args.coloring == "dsatur":
-        coloring = dsatur_color(adj)
-    else:
-        coloring = greedy_color(adj)
-    log(f"  {len(set(coloring.values()))} colors used ({args.coloring})")
+    coloring = args["coloring"]
+    colorize_fn = dsatur_color if args == "dsatur" else greedy_color
+    coloring = colorize_fn(adj)
+    log(f"  {len(set(coloring.values()))} colors used ({coloring})")
 
     # Map every member and dropped relation ID to its color
     rel_color: dict[int, int] = {}
@@ -443,53 +448,33 @@ def main() -> None:
         help="Only output relations matching tag KEY with value in {VAL1, VAL2, ...}",
     )
     parser.add_argument(
-        "--simplify-tolerance-m",
-        type=float,
-        default=_DEFAULT_SIMPLIFY_TOLERANCE_M,
-        metavar="METERS",
-        help=(
-            "Ramer-Douglas-Peucker simplification tolerance in meters for open ways "
-            f"(default: {_DEFAULT_SIMPLIFY_TOLERANCE_M}). "
-            "Set to 0 to disable simplification."
-        ),
-    )
-    parser.add_argument(
         "--admin-levels",
-        default="2",
         metavar="LEVELS",
         help=(
-            "Comma-separated list of admin_level values to include "
-            "(default: 2). Example: --admin-levels 2,3,4"
+            "Comma-separated list of admin_level values to include. "
+            "This overrides the value in the config. Example: --admin-levels 2,3,4"
         ),
     )
     parser.add_argument(
-        "--graph",
-        metavar="GRAPH_JSON",
-        default=None,
-        help=(
-            "Path to a graph.json produced by build_connectivity_graph.py.  "
-            "When supplied, the script runs graph coloring and writes a "
-            "'color' integer property on every relation that appears in the graph."
-        ),
+        "--config",
+        type=str,
+        help="Path to output configuration file (JSONC)",
+        required=True,
     )
-    parser.add_argument(
-        "--coloring",
-        choices=["welsh-powell", "dsatur"],
-        default="welsh-powell",
-        help="Graph coloring algorithm to use (default: welsh-powell)",
-    )
-    parser.add_argument(
-        "--vw-tolerance-m2",
-        type=float,
-        default=_DEFAULT_VW_TOLERANCE_M2,
-        metavar="M2",
-        help=(
-            "Visvalingam–Whyatt area threshold in m² for closed rings "
-            f"(default: {_DEFAULT_VW_TOLERANCE_M2}). "
-            "Set to 0 to disable simplification for closed rings."
-        ),
-    )
+
     args = parser.parse_args()
+    config = json5.load(open(args.config))
+    DEFAULTS = {
+        "coloring": "welsh-powell",
+        "vw_tolerance_m2": _DEFAULT_VW_TOLERANCE_M2,
+        "simplify_tolerance_m": _DEFAULT_SIMPLIFY_TOLERANCE_M,
+    }
+    for k, v in DEFAULTS.items():
+        if not config.get(k):
+            config[k] = v
+    if config.get("coloring"):
+        assert config.get("coloring") in ["welsh-powell", "dsatur"]
+
     log_start(__file__)
 
     tag_filter: tuple[str, set[str]] | None = None
@@ -512,13 +497,16 @@ def main() -> None:
         f"{len(chrono_handler.by_member):,} unique member relations  ({elapsed:.1f}s)"
     )
 
-    graph = color_graph(args)
+    graph = color_graph(config)
 
-    admin_levels = args.admin_levels.split(",")
+    admin_levels = (
+        args.admin_levels.split(",") if args.admin_levels else config["admin_levels"]
+    )
     for admin_level in admin_levels:
+        admin_level = str(admin_level)
         log_start(f"admin_level={admin_level}")
         process_admin_level(
-            admin_level, args, tag_filter, chrono_handler.by_member, graph
+            admin_level, args, config, tag_filter, chrono_handler.by_member, graph
         )
         log_finish(f"admin_level={admin_level}")
 

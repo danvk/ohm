@@ -1,0 +1,13 @@
+{
+    "admin_levels": [1,2,3,4,5,6,7,8],
+    "simplify_tolerance_m": 1000,
+    "vw-tolerance-m2": 100000,
+    "coloring": "welsh-powell",
+    "graph": "graph.json",
+    "by_level": {
+        "8": {
+            "simplify_tolerance_m": 100,
+            "vw-tolerance-m2": 1000,
+        },
+    }
+}
