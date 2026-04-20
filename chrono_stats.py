@@ -136,6 +136,7 @@ class DateExtractor(osmium.SimpleHandler):
         self.n_dot_dot_edtf = 0
         self.edtf_mismatch = []
         self.n_edtf_off_by_one = 0
+        self.edtf_without_plain = []
 
     def handle_object(self, typ: str, f: OSMObject):
         name = f.tags.get("name")
@@ -200,6 +201,11 @@ class DateExtractor(osmium.SimpleHandler):
             if not edtf_str:
                 continue
             has_edtf = True
+            if not plain:
+                self.edtf_without_plain.append(
+                    (typ, f.id, f"{edtf_tag}={edtf_str} {name}")
+                )
+                continue
             interval = edtf_interval(edtf_str)
             if interval is None:
                 self.invalid_edtf.append((typ, f.id, f"{edtf_tag}={edtf_str} {name}"))
@@ -381,6 +387,7 @@ def main() -> None:
         "date-end-no-start": [(typ, id, "") for typ, id in handler.end_no_start],
         "date-start-after-end": handler.start_after_end,
         "date-far-future": handler.far_future,
+        "date-edtf-without-plain": handler.edtf_without_plain,
         "date-edtf-invalid": handler.invalid_edtf,
         "date-edtf-mismatch": handler.edtf_mismatch,
         "chronology-anonymous": ch.anonymous_chronologies,

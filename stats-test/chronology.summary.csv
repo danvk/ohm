@@ -11,6 +11,7 @@ chronology-overlapping-members,6
 chronology-undated-member,5
 date-edtf-invalid,8
 date-edtf-mismatch,308
+date-edtf-without-plain,10
 date-end-no-start,68
 date-far-future,0
 date-in-name,187
