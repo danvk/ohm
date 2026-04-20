@@ -87,6 +87,8 @@ a:hover {
   font-family: sans-serif;
   font-size: 13px;
   user-select: none;
+  width: 220px;
+  flex-wrap: wrap;
 }
 
 .admin-level-filter-label {

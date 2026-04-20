@@ -62,7 +62,7 @@ export function snapYear(sliderPos: number, year: number): number {
     // High-resolution segment: snap to nearest 50 if close enough
     const nearest = Math.round(year / 50) * 50;
     if (Math.abs(sliderPos - yearToSlider(nearest)) <= SNAP_THRESHOLD) {
-      return nearest;
+      return Math.min(nearest, MAX_YEAR);
     }
     return year;
   }

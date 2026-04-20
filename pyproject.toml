@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "edtf>=5.0.1",
+    "json5>=0.14.0",
     "osmium>=4.3.0",
     "pyproj>=3.7.2",
     "pyright>=1.1.408",

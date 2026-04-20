@@ -44,15 +44,40 @@ function decodePositions(pos: number[]) {
   return coords;
 }
 
-function decodeRing(signedWayIds: number[], ways: AppData['ways']): Position[] {
+function decodeRing(b64Ring: string, ways: AppData['ways']): Position[] {
+  const binary = atob(b64Ring);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  // Decode varint stream: each way ID is delta+zigzag encoded.
+  // Encoding: zigzag(abs(cur) - abs(prev)) * 2 + sign_changed_bit, as varint.
+  let pos = 0;
+  let prevAbs = 0;
+  let prevNeg = false;
   const segments: Position[][] = [];
-  for (const wayId of signedWayIds) {
-    const encoded = ways[Math.abs(wayId)];
+  while (pos < bytes.length) {
+    let v = 0;
+    let shift = 0;
+    for (;;) {
+      const b = bytes[pos++];
+      v |= (b & 0x7f) << shift;
+      shift += 7;
+      if (!(b & 0x80)) break;
+    }
+    const signChanged = (v & 1) === 1;
+    const zz = v >>> 1;
+    const absDelta = (zz >>> 1) ^ -(zz & 1); // unzigzag
+    const curAbs = prevAbs + absDelta;
+    const curNeg: boolean = signChanged ? !prevNeg : prevNeg;
+    const encoded = ways[curAbs];
     if (!encoded) {
-      throw new Error(`Missing way ${wayId}`);
+      throw new Error(`Missing way ${curAbs}`);
     }
     const coords = decodePositions(encoded);
-    segments.push(wayId < 0 ? coords.reverse() : coords);
+    segments.push(curNeg ? coords.reverse() : coords);
+    prevAbs = curAbs;
+    prevNeg = curNeg;
   }
   return segments.flat();
 }
