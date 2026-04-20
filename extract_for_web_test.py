@@ -125,9 +125,7 @@ def test_encode_decode_tags_roundtrip():
 def test_encode_tags_common_pair_is_single_int():
     """A common pair should be encoded as a single negative integer."""
     pair_table, key_table, val_table = build_tag_tables(SAMPLE_TAGS)
-    flat = encode_tags(
-        {"boundary": "administrative"}, pair_table, key_table, val_table
-    )
+    flat = encode_tags({"boundary": "administrative"}, pair_table, key_table, val_table)
     assert len(flat) == 1
     assert isinstance(flat[0], int)
     assert flat[0] < 0
@@ -136,9 +134,7 @@ def test_encode_tags_common_pair_is_single_int():
 def test_encode_tags_unique_pair_uses_key_and_literal():
     """A singleton pair falls back to [key_idx, literal_string]."""
     pair_table, key_table, val_table = build_tag_tables(SAMPLE_TAGS)
-    flat = encode_tags(
-        {"unique_key": "only_here"}, pair_table, key_table, val_table
-    )
+    flat = encode_tags({"unique_key": "only_here"}, pair_table, key_table, val_table)
     assert len(flat) == 2
     assert isinstance(flat[0], int) and flat[0] >= 0
     assert flat[1] == "only_here"

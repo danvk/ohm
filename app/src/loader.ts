@@ -43,7 +43,7 @@ const levelCache = new Map<string, Promise<LevelData>>();
 function loadLevel(level: string): Promise<LevelData> {
   if (!levelCache.has(level)) {
     const promise = Promise.all([
-      fetch(`${BASE_URL}relations${level}.json`).then(
+      fetch(`${BASE_URL}relations${level}.b64.json`).then(
         (r) => r.json() as Promise<RelationsFile>,
       ),
       fetch(`${BASE_URL}ways${level}.json`).then(
@@ -55,7 +55,12 @@ function loadLevel(level: string): Promise<LevelData> {
     ]).then(([relFile, ways, nodes]) => ({
       relations: relFile.relations.map((r) => ({
         ...r,
-        tags: decodeTags(r.tags, relFile.tagPairs, relFile.tagKeys, relFile.tagVals),
+        tags: decodeTags(
+          r.tags,
+          relFile.tagPairs,
+          relFile.tagKeys,
+          relFile.tagVals,
+        ),
       })) as Relation[],
       ways,
       nodes,
