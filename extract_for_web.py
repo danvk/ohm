@@ -24,8 +24,8 @@ Each file is a JSON object mapping string IDs to their data.
 
 import argparse
 import base64
+import collections
 import json
-import struct
 import sys
 import time
 from typing import Any
@@ -276,6 +276,30 @@ def parse_date_key(date_str: str) -> tuple:
         return (9999, 12, 31)  # Invalid dates sort last
 
 
+def encode_ring_varint(way_ids: list[int]) -> bytes:
+    """Encode a ring of signed way IDs as a varint byte stream.
+
+    Each value is encoded as zigzag(delta(abs(id))) * 2 + sign_changed_bit,
+    then written as a little-endian varint (7 bits/byte, high bit = more bytes).
+    This exploits the spatial locality of OSM way IDs within a relation (~45%
+    smaller than fixed 4-byte int32 after base64 encoding).
+    """
+    out: list[int] = []
+    prev_abs, prev_neg = 0, False
+    for way_id in way_ids:
+        cur_abs, cur_neg = abs(way_id), way_id < 0
+        delta = cur_abs - prev_abs
+        sign_changed = cur_neg != prev_neg
+        zz = delta * 2 if delta >= 0 else -delta * 2 - 1
+        v = zz * 2 + (1 if sign_changed else 0)
+        while v >= 128:
+            out.append((v & 0x7F) | 0x80)
+            v >>= 7
+        out.append(v)
+        prev_abs, prev_neg = cur_abs, cur_neg
+    return bytes(out)
+
+
 def write_json(path: str, data: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
@@ -361,7 +385,7 @@ def process_admin_level(level: str, args, config, tag_filter, chrono_to_members,
             log(f"    Warning: {msg}")
         rel_data["ways"] = [
             [
-                base64.b64encode(struct.pack(f">{len(ring)}i", *ring)).decode()
+                base64.b64encode(encode_ring_varint(ring)).decode()
                 for ring in polygon
             ]
             for polygon in polygons
@@ -387,9 +411,64 @@ def process_admin_level(level: str, args, config, tag_filter, chrono_to_members,
                 rel_data["tags"]["color"] = rel_color[rid]
                 rel_data["tags"]["color:id"] = canonical_id[rid]
 
+    # --- Build tag lookup tables and encode tags ---
+    # Count (key, value) pair frequencies and individual value frequencies.
+    pair_counts: collections.Counter[tuple[str, str]] = collections.Counter()
+    val_counts: collections.Counter[str] = collections.Counter()
+    for rel_data in rel_handler.relations.values():
+        for k, v in rel_data["tags"].items():
+            v = str(v)  # coerce color int values to string
+            pair_counts[(k, v)] += 1
+            val_counts[v] += 1
+
+    # pair_table: common (key, value) pairs encoded as a single negative index
+    # key_table: all unique keys (for key-only index)
+    # val_table: repeated values (for value-only index on unpaired tags)
+    pair_table = [list(p) for p, c in pair_counts.most_common() if c > 1]
+    pair_to_idx = {p: i for i, p in enumerate(map(tuple, pair_table))}
+    key_table = sorted({k for k, _ in pair_counts})
+    key_to_idx = {k: i for i, k in enumerate(key_table)}
+    val_table = [v for v, c in val_counts.most_common() if c > 1]
+    val_to_idx = {v: i for i, v in enumerate(val_table)}
+
+    # Encode each relation's tags as a flat array.
+    # Negative int n  → pair index -(n+1) in pair_table (complete key+value pair)
+    # Non-negative int k followed by string or int v → key_table[k] + value
+    for rel_data in rel_handler.relations.values():
+        flat: list[int | str] = []
+        for k, v in rel_data["tags"].items():
+            v = str(v)
+            pair = (k, v)
+            if pair in pair_to_idx:
+                flat.append(-(pair_to_idx[pair] + 1))
+            else:
+                flat.append(key_to_idx[k])
+                flat.append(val_to_idx[v] if v in val_to_idx else v)
+        rel_data["tags"] = flat
+
     relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
-    relations_out.sort(key=lambda r: parse_date_key(r["tags"].get("end_date", "2030")))
-    write_json(f"{args.output_dir}/relations{level}.json", relations_out)
+
+    def get_end_date(r: dict[str, Any]) -> tuple:
+        flat = r["tags"]
+        for i, x in enumerate(flat):
+            if isinstance(x, int) and x < 0 and pair_table[-(x + 1)][0] == "end_date":
+                return parse_date_key(pair_table[-(x + 1)][1])
+            if isinstance(x, int) and x >= 0 and key_table[x] == "end_date":
+                raw = flat[i + 1]
+                return parse_date_key(raw if isinstance(raw, str) else val_table[raw])
+        return parse_date_key("2030")
+
+    relations_out.sort(key=get_end_date)
+    relations_file: dict[str, Any] = {
+        "tagPairs": pair_table,
+        "tagKeys": key_table,
+        "tagVals": val_table,
+        "relations": relations_out,
+    }
+    output_path = f"{args.output_dir}/relations{level}.json"
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(relations_file, f, ensure_ascii=False, separators=(",", ":"))
+    log(f"  Wrote {len(relations_out):,} relations to {output_path}")
 
 
 def color_graph(args):

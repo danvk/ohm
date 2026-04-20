@@ -50,18 +50,34 @@ function decodeRing(b64Ring: string, ways: AppData['ways']): Position[] {
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  // Big-endian int32 — swap bytes on little-endian platforms
-  const view = new DataView(bytes.buffer);
-  const count = bytes.length / 4;
+  // Decode varint stream: each way ID is delta+zigzag encoded.
+  // Encoding: zigzag(abs(cur) - abs(prev)) * 2 + sign_changed_bit, as varint.
+  let pos = 0;
+  let prevAbs = 0;
+  let prevNeg = false;
   const segments: Position[][] = [];
-  for (let i = 0; i < count; i++) {
-    const wayId = view.getInt32(i * 4, false /* big-endian */);
-    const encoded = ways[Math.abs(wayId)];
+  while (pos < bytes.length) {
+    let v = 0;
+    let shift = 0;
+    for (;;) {
+      const b = bytes[pos++];
+      v |= (b & 0x7f) << shift;
+      shift += 7;
+      if (!(b & 0x80)) break;
+    }
+    const signChanged = (v & 1) === 1;
+    const zz = v >>> 1;
+    const absDelta = (zz >>> 1) ^ -(zz & 1); // unzigzag
+    const curAbs = prevAbs + absDelta;
+    const curNeg: boolean = signChanged ? !prevNeg : prevNeg;
+    const encoded = ways[curAbs];
     if (!encoded) {
-      throw new Error(`Missing way ${wayId}`);
+      throw new Error(`Missing way ${curAbs}`);
     }
     const coords = decodePositions(encoded);
-    segments.push(wayId < 0 ? coords.reverse() : coords);
+    segments.push(curNeg ? coords.reverse() : coords);
+    prevAbs = curAbs;
+    prevNeg = curNeg;
   }
   return segments.flat();
 }
