@@ -24,10 +24,10 @@ Each file is a JSON object mapping string IDs to their data.
 
 import argparse
 import base64
-import collections
 import json
 import sys
 import time
+from collections import Counter
 from typing import Any
 
 import json5
@@ -332,9 +332,9 @@ def decode_ring_varint(data: bytes) -> list[int]:
 # ---------------------------------------------------------------------------
 
 TagTables = tuple[
-    list[list[str]],  # pair_table:  [[key, val], ...]
-    list[str],  # key_table:   [key, ...]
-    list[str],  # val_table:   [val, ...]
+    list[tuple[str, str]],  # pair_table:  [(key, val), ...]
+    list[str],              # key_table:   [key, ...]
+    list[str],              # val_table:   [val, ...]
 ]
 
 
@@ -346,13 +346,13 @@ def build_tag_tables(all_tags: list[dict[str, str]]) -> TagTables:
       key_table   – sorted list of all unique keys.
       val_table   – values appearing more than once, most-common first.
     """
-    pair_counts: collections.Counter[tuple[str, str]] = collections.Counter()
-    val_counts: collections.Counter[str] = collections.Counter()
+    pair_counts = Counter[tuple[str, str]]()
+    val_counts = Counter[str]()
     for tags in all_tags:
         for k, v in tags.items():
             pair_counts[(k, v)] += 1
             val_counts[v] += 1
-    pair_table = [list(p) for p, c in pair_counts.most_common() if c > 1]
+    pair_table = [p for p, c in pair_counts.most_common() if c > 1]
     key_table = sorted({k for k, _ in pair_counts})
     val_table = [v for v, c in val_counts.most_common() if c > 1]
     return pair_table, key_table, val_table
@@ -360,7 +360,7 @@ def build_tag_tables(all_tags: list[dict[str, str]]) -> TagTables:
 
 def encode_tags(
     tags: dict[str, str],
-    pair_table: list[list[str]],
+    pair_table: list[tuple[str, str]],
     key_table: list[str],
     val_table: list[str],
 ) -> list[int | str]:
@@ -372,7 +372,7 @@ def encode_tags(
         String              → literal value (unique value, not in val_table)
         Non-negative int v  → value at val_table[v]
     """
-    pair_to_idx = {tuple(p): i for i, p in enumerate(pair_table)}
+    pair_to_idx = {p: i for i, p in enumerate(pair_table)}
     key_to_idx = {k: i for i, k in enumerate(key_table)}
     val_to_idx = {v: i for i, v in enumerate(val_table)}
     flat: list[int | str] = []
@@ -388,7 +388,7 @@ def encode_tags(
 
 def decode_tags(
     flat: list[int | str],
-    pair_table: list[list[str]],
+    pair_table: list[tuple[str, str]],
     key_table: list[str],
     val_table: list[str],
 ) -> dict[str, str]:
@@ -522,21 +522,25 @@ def process_admin_level(level: str, args, config, tag_filter, chrono_to_members,
 
     # --- Build tag lookup tables and encode tags ---
     # Coerce any non-string tag values (e.g. color ints from graph coloring).
+    rel_items = list(rel_handler.relations.items())
     all_tags = [
         {k: str(v) for k, v in rel_data["tags"].items()}
-        for rel_data in rel_handler.relations.values()
+        for _, rel_data in rel_items
     ]
     pair_table, key_table, val_table = build_tag_tables(all_tags)
-    for rel_data, coerced in zip(rel_handler.relations.values(), all_tags):
-        rel_data["tags"] = encode_tags(coerced, pair_table, key_table, val_table)
 
-    relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
+    # Sort by end_date while tags are still plain string dicts.
+    order = sorted(
+        range(len(rel_items)),
+        key=lambda i: parse_date_key(all_tags[i].get("end_date", "2030")),
+    )
 
-    def get_end_date(r: dict[str, Any]) -> tuple:
-        tags = decode_tags(r["tags"], pair_table, key_table, val_table)
-        return parse_date_key(tags.get("end_date", "2030"))
-
-    relations_out.sort(key=get_end_date)
+    # Encode tags and emit relations in sorted order.
+    relations_out = []
+    for i in order:
+        rid, rel_data = rel_items[i]
+        rel_data["tags"] = encode_tags(all_tags[i], pair_table, key_table, val_table)
+        relations_out.append({"id": rid, **rel_data})
     relations_file: dict[str, Any] = {
         "tagPairs": pair_table,
         "tagKeys": key_table,
@@ -560,10 +564,9 @@ def color_graph(args):
         graph = json.load(f)
 
     adj = build_adjacency(graph)
-    coloring = args["coloring"]
-    colorize_fn = dsatur_color if args == "dsatur" else greedy_color
+    colorize_fn = dsatur_color if args["coloring"] == "dsatur" else greedy_color
     coloring = colorize_fn(adj)
-    log(f"  {len(set(coloring.values()))} colors used ({coloring})")
+    log(f"  {len(set(coloring.values()))} colors used ({args['coloring']})")
 
     # Map every member and dropped relation ID to its color
     rel_color: dict[int, int] = {}

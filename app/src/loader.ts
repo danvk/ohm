@@ -1,4 +1,4 @@
-import type { Relation, RelationsFile, Node } from './ohm-data';
+import type { Relation, RawRelation, RelationsFile, Node } from './ohm-data';
 
 const BASE_URL = '//ohmdash.pages.dev/boundary/';
 // const BASE_URL = '//localhost:8081/boundary/';
@@ -37,6 +37,13 @@ function decodeTags(
   return tags;
 }
 
+function decodeRelation(r: RawRelation, relFile: RelationsFile): Relation {
+  return {
+    ...r,
+    tags: decodeTags(r.tags, relFile.tagPairs, relFile.tagKeys, relFile.tagVals),
+  };
+}
+
 /** Per-level cache: level string → in-flight or resolved Promise. */
 const levelCache = new Map<string, Promise<LevelData>>();
 
@@ -53,15 +60,7 @@ function loadLevel(level: string): Promise<LevelData> {
         (r) => r.json() as Promise<Record<string, Node>>,
       ),
     ]).then(([relFile, ways, nodes]) => ({
-      relations: relFile.relations.map((r) => ({
-        ...r,
-        tags: decodeTags(
-          r.tags,
-          relFile.tagPairs,
-          relFile.tagKeys,
-          relFile.tagVals,
-        ),
-      })) as Relation[],
+      relations: relFile.relations.map((r) => decodeRelation(r, relFile)),
       ways,
       nodes,
     }));
