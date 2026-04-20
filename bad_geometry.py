@@ -7,18 +7,17 @@ import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import osmium
 import osmium.filter
 import osmium.io
 from osmium.osm.types import Relation
-from shapely import make_valid
 from shapely.validation import explain_validity
 from tqdm import tqdm
 
 import geometry
-from dates import duration_years, parse_ohm_date, start_of_date
+from dates import DateTuple, duration_years, parse_ohm_date, start_of_date
 from earth_coverage import EARTH_LAND_AREA_KM2, area_km2
 from stats import write_stats
 
@@ -30,6 +29,16 @@ class RelationGeom:
     start_date: str | None
     end_date: str | None
     name: str | None
+    admin_level: str | None
+
+    def label_prefix(self):
+        """Label to prepend to error messages involving this relation"""
+        label = ""
+        if self.admin_level:
+            label += f"[{self.admin_level}] "
+        if self.name:
+            label += f"{self.name} "
+        return label
 
 
 class RelGeomCollector(osmium.SimpleHandler):
@@ -48,6 +57,7 @@ class RelGeomCollector(osmium.SimpleHandler):
             start_date=r.tags.get("start_date"),
             end_date=r.tags.get("end_date"),
             name=r.tags.get("name:en") or r.tags.get("name"),
+            admin_level=r.tags.get("admin_level"),
         )
 
 
@@ -119,7 +129,12 @@ def main() -> None:
     with osmium.io.Reader(args.osm_file) as r:
         timestamp_str = r.header().get("timestamp") or ""
     m = re.search(r"(\d{4}-\d{2}-\d{2})", timestamp_str)
-    planet_date = start_of_date(parse_ohm_date(m.group(1))) if m else (2026, 1, 1)
+    if m:
+        parsed_date = parse_ohm_date(m.group(1))
+        assert parsed_date is not None
+        planet_date = start_of_date(parsed_date)
+    else:
+        planet_date = cast(DateTuple, (2026, 1, 1))
 
     warning_map = {
         geometry.OpenRingWarning: "nonclosed-ring",
@@ -135,7 +150,7 @@ def main() -> None:
     n_valid = 0
     n_invalid = 0
     rids = [*rel_collector.relations.keys()]
-    random.shuffle(rids)
+    random.shuffle(rids)  # this produces more accurate time estimates from tqdm
     for rid in tqdm(rids, smoothing=0):
         geom = rel_collector.relations[rid]
         rings, poly_warnings = geometry.build_polygon_rings(
@@ -147,16 +162,20 @@ def main() -> None:
         # Compute earth-years using a valid (or make_valid'd) polygon.
         earth_years = 0.0
         if poly is not None:
-            area_poly = poly if poly.is_valid else make_valid(poly)
             start_date = parse_ohm_date(geom.start_date)
-            end_date = parse_ohm_date(geom.end_date)
             if start_date is not None:
+                end_date = parse_ohm_date(geom.end_date)
                 end_pt = (
                     start_of_date(end_date) if end_date is not None else planet_date
                 )
                 dur = duration_years((start_of_date(start_date), end_pt))
                 if math.isfinite(dur) and dur >= 0:
-                    earth_years = dur * area_km2(area_poly) / EARTH_LAND_AREA_KM2
+                    # Calculate the areak of poly directly here, even if it's invalid.
+                    # This saves the cost of a call to poly.is_valid and make_valid.
+                    # area_km2 uses shapely.transform, which works on invalid geometries
+                    # and gives a good approximation (slightly off only for
+                    # self-intersecting rings, which is acceptable for ranking).
+                    earth_years = dur * area_km2(poly) / EARTH_LAND_AREA_KM2
 
         has_problem = False
 
@@ -166,22 +185,23 @@ def main() -> None:
                     earth_years,
                     "r",
                     rid,
-                    (geom.name or "")
-                    + " "
+                    geom.label_prefix()
                     + ", ".join(str(w) for w in poly_warnings if isinstance(w, typ)),
                 )
             )
             has_problem = True
 
         if poly is None:
-            raw_examples["no-shapely"].append((earth_years, "r", rid, ""))
+            raw_examples["no-shapely"].append(
+                (earth_years, "r", rid, geom.label_prefix().strip())
+            )
             has_problem = True
-        elif not poly.is_valid and not poly_warnings:
+        elif not poly_warnings and not poly.is_valid:
             # avoid generating shapely warnings for polygons we've "fixed" ourselves
             reason = explain_validity(poly)
             error_type = reason.split("[")[0]  # strip out any coords
             error_code = warning_map.get(error_type, "other")
-            message = (geom.name or "") + " " + reason
+            message = geom.label_prefix() + reason
             raw_examples[error_code].append((earth_years, "r", rid, message))
             has_problem = True
 

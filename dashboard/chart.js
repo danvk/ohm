@@ -64,11 +64,32 @@ const METRIC_DOCS = {
     label: "end_date w/o start_date",
     help: "If a feature has end_date, then it should have start_date. Nothing is timeless.",
   },
+  "date-start-after-end": {
+    label: "start_date > end_date",
+    help: "The feature has a valid start_date and end_date, but start_date > end_date.",
+  },
+  "date-far-future": {
+    label: "Far future",
+    help: "Either start_date or end_date is after 2050. This is often a typo or placeholder, but omitting end_date is preferable."
+  },
+  "date-edtf-invalid": {
+    label: "Invalid EDTF date",
+    help: "Features with start_date:edtf or end_date:edtf that cannot be parsed as EDTF."
+  },
+  "date-edtf-mismatch": {
+    label: "Mismatched EDTF date",
+    help: "A feature specifies both start_date and start_date:edtf (or end_date/end_date:edtf), but the two do not overlap."
+  },
 
   "earth-years-admin-1": { label: "admin1", help: 'See above for an explanation of this metric.' },
   "earth-years-admin-2": { label: "admin2", help: 'See above for an explanation of this metric.' },
   "earth-years-admin-3": { label: "admin3", help: 'See above for an explanation of this metric.' },
   "earth-years-admin-4": { label: "admin4", help: 'See above for an explanation of this metric.' },
+
+  'double-covered-admin-1': { label: "admin1", help: '' },
+  'double-covered-admin-2': { label: "admin2", help: '' },
+  'double-covered-admin-3': { label: "admin3", help: '' },
+  'double-covered-admin-4': { label: "admin4", help: '' },
 
   "num-nodes": { label: "Nodes" },
   "num-ways": { label: "Ways" },
@@ -178,14 +199,17 @@ function makeChart(container, series, options) {
       e.stopPropagation();
       const value = a.textContent;
       const { label, help } = METRIC_DOCS[metric];
-      const r = await fetch(`/daily/${date}/${metric}.examples.txt`);
+      const examplesUrl = `/daily/${date}/${metric}.examples.txt`;
+      const r = await fetch(examplesUrl);
       const text = await r.text();
       const examples = text.split("\n");
       const lis = examples.map((txt) => `<li>${formatExample(txt)}</li>`);
       examplesEl.innerHTML = `
         <div class="close-example">&times;</div>
         <div class="example-header">${label}: ${value} on ${date}</div>
-        <div class="example-explanation">${help} (${metric})</div>
+        <div class="example-explanation">
+          ${help} (${metric}) <a href="${examplesUrl}" target="_blank">raw</a>
+        </div>
         <ul>
           ${lis.join("")}
         </ul>
@@ -212,7 +236,7 @@ makeChart(
   {
     examples: true,
     axes: { y: { valueFormatter: x => String(x) } },
-    dateWindow: [oneYearAgoMs, Date.now()]
+    dateWindow: [Date.parse('2026-01-01'), Date.now()]
   }
 );
 
@@ -229,25 +253,52 @@ makeChart(
 
 makeChart(
   document.getElementById("tag-errors"),
-  ["date-in-name",
-  "date-invalid",
-  "date-end-no-start"],
+  [
+    "date-in-name",
+    "date-invalid",
+    "date-end-no-start",
+    "date-far-future",
+    "date-start-after-end",
+    "date-edtf-invalid",
+    "date-edtf-mismatch",
+  ],
   {
     examples: true,
+    // connectSeparatedPoints: true,
     axes: { y: { valueFormatter: x => String(x) } },
+    dateWindow: [Date.parse('2026-01-01'), Date.now()]
   }
 );
 
 makeChart(
   document.getElementById('earth-coverage'),
-  ["earth-years-admin-1",
-  "earth-years-admin-2",
-  "earth-years-admin-3",
-  "earth-years-admin-4"],
+  [
+    "earth-years-admin-1",
+    "earth-years-admin-2",
+    "earth-years-admin-3",
+    "earth-years-admin-4"
+  ],
   {
     ylabel: 'Earth Years',
     examples: true,
     labelsKMB: false,
+  }
+);
+
+makeChart(
+  document.getElementById('overlap'),
+  [
+    "double-covered-admin-1",
+    "double-covered-admin-2",
+    "double-covered-admin-3",
+    "double-covered-admin-4"
+  ],
+  {
+    ylabel: 'Earth Years',
+    examples: true,
+    labelsKMB: false,
+    connectSeparatedPoints: true,
+    dateWindow: [Date.parse('2026-01-01'), Date.now()]
   }
 );
 

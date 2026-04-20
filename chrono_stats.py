@@ -1,16 +1,94 @@
 import argparse
+import datetime
+import functools
 import itertools
 import re
-from typing import Iterable
+import time
 
+import edtf as edtf_lib
 import osmium
 import osmium.filter
+from edtf.parser.parser_classes import UnspecifiedIntervalSection
 from osmium.osm import Node, OSMObject, Relation, Way
 
-from dates import Range, overlaps, parse_ohm_date, parse_ohm_range
+from dates import (
+    DateTuple,
+    Range,
+    end_of_date,
+    overlaps,
+    parse_ohm_date,
+    parse_ohm_range,
+    start_of_date,
+)
 from stats import log_start, write_stats
 
 NAME_RANGE_PAT = r"\(-?\d{3,}--?\d{3,}\)"
+# Matches OHM-style ranges written with ".." instead of the EDTF separator "/":
+# "1970..1977", "..1970", "1970.."
+DOT_DOT_EDTF_PAT = re.compile(r"^(-?\d[\d-]*)?\.\.(-?\d[\d-]*)?$")
+
+
+@functools.lru_cache(maxsize=None)
+def edtf_interval(edtf_str: str) -> tuple[DateTuple, DateTuple] | None:
+    """Parse an EDTF string and return (lower, upper) as DateTuples, or None on failure.
+
+    Returns None if the string is not valid EDTF, or if the library cannot compute
+    fuzzy bounds (e.g. partially-unspecified dates like '1X00-1X-1X').
+    """
+    try:
+        parsed = edtf_lib.parse_edtf(edtf_str)  # type: ignore[attr-defined]
+        lo = parsed.lower_fuzzy()  # type: ignore[attr-defined]
+        hi = parsed.upper_fuzzy()  # type: ignore[attr-defined]
+    except Exception:
+        return None
+    # "1752/" and "/1818" use an empty UnspecifiedIntervalSection for the open
+    # end.  The library resolves this to a computed fuzzy date (~10 years out)
+    # instead of infinity.  Detect and override to the correct infinite bound.
+    if (
+        hasattr(parsed, "lower")
+        and isinstance(parsed.lower, UnspecifiedIntervalSection)  # type: ignore[attr-defined]
+        and str(parsed.lower) == ""  # type: ignore[attr-defined]
+    ):
+        lo = float("-inf")
+    if (
+        hasattr(parsed, "upper")
+        and isinstance(parsed.upper, UnspecifiedIntervalSection)  # type: ignore[attr-defined]
+        and str(parsed.upper) == ""  # type: ignore[attr-defined]
+    ):
+        hi = float("inf")
+    lo_tup: DateTuple = (
+        (lo.tm_year, lo.tm_mon, lo.tm_mday)
+        if isinstance(lo, time.struct_time)
+        else (-(10**12), 1, 1)
+    )
+    hi_tup: DateTuple = (
+        (hi.tm_year, hi.tm_mon, hi.tm_mday)
+        if isinstance(hi, time.struct_time)
+        else (10**12, 1, 1)
+    )
+    return lo_tup, hi_tup
+
+
+FAR_FUTURE = 2050
+ONE_DAY = datetime.timedelta(days=1)
+
+
+def _is_one_day_off(
+    plain_lo: DateTuple, plain_hi: DateTuple, lo: DateTuple, hi: DateTuple
+) -> bool:
+    """Return True if the plain date range misses the EDTF interval by exactly one day.
+
+    Covers two cases: the plain range ends one day before the EDTF interval
+    starts, or starts one day after the EDTF interval ends.
+    """
+    try:
+        if plain_hi < lo:
+            return datetime.date(*lo) - datetime.date(*plain_hi) == ONE_DAY
+        else:
+            return datetime.date(*plain_lo) - datetime.date(*hi) == ONE_DAY
+    except (ValueError, OverflowError):
+        return False
+
 
 type OsmKey = tuple[str, int]  # {"n", "w", "r"} + ID
 
@@ -48,8 +126,17 @@ class DateExtractor(osmium.SimpleHandler):
         self.n_invalid = 0
         self.invalid_dates = []
         self.year_names = []
+        self.start_after_end = []
         self.end_no_start = list[OsmKey]()
+        self.far_future = []
+        self.n_dated = 0
         self.n_timeless = 0
+        self.n_edtf = 0
+        self.invalid_edtf = []
+        self.n_dot_dot_edtf = 0
+        self.edtf_mismatch = []
+        self.n_edtf_off_by_one = 0
+        self.edtf_without_plain = []
 
     def handle_object(self, typ: str, f: OSMObject):
         name = f.tags.get("name")
@@ -60,11 +147,15 @@ class DateExtractor(osmium.SimpleHandler):
 
         start_date = f.tags.get("start_date")
         end_date = f.tags.get("end_date")
+        name = f.tags.get("name:en") or f.tags.get("name") or ""
+        if start_date or end_date:
+            self.n_dated += 1
+
         if start_date:
             start_tup = parse_ohm_date(start_date)
             if not start_tup:
                 self.n_invalid += 1
-                self.invalid_dates.append((typ, f.id, start_date))
+                self.invalid_dates.append((typ, f.id, f"{start_date} {name}"))
                 self.invalid_ids.add(key)
                 return
 
@@ -72,7 +163,7 @@ class DateExtractor(osmium.SimpleHandler):
             end_tup = parse_ohm_date(end_date)
             if not end_tup:
                 self.n_invalid += 1
-                self.invalid_dates.append((typ, f.id, end_date))
+                self.invalid_dates.append((typ, f.id, f"{end_date} {name}"))
                 self.invalid_ids.add(key)
                 return
 
@@ -89,7 +180,60 @@ class DateExtractor(osmium.SimpleHandler):
             else:
                 self.end_no_start.append(key)
 
-        self.id_to_dates[key] = parse_ohm_range(start_date, end_date)
+        range = parse_ohm_range(start_date, end_date)
+        if end_date and start_date:
+            if range[0] > range[1]:
+                self.start_after_end.append(
+                    (typ, f.id, f"{start_date} > {end_date} {name}")
+                )
+        if start_date and range[0][0] > FAR_FUTURE:
+            self.far_future.append((typ, f.id, f"{start_date} {name}"))
+        if end_date and range[1][0] > FAR_FUTURE:
+            self.far_future.append((typ, f.id, f"{end_date} {name}"))
+
+        has_edtf = False
+        for plain_tag, edtf_tag in (
+            ("start_date", "start_date:edtf"),
+            ("end_date", "end_date:edtf"),
+        ):
+            plain = f.tags.get(plain_tag)
+            edtf_str = f.tags.get(edtf_tag)
+            if not edtf_str:
+                continue
+            has_edtf = True
+            if not plain:
+                self.edtf_without_plain.append(
+                    (typ, f.id, f"{edtf_tag}={edtf_str} {name}")
+                )
+                continue
+            interval = edtf_interval(edtf_str)
+            if interval is None:
+                self.invalid_edtf.append((typ, f.id, f"{edtf_tag}={edtf_str} {name}"))
+                m = DOT_DOT_EDTF_PAT.match(edtf_str)
+                if m and (m.group(1) or m.group(2)):
+                    self.n_dot_dot_edtf += 1
+                continue
+            if plain:
+                plain_parsed = parse_ohm_date(plain)
+                if plain_parsed:
+                    plain_lo = start_of_date(plain_parsed)
+                    plain_hi = end_of_date(plain_parsed)
+                    lo, hi = interval
+                    if not (plain_lo <= hi and lo <= plain_hi):
+                        self.edtf_mismatch.append(
+                            (
+                                typ,
+                                f.id,
+                                f"{plain_tag}={plain} vs {edtf_tag}={edtf_str} {name}",
+                            )
+                        )
+                        if _is_one_day_off(plain_lo, plain_hi, lo, hi):
+                            self.n_edtf_off_by_one += 1
+
+        if has_edtf:
+            self.n_edtf += 1
+
+        self.id_to_dates[key] = range
         self.id_to_raw_dates[key] = (start_date or "", end_date or "")
 
     def relation(self, r: Relation) -> None:
@@ -131,11 +275,17 @@ class ChronologyHandler(osmium.SimpleHandler):
         self.tid_to_raw_dates = tid_to_raw_dates
         self.invalid_tids = invalid_tids
         self.date_outside_ranges = []
+        self.anonymous_chronologies: list[tuple[str, int, str]] = []
 
     def relation(self, r: Relation) -> None:
         if r.tags.get("type") != "chronology":
             return
         self.chronology_count += 1
+        name = r.tags.get("name:en") or r.tags.get("name") or ""
+        name_prefix = f"{name} " if name else ""
+
+        if not name:
+            self.anonymous_chronologies.append(("r", r.id, ""))
 
         undated: list[OsmKey] = []
         member_dates: list[tuple[str, int, Range]] = []
@@ -151,7 +301,11 @@ class ChronologyHandler(osmium.SimpleHandler):
 
         if undated:
             self.undated_members.append(
-                ("r", r.id, ",".join(f"{typ}/{id}" for typ, id in undated))
+                (
+                    "r",
+                    r.id,
+                    name_prefix + ",".join(f"{typ}/{id}" for typ, id in undated),
+                )
             )
 
         fails = [
@@ -171,7 +325,8 @@ class ChronologyHandler(osmium.SimpleHandler):
                 (
                     "r",
                     r.id,
-                    ", ".join(
+                    name_prefix
+                    + ", ".join(
                         fmt_member(*a) + " + " + fmt_member(*b) for a, b in fails[:10]
                     ),
                 )
@@ -188,14 +343,13 @@ class ChronologyHandler(osmium.SimpleHandler):
                         *self.tid_to_raw_dates.get((mtyp, mid), ("", ""))
                     )
                     self.date_outside_ranges.append(
-                        ("r", r.id, f"{mtyp}/{mid} ({m_str}) outside {ch_str}")
+                        (
+                            "r",
+                            r.id,
+                            f"{name_prefix}{mtyp}/{mid} ({m_str}) outside {ch_str}",
+                        )
                     )
                     break
-
-
-def print_links(ids: Iterable[int]):
-    for id in ids:
-        print(f"    {id} https://www.openhistoricalmap.org/relation/{id}")
 
 
 def main() -> None:
@@ -210,7 +364,12 @@ def main() -> None:
 
     handler = DateExtractor()
     handler.apply_file(
-        args.osm_file, filters=[osmium.filter.KeyFilter("start_date", "end_date")]
+        args.osm_file,
+        filters=[
+            osmium.filter.KeyFilter(
+                "start_date", "end_date", "start_date:edtf", "end_date:edtf"
+            )
+        ],
     )
 
     n_dated_rels = len(handler.id_to_dates)
@@ -226,6 +385,12 @@ def main() -> None:
         "date-invalid": handler.invalid_dates,
         "date-in-name": handler.year_names,
         "date-end-no-start": [(typ, id, "") for typ, id in handler.end_no_start],
+        "date-start-after-end": handler.start_after_end,
+        "date-far-future": handler.far_future,
+        "date-edtf-without-plain": handler.edtf_without_plain,
+        "date-edtf-invalid": handler.invalid_edtf,
+        "date-edtf-mismatch": handler.edtf_mismatch,
+        "chronology-anonymous": ch.anonymous_chronologies,
         "chronology-undated-member": ch.undated_members,
         "chronology-overlapping-members": ch.overlapping_members,
         "chronology-member-outside-range": ch.date_outside_ranges,
@@ -235,7 +400,14 @@ def main() -> None:
         args.output_dir,
         "chronology",
         by_type,
-        {"dated-relations": n_dated_rels, "dated-timeless": handler.n_timeless},
+        {
+            "dated-relations": n_dated_rels,
+            "dated-features": handler.n_dated,
+            "dated-timeless": handler.n_timeless,
+            "date-edtf-features": handler.n_edtf,
+            "date-edtf-invalid-dot-dot": handler.n_dot_dot_edtf,
+            "date-edtf-mismatch-off-by-one-day": handler.n_edtf_off_by_one,
+        },
     )
 
 

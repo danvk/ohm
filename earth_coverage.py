@@ -6,23 +6,21 @@ start_date/end_date tags.
 """
 
 import argparse
-import functools
 import heapq
-import json
 import re
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
 
+import numpy as np
 import osmium
 import osmium.filter
 import osmium.geom
 import osmium.io
 import pyproj
+import shapely
 from osmium.osm.types import Area
-from shapely.geometry import shape
 from shapely.geometry.base import BaseGeometry
-from shapely.ops import transform as shapely_transform
 from shapely.strtree import STRtree
 from tqdm import tqdm
 
@@ -44,12 +42,22 @@ class OverlapFeature:
 
 # Transformer from WGS84 lon/lat → equal-area projection (EPSG:6933) for km²
 _transformer = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:6933", always_xy=True)
-_to_equal_area = functools.partial(_transformer.transform)
+
+
+def _transform_coords(coords):
+    """Transform an (N, 2) lon/lat array to equal-area x/y in one vectorized call."""
+    x, y = _transformer.transform(coords[:, 0], coords[:, 1])
+    return np.column_stack([x, y])
 
 
 def area_km2(geom) -> float:
-    """Return the area of a Shapely geometry in square kilometres."""
-    projected = shapely_transform(_to_equal_area, geom)
+    """Return the area of a Shapely geometry in square kilometres.
+
+    Uses shapely.transform (Shapely 2.x) which passes all coordinates as a
+    numpy array in one call, avoiding the per-coordinate Python overhead of
+    the older shapely.ops.transform approach.
+    """
+    projected = shapely.transform(geom, _transform_coords, include_z=False)
     return projected.area / 1e6
 
 
@@ -59,7 +67,7 @@ ADMIN_LEVELS = ("1", "2", "3", "4")
 class CoverageHandler(osmium.SimpleHandler):
     def __init__(self, planet_timestamp: str):
         super().__init__()
-        self.geojson = osmium.geom.GeoJSONFactory()
+        self.wkb = osmium.geom.WKBFactory()
         self.skipped_no_date = 0
         self.skipped_no_start = 0
         self.planet_date = parse_ohm_date(planet_timestamp[:10])
@@ -108,11 +116,11 @@ class CoverageHandler(osmium.SimpleHandler):
         orig_type = "w" if a.from_way() else "r"
         orig_id = a.orig_id()
         try:
-            geometry_str = self.geojson.create_multipolygon(a)
+            wkb = self.wkb.create_multipolygon(a)
         except Exception:
             return
 
-        geom = shape(json.loads(geometry_str))
+        geom = shapely.from_wkb(wkb)
         if not geom.is_valid:
             geom = geom.buffer(0)
 
