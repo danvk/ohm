@@ -333,8 +333,8 @@ def decode_ring_varint(data: bytes) -> list[int]:
 
 TagTables = tuple[
     list[tuple[str, str]],  # pair_table:  [(key, val), ...]
-    list[str],              # key_table:   [key, ...]
-    list[str],              # val_table:   [val, ...]
+    list[str],  # key_table:   [key, ...]
+    list[str],  # val_table:   [val, ...]
 ]
 
 
@@ -524,8 +524,7 @@ def process_admin_level(level: str, args, config, tag_filter, chrono_to_members,
     # Coerce any non-string tag values (e.g. color ints from graph coloring).
     rel_items = list(rel_handler.relations.items())
     all_tags = [
-        {k: str(v) for k, v in rel_data["tags"].items()}
-        for _, rel_data in rel_items
+        {k: str(v) for k, v in rel_data["tags"].items()} for _, rel_data in rel_items
     ]
     pair_table, key_table, val_table = build_tag_tables(all_tags)
 
