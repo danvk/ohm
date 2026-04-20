@@ -333,8 +333,8 @@ def decode_ring_varint(data: bytes) -> list[int]:
 
 TagTables = tuple[
     list[list[str]],  # pair_table:  [[key, val], ...]
-    list[str],        # key_table:   [key, ...]
-    list[str],        # val_table:   [val, ...]
+    list[str],  # key_table:   [key, ...]
+    list[str],  # val_table:   [val, ...]
 ]
 
 
@@ -496,10 +496,7 @@ def process_admin_level(level: str, args, config, tag_filter, chrono_to_members,
         for msg in poly_warnings:
             log(f"    Warning: {msg}")
         rel_data["ways"] = [
-            [
-                base64.b64encode(encode_ring_varint(ring)).decode()
-                for ring in polygon
-            ]
+            [base64.b64encode(encode_ring_varint(ring)).decode() for ring in polygon]
             for polygon in polygons
         ]
 
@@ -546,7 +543,7 @@ def process_admin_level(level: str, args, config, tag_filter, chrono_to_members,
         "tagVals": val_table,
         "relations": relations_out,
     }
-    output_path = f"{args.output_dir}/relations{level}.json"
+    output_path = f"{args.output_dir}/relations{level}.b64.json"
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(relations_file, f, ensure_ascii=False, separators=(",", ":"))
     log(f"  Wrote {len(relations_out):,} relations to {output_path}")
