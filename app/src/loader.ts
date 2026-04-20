@@ -40,7 +40,12 @@ function decodeTags(
 function decodeRelation(r: RawRelation, relFile: RelationsFile): Relation {
   return {
     ...r,
-    tags: decodeTags(r.tags, relFile.tagPairs, relFile.tagKeys, relFile.tagVals),
+    tags: decodeTags(
+      r.tags,
+      relFile.tagPairs,
+      relFile.tagKeys,
+      relFile.tagVals,
+    ),
   };
 }
 
