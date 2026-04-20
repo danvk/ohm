@@ -48,7 +48,7 @@ def tags_to_dict(tags) -> dict[str, str]:
     }
 
 
-def _log(msg: str) -> None:
+def log(msg: str) -> None:
     print(msg, file=sys.stderr, flush=True)
 
 
@@ -278,19 +278,19 @@ def parse_date_key(date_str: str) -> tuple:
 def write_json(path: str, data: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
-    _log(f"  Wrote {len(data):,} entries to {path}")
+    log(f"  Wrote {len(data):,} entries to {path}")
 
 
-def process_admin_level(level: str, args, tag_filter, chrono_to_members):
+def process_admin_level(level: str, args, tag_filter, chrono_to_members, graph):
     osm_file = args.osm_file
 
     # --- Pass 1: Relations ---
-    _log(f"{level} Pass 1: scanning relations …")
+    log(f"{level} Pass 1: scanning relations …")
     t0 = time.monotonic()
     rel_handler = RelationHandler({level}, tag_filter=tag_filter)
     rel_handler.apply_file(osm_file, filters=[osmium.filter.KeyFilter("name")])
     elapsed = time.monotonic() - t0
-    _log(
+    log(
         f"  Found {len(rel_handler.relations):,} relations, "
         f"{len(rel_handler.way_ids):,} unique ways, "
         f"{len(rel_handler.node_ids):,} direct node members  ({elapsed:.1f}s)"
@@ -301,7 +301,7 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
     vw_tolerance = args.vw_tolerance_m2 / 100.0
 
     # --- Pass 2: Ways ---
-    _log("Pass 2: scanning ways …")
+    log("Pass 2: scanning ways …")
     t0 = time.monotonic()
     way_handler = WayHandler(
         rel_handler.way_ids, rdp_tolerance=rdp_tolerance, vw_tolerance=vw_tolerance
@@ -312,7 +312,7 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
     elapsed = time.monotonic() - t0
     removed = way_handler.nodes_before - way_handler.nodes_after
     pct = 100 * removed / way_handler.nodes_before if way_handler.nodes_before else 0
-    _log(
+    log(
         f"  Found {len(way_handler.ways):,} ways in ({elapsed:.1f}s)  "
         f"nodes: {way_handler.nodes_before:,} → {way_handler.nodes_after:,} "
         f"({removed:,} removed, {pct:.1f}%)"
@@ -324,7 +324,7 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
     # --- Pass 3: Nodes (direct relation members) ---
     nodes_out: dict[str, Any] = {}
     if rel_handler.node_ids:
-        _log("Pass 3: scanning nodes …")
+        log("Pass 3: scanning nodes …")
         t0 = time.monotonic()
         node_handler = NodeHandler(rel_handler.node_ids)
         node_filter = osmium.filter.IdFilter(rel_handler.node_ids).enable_for(
@@ -332,14 +332,14 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
         )
         node_handler.apply_file(osm_file, filters=[node_filter], locations=True)
         elapsed = time.monotonic() - t0
-        _log(f"  Found {len(node_handler.nodes):,} nodes  ({elapsed:.1f}s)")
+        log(f"  Found {len(node_handler.nodes):,} nodes  ({elapsed:.1f}s)")
         nodes_out = {str(nid): data for nid, data in node_handler.nodes.items()}
     else:
-        _log("Pass 3: no direct node members found, skipping.")
+        log("Pass 3: no direct node members found, skipping.")
     write_json(f"{args.output_dir}/nodes{level}.json", nodes_out)
 
     # --- Order ways in each relation into oriented rings, then write relations ---
-    _log("Ordering ways into oriented rings …")
+    log("Ordering ways into oriented rings …")
     for rid, rel_data in rel_handler.relations.items():
         outer_way_ids: list[int] = rel_data.pop("outer_ways")
         inner_way_ids: list[int] = rel_data.pop("inner_ways")
@@ -353,7 +353,7 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
             leave_open_rings=True,
         )
         for msg in poly_warnings:
-            _log(f"    Warning: {msg}")
+            log(f"    Warning: {msg}")
         rel_data["ways"] = [
             [
                 base64.b64encode(struct.pack(f">{len(ring)}i", *ring)).decode()
@@ -374,45 +374,54 @@ def process_admin_level(level: str, args, tag_filter, chrono_to_members):
         if chrono_entries:
             rel_data["chronology"] = chrono_entries
 
-    # --- Optional: graph coloring ---
-    rel_color: dict[int, int] = {}
-    canonical_id: dict[int, int] = {}
-    if args.graph:
-        _log("Loading graph and computing coloring …")
-        with open(args.graph, encoding="utf-8") as _f:
-            _graph = json.load(_f)
-        # Build adjacency and run coloring
-        _adj = build_adjacency(_graph)
-        if args.coloring == "dsatur":
-            _coloring = dsatur_color(_adj)
-        else:
-            _coloring = greedy_color(_adj)
-        _log(f"  {len(set(_coloring.values()))} colors used ({args.coloring})")
-        # Map every member and dropped relation ID to its color
-        for _nid_str, _node in _graph["nodes"].items():
-            _color = _coloring.get(int(_nid_str))
-            if _color is None:
-                continue
-            for _rid in _node.get("members", []) + _node.get("dropped", []):
-                rel_color[_rid] = _color
-                canonical_id[_rid] = _nid_str
-            canonical_id[_nid_str] = _nid_str
-        # Print per-color relation counts
-        _color_rel_counts: dict[int, int] = {}
-        for _c in rel_color.values():
-            _color_rel_counts[_c] = _color_rel_counts.get(_c, 0) + 1
-        for _c in sorted(_color_rel_counts):
-            _log(f"    color {_c}: {_color_rel_counts[_c]:,} relations")
-
-    # Inject color into relations that have one
-    for rid, rel_data in rel_handler.relations.items():
-        if rid in rel_color:
-            rel_data["tags"]["color"] = rel_color[rid]
-            rel_data["tags"]["color:id"] = canonical_id[rid]
+    # --- Optional: graph coloring; Inject color into relations that have one ---
+    if graph:
+        rel_color, canonical_id = graph
+        for rid, rel_data in rel_handler.relations.items():
+            if rid in rel_color:
+                rel_data["tags"]["color"] = rel_color[rid]
+                rel_data["tags"]["color:id"] = canonical_id[rid]
 
     relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
     relations_out.sort(key=lambda r: parse_date_key(r["tags"].get("end_date", "2030")))
     write_json(f"{args.output_dir}/relations{level}.json", relations_out)
+
+
+def color_graph(args):
+    """Load graph data and produce ID->color, ID->canonical ID mappings."""
+    if not args.graph:
+        return None
+
+    log("Loading graph and computing coloring …")
+    with open(args.graph, encoding="utf-8") as f:
+        graph = json.load(f)
+    # Build adjacency and run coloring
+    adj = build_adjacency(graph)
+    if args.coloring == "dsatur":
+        coloring = dsatur_color(adj)
+    else:
+        coloring = greedy_color(adj)
+    log(f"  {len(set(coloring.values()))} colors used ({args.coloring})")
+
+    # Map every member and dropped relation ID to its color
+    rel_color: dict[int, int] = {}
+    canonical_id: dict[int, int] = {}
+    for nid_str, _node in graph["nodes"].items():
+        color = coloring.get(int(nid_str))
+        if color is None:
+            continue
+        for rid in _node.get("members", []) + _node.get("dropped", []):
+            rel_color[rid] = color
+            canonical_id[rid] = nid_str
+        canonical_id[nid_str] = nid_str
+    # Print per-color relation counts
+    color_rel_counts: dict[int, int] = {}
+    for c in rel_color.values():
+        color_rel_counts[c] = color_rel_counts.get(c, 0) + 1
+    for c in sorted(color_rel_counts):
+        log(f"    color {c}: {color_rel_counts[c]:,} relations")
+
+    return rel_color, canonical_id
 
 
 def main() -> None:
@@ -491,25 +500,29 @@ def main() -> None:
         tag_filter = (key, set(vals.split(",")))
 
     # --- Pass 0: Chronologies ---
-    _log("Pass 0: scanning chronology relations …")
+    log("Pass 0: scanning chronology relations …")
     t0 = time.monotonic()
     chrono_handler = ChronologyHandler()
     chrono_handler.apply_file(
         args.osm_file, filters=[osmium.filter.TagFilter(("type", "chronology"))]
     )
     elapsed = time.monotonic() - t0
-    _log(
+    log(
         f"  Found {chrono_handler.chronology_count:,} chronologies covering "
         f"{len(chrono_handler.by_member):,} unique member relations  ({elapsed:.1f}s)"
     )
 
+    graph = color_graph(args)
+
     admin_levels = args.admin_levels.split(",")
     for admin_level in admin_levels:
         log_start(f"admin_level={admin_level}")
-        process_admin_level(admin_level, args, tag_filter, chrono_handler.by_member)
+        process_admin_level(
+            admin_level, args, tag_filter, chrono_handler.by_member, graph
+        )
         log_finish(f"admin_level={admin_level}")
 
-    _log("Done.")
+    log("Done.")
 
 
 if __name__ == "__main__":
