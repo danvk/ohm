@@ -300,6 +300,118 @@ def encode_ring_varint(way_ids: list[int]) -> bytes:
     return bytes(out)
 
 
+def decode_ring_varint(data: bytes) -> list[int]:
+    """Decode a varint byte stream back into a list of signed way IDs.
+
+    Inverse of encode_ring_varint.
+    """
+    ids: list[int] = []
+    pos, prev_abs, prev_neg = 0, 0, False
+    n = len(data)
+    while pos < n:
+        v, shift = 0, 0
+        while True:
+            b = data[pos]
+            pos += 1
+            v |= (b & 0x7F) << shift
+            shift += 7
+            if not (b & 0x80):
+                break
+        sign_changed = bool(v & 1)
+        zz = v >> 1
+        abs_delta = (zz >> 1) ^ -(zz & 1)  # unzigzag
+        cur_abs = prev_abs + abs_delta
+        cur_neg = (not prev_neg) if sign_changed else prev_neg
+        ids.append(-cur_abs if cur_neg else cur_abs)
+        prev_abs, prev_neg = cur_abs, cur_neg
+    return ids
+
+
+# ---------------------------------------------------------------------------
+# Tag encoding / decoding
+# ---------------------------------------------------------------------------
+
+TagTables = tuple[
+    list[list[str]],  # pair_table:  [[key, val], ...]
+    list[str],        # key_table:   [key, ...]
+    list[str],        # val_table:   [val, ...]
+]
+
+
+def build_tag_tables(all_tags: list[dict[str, str]]) -> TagTables:
+    """Build lookup tables for compact tag encoding from a collection of tag dicts.
+
+    Returns (pair_table, key_table, val_table):
+      pair_table  – [key, value] pairs that appear more than once, most-common first.
+      key_table   – sorted list of all unique keys.
+      val_table   – values appearing more than once, most-common first.
+    """
+    pair_counts: collections.Counter[tuple[str, str]] = collections.Counter()
+    val_counts: collections.Counter[str] = collections.Counter()
+    for tags in all_tags:
+        for k, v in tags.items():
+            pair_counts[(k, v)] += 1
+            val_counts[v] += 1
+    pair_table = [list(p) for p, c in pair_counts.most_common() if c > 1]
+    key_table = sorted({k for k, _ in pair_counts})
+    val_table = [v for v, c in val_counts.most_common() if c > 1]
+    return pair_table, key_table, val_table
+
+
+def encode_tags(
+    tags: dict[str, str],
+    pair_table: list[list[str]],
+    key_table: list[str],
+    val_table: list[str],
+) -> list[int | str]:
+    """Encode a tag dict as a flat array using the provided lookup tables.
+
+    Encoding rules (see decode_tags for the inverse):
+      Negative int n        → complete pair at index -(n+1) in pair_table
+      Non-negative int k    → key at key_table[k], followed by the value:
+        String              → literal value (unique value, not in val_table)
+        Non-negative int v  → value at val_table[v]
+    """
+    pair_to_idx = {tuple(p): i for i, p in enumerate(pair_table)}
+    key_to_idx = {k: i for i, k in enumerate(key_table)}
+    val_to_idx = {v: i for i, v in enumerate(val_table)}
+    flat: list[int | str] = []
+    for k, v in tags.items():
+        pair = (k, v)
+        if pair in pair_to_idx:
+            flat.append(-(pair_to_idx[pair] + 1))
+        else:
+            flat.append(key_to_idx[k])
+            flat.append(val_to_idx[v] if v in val_to_idx else v)
+    return flat
+
+
+def decode_tags(
+    flat: list[int | str],
+    pair_table: list[list[str]],
+    key_table: list[str],
+    val_table: list[str],
+) -> dict[str, str]:
+    """Decode a flat encoded tag array back into a dict.
+
+    Inverse of encode_tags.
+    """
+    tags: dict[str, str] = {}
+    i = 0
+    while i < len(flat):
+        x = flat[i]
+        i += 1
+        if isinstance(x, int) and x < 0:
+            k, v = pair_table[-(x + 1)]
+            tags[k] = v
+        else:
+            k = key_table[x]  # type: ignore[index]
+            raw = flat[i]
+            i += 1
+            tags[k] = raw if isinstance(raw, str) else val_table[raw]  # type: ignore[index]
+    return tags
+
+
 def write_json(path: str, data: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
@@ -412,51 +524,20 @@ def process_admin_level(level: str, args, config, tag_filter, chrono_to_members,
                 rel_data["tags"]["color:id"] = canonical_id[rid]
 
     # --- Build tag lookup tables and encode tags ---
-    # Count (key, value) pair frequencies and individual value frequencies.
-    pair_counts: collections.Counter[tuple[str, str]] = collections.Counter()
-    val_counts: collections.Counter[str] = collections.Counter()
-    for rel_data in rel_handler.relations.values():
-        for k, v in rel_data["tags"].items():
-            v = str(v)  # coerce color int values to string
-            pair_counts[(k, v)] += 1
-            val_counts[v] += 1
-
-    # pair_table: common (key, value) pairs encoded as a single negative index
-    # key_table: all unique keys (for key-only index)
-    # val_table: repeated values (for value-only index on unpaired tags)
-    pair_table = [list(p) for p, c in pair_counts.most_common() if c > 1]
-    pair_to_idx = {p: i for i, p in enumerate(map(tuple, pair_table))}
-    key_table = sorted({k for k, _ in pair_counts})
-    key_to_idx = {k: i for i, k in enumerate(key_table)}
-    val_table = [v for v, c in val_counts.most_common() if c > 1]
-    val_to_idx = {v: i for i, v in enumerate(val_table)}
-
-    # Encode each relation's tags as a flat array.
-    # Negative int n  → pair index -(n+1) in pair_table (complete key+value pair)
-    # Non-negative int k followed by string or int v → key_table[k] + value
-    for rel_data in rel_handler.relations.values():
-        flat: list[int | str] = []
-        for k, v in rel_data["tags"].items():
-            v = str(v)
-            pair = (k, v)
-            if pair in pair_to_idx:
-                flat.append(-(pair_to_idx[pair] + 1))
-            else:
-                flat.append(key_to_idx[k])
-                flat.append(val_to_idx[v] if v in val_to_idx else v)
-        rel_data["tags"] = flat
+    # Coerce any non-string tag values (e.g. color ints from graph coloring).
+    all_tags = [
+        {k: str(v) for k, v in rel_data["tags"].items()}
+        for rel_data in rel_handler.relations.values()
+    ]
+    pair_table, key_table, val_table = build_tag_tables(all_tags)
+    for rel_data, coerced in zip(rel_handler.relations.values(), all_tags):
+        rel_data["tags"] = encode_tags(coerced, pair_table, key_table, val_table)
 
     relations_out = [{"id": rid, **data} for rid, data in rel_handler.relations.items()]
 
     def get_end_date(r: dict[str, Any]) -> tuple:
-        flat = r["tags"]
-        for i, x in enumerate(flat):
-            if isinstance(x, int) and x < 0 and pair_table[-(x + 1)][0] == "end_date":
-                return parse_date_key(pair_table[-(x + 1)][1])
-            if isinstance(x, int) and x >= 0 and key_table[x] == "end_date":
-                raw = flat[i + 1]
-                return parse_date_key(raw if isinstance(raw, str) else val_table[raw])
-        return parse_date_key("2030")
+        tags = decode_tags(r["tags"], pair_table, key_table, val_table)
+        return parse_date_key(tags.get("end_date", "2030"))
 
     relations_out.sort(key=get_end_date)
     relations_file: dict[str, Any] = {
