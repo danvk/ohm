@@ -82,9 +82,9 @@ type FillPaintStyle = Exclude<
   undefined
 >;
 
-const DFEAULT_COLOR = '#6080C0'; // — blue
+const DEFAULT_COLOR = '#6080C0'; // — blue
 const PALETTE = [
-  DFEAULT_COLOR,
+  DEFAULT_COLOR,
   '#E15759', // — red
   '#4E9F3D', // — green
   '#F28E2B', // — orange
@@ -96,14 +96,20 @@ const PALETTE = [
 ];
 const HIGHLIGHT_COLOR = '#FF00FF'; // '#00E5FF',
 
-const ID_PALETTE = PALETTE.flatMap((color, i) => [String(i), color]);
+// This type assertion is wrong, but this is what MapLibre's types want.
+const ID_PALETTE = PALETTE.flatMap((color, i) => [String(i), color]) as [
+  string,
+  string,
+  string,
+  string,
+];
 
 export const PAINT_STYLE: FillPaintStyle = {
   'fill-color': [
     'case',
     ['boolean', ['feature-state', 'selected'], false],
     HIGHLIGHT_COLOR,
-    ['match', ['get', 'color'], ...ID_PALETTE, DFEAULT_COLOR],
+    ['match', ['get', 'color'], ...ID_PALETTE, DEFAULT_COLOR],
   ],
   'fill-opacity': 0.5,
 };
@@ -117,7 +123,7 @@ export const LINE_STYLE: LinePaintStyle = {
     'case',
     ['boolean', ['feature-state', 'selected'], false],
     HIGHLIGHT_COLOR,
-    ['match', ['get', 'color'], ...ID_PALETTE, DFEAULT_COLOR],
+    ['match', ['get', 'color'], ...ID_PALETTE, DEFAULT_COLOR],
   ],
   'line-width': [
     'case',
