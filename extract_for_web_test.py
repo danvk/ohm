@@ -2,8 +2,6 @@
 
 import base64
 
-import pytest
-
 from extract_for_web import (
     build_tag_tables,
     decode_ring_varint,
