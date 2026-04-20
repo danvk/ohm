@@ -29,6 +29,16 @@ class RelationGeom:
     start_date: str | None
     end_date: str | None
     name: str | None
+    admin_level: str | None
+
+    def label_prefix(self):
+        """Label to prepend to error messages involving this relation"""
+        label = ""
+        if self.admin_level:
+            label += f"[{self.admin_level}] "
+        if self.name:
+            label += f"{self.name} "
+        return label
 
 
 class RelGeomCollector(osmium.SimpleHandler):
@@ -47,6 +57,7 @@ class RelGeomCollector(osmium.SimpleHandler):
             start_date=r.tags.get("start_date"),
             end_date=r.tags.get("end_date"),
             name=r.tags.get("name:en") or r.tags.get("name"),
+            admin_level=r.tags.get("admin_level"),
         )
 
 
@@ -139,7 +150,7 @@ def main() -> None:
     n_valid = 0
     n_invalid = 0
     rids = [*rel_collector.relations.keys()]
-    random.shuffle(rids)
+    random.shuffle(rids)  # this produces more accurate time estimates from tqdm
     for rid in tqdm(rids, smoothing=0):
         geom = rel_collector.relations[rid]
         rings, poly_warnings = geometry.build_polygon_rings(
@@ -174,22 +185,23 @@ def main() -> None:
                     earth_years,
                     "r",
                     rid,
-                    (geom.name or "")
-                    + " "
+                    geom.label_prefix()
                     + ", ".join(str(w) for w in poly_warnings if isinstance(w, typ)),
                 )
             )
             has_problem = True
 
         if poly is None:
-            raw_examples["no-shapely"].append((earth_years, "r", rid, ""))
+            raw_examples["no-shapely"].append(
+                (earth_years, "r", rid, geom.label_prefix().strip())
+            )
             has_problem = True
         elif not poly_warnings and not poly.is_valid:
             # avoid generating shapely warnings for polygons we've "fixed" ourselves
             reason = explain_validity(poly)
             error_type = reason.split("[")[0]  # strip out any coords
             error_code = warning_map.get(error_type, "other")
-            message = (geom.name or "") + " " + reason
+            message = geom.label_prefix() + reason
             raw_examples[error_code].append((earth_years, "r", rid, message))
             has_problem = True
 

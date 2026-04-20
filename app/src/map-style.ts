@@ -97,8 +97,11 @@ const PALETTE = [
 ];
 const HIGHLIGHT_COLOR = '#FF00FF'; // '#00E5FF',
 
-const ID_PALETTE = PALETTE.flatMap((color, i) => [i, color]) as [
-  number,
+// This type assertion is wrong, but this is what MapLibre's types want.
+const ID_PALETTE = PALETTE.flatMap((color, i) => [String(i), color]) as [
+  string,
+  string,
+  string,
   string,
 ];
 

@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
 import json
 import sys
@@ -35,6 +36,7 @@ from tqdm import tqdm
 
 from dates import DateTuple, parse_ohm_date, start_of_date, to_fractional_year
 from earth_coverage import EARTH_LAND_AREA_KM2, area_km2
+from extract_for_web import decode_ring_varint, decode_tags
 
 # ── Coordinate helpers ────────────────────────────────────────────────────────
 
@@ -172,6 +174,27 @@ def _parse_dates(
     return start, end
 
 
+def _resolve_rel_path(rel_path: Path) -> Path:
+    """Prefer the .b64.json variant of a relations file if it exists.
+
+    Accepts either ``relationsN.json`` or ``relationsN.b64.json``; returns
+    the .b64.json path when it exists on disk so callers can pass either form.
+    """
+    if rel_path.suffix == ".json" and not rel_path.name.endswith(".b64.json"):
+        b64_path = rel_path.with_name(rel_path.stem + ".b64.json")
+        if b64_path.exists():
+            return b64_path
+    return rel_path
+
+
+def _decode_rel_ways_b64(rel_ways_b64: list[list[str]]) -> list[list[list[int]]]:
+    """Decode base64-varint encoded ways into lists of signed way IDs."""
+    return [
+        [decode_ring_varint(base64.b64decode(ring)) for ring in polygon]
+        for polygon in rel_ways_b64
+    ]
+
+
 def load_features(
     rel_path: Path,
     way_path: Path,
@@ -179,7 +202,14 @@ def load_features(
     require_whmid: bool = False,
     desc: str = "",
 ) -> list[Feature]:
-    """Load features from extract_for_web.py JSON files."""
+    """Load features from extract_for_web.py JSON files.
+
+    Supports both the legacy ``relationsN.json`` format (plain list of dicts
+    with plain-dict tags and int-list ring ways) and the newer
+    ``relationsN.b64.json`` format (wrapper object with tagPairs/tagKeys/tagVals
+    lookup tables and base64-varint encoded rings).
+    """
+    rel_path = _resolve_rel_path(rel_path)
     print(f"Loading {desc or rel_path} …")
 
     with open(way_path) as f:
@@ -192,13 +222,29 @@ def load_features(
     print(f"  Decoded {len(ways):,} ways")
 
     with open(rel_path) as f:
-        relations: list[dict] = json.load(f)
+        raw = json.load(f)
+
+    # Detect format: new format is a dict with a "relations" key
+    if isinstance(raw, dict) and "relations" in raw:
+        pair_table = [tuple(p) for p in raw.get("tagPairs", [])]
+        key_table: list[str] = raw.get("tagKeys", [])
+        val_table: list[str] = raw.get("tagVals", [])
+        relations: list[dict] = raw["relations"]
+        use_b64 = True
+    else:
+        relations = raw  # legacy: plain list
+        pair_table = key_table = val_table = []
+        use_b64 = False
 
     features: list[Feature] = []
     n_skip_date = n_skip_geom = 0
 
     for rel in tqdm(relations, desc=f"  {desc or 'relations'}", unit="rel"):
-        tags = rel.get("tags", {})
+        # Decode tags
+        if use_b64:
+            tags = decode_tags(rel.get("tags", []), pair_table, key_table, val_table)
+        else:
+            tags = rel.get("tags", {})
 
         # Skip chronology meta-relations
         if tags.get("type") == "chronology":
@@ -212,14 +258,20 @@ def load_features(
             n_skip_date += 1
             continue
 
-        rel_ways = rel.get("ways", [])
+        # Decode ways
+        raw_ways_field = rel.get("ways", [])
+        if use_b64:
+            rel_ways = _decode_rel_ways_b64(raw_ways_field)
+        else:
+            rel_ways = raw_ways_field
+
         geom = _build_geometry(rel_ways, ways)
         if geom is None or geom.is_empty:
             n_skip_geom += 1
             continue
 
         km2 = area_km2(geom)
-        whmid = tags.get("whmid", "") if require_whmid else tags.get("whmid", "")
+        whmid = tags.get("whmid", "")
 
         features.append(
             Feature(
