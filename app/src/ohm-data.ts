@@ -8,9 +8,11 @@ export interface Chronology {
 export interface Relation {
   id: string;
   tags: Record<string, string>;
-  /** Polygons: ways[i] is a polygon, ways[i][0] is the outer ring,
-   *  ways[i][1..] are inner rings (holes). Each ring is a base64-encoded
-   *  varint byte stream of delta+zigzag encoded signed way IDs. */
+  /**
+   * Polygons: ways[i] is a polygon, ways[i][0] is the outer ring,
+   * ways[i][1..] are inner rings (holes). Each ring is a base64-encoded
+   * varint byte stream of delta+zigzag encoded signed way IDs.
+   */
   ways: string[][];
   /** Nodes that are direct members of this relation */
   nodes: number[];
@@ -19,8 +21,10 @@ export interface Relation {
 
 /** A relation as stored in the JSON file before tag decoding. */
 export interface RawRelation extends Omit<Relation, 'tags'> {
-  /** Flat encoded tag array. Negative int n = pair index -(n+1) in tagPairs.
-   *  Non-negative int k followed by string|int = key tagKeys[k] + value. */
+  /**
+   * Flat encoded tag array. Negative int n = pair index -(n+1) in tagPairs.
+   * Non-negative int k followed by string|int = key tagKeys[k] + value.
+   */
   tags: (number | string)[];
 }
 

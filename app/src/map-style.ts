@@ -96,10 +96,7 @@ const PALETTE = [
 ];
 const HIGHLIGHT_COLOR = '#FF00FF'; // '#00E5FF',
 
-const ID_PALETTE = PALETTE.flatMap((color, i) => [i, color]) as [
-  number,
-  string,
-];
+const ID_PALETTE = PALETTE.flatMap((color, i) => [String(i), color]);
 
 export const PAINT_STYLE: FillPaintStyle = {
   'fill-color': [
