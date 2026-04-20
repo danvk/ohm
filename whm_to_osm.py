@@ -230,9 +230,7 @@ def main() -> None:
                 continue
             features.append(feat)
 
-        print(
-            f"Year {args.year}: {n_active} active → {len(features)} features"
-        )
+        print(f"Year {args.year}: {n_active} active → {len(features)} features")
 
     else:
         # ── All-years mode ────────────────────────────────────────────────────
@@ -251,7 +249,9 @@ def main() -> None:
                 features.append(feat)
 
             if len(pid_feat_indices) > 1:
-                first_title = features[pid_feat_indices[0]]["properties"].get("name", "")
+                first_title = features[pid_feat_indices[0]]["properties"].get(
+                    "name", ""
+                )
                 chronology_relations.append(
                     {
                         "tags": {

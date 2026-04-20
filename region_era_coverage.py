@@ -31,11 +31,12 @@ from whm_gap import load_features, Feature
 
 # ── Era / region helpers ──────────────────────────────────────────────────────
 
+
 @dataclass
 class Era:
-    label: str       # e.g. "-3000 to -1500"
-    start: float     # fractional year
-    end: float       # fractional year
+    label: str  # e.g. "-3000 to -1500"
+    start: float  # fractional year
+    end: float  # fractional year
 
 
 def load_eras(path: Path) -> list[Era]:
@@ -47,11 +48,13 @@ def load_eras(path: Path) -> list[Era]:
                 continue
             start_s, end_s = line.split(",")
             start_y, end_y = int(start_s), int(end_s)
-            eras.append(Era(
-                label=f"{start_y} to {end_y}",
-                start=float(start_y),
-                end=float(end_y),
-            ))
+            eras.append(
+                Era(
+                    label=f"{start_y} to {end_y}",
+                    start=float(start_y),
+                    end=float(end_y),
+                )
+            )
     return eras
 
 
@@ -87,7 +90,7 @@ def accumulate(
 
     for feat in tqdm(features, unit="feat", smoothing=0):
         feat_start = to_fractional_year(feat.start)
-        feat_end   = to_fractional_year(feat.end)
+        feat_end = to_fractional_year(feat.end)
         if feat_end <= feat_start:
             continue
 
@@ -117,7 +120,7 @@ def accumulate(
 
             for era in eras:
                 t_start = max(feat_start, era.start)
-                t_end   = min(feat_end,   era.end)
+                t_end = min(feat_end, era.end)
                 if t_end <= t_start:
                     continue
                 duration = t_end - t_start
@@ -187,7 +190,7 @@ def main() -> None:
 
     # Write CSV in region-major, era-minor order
     region_order = [r.name for r in regions]
-    era_order    = [e.label for e in eras]
+    era_order = [e.label for e in eras]
 
     rows = []
     for rname in region_order:
@@ -196,12 +199,14 @@ def main() -> None:
             whm_ey = whm_totals.get(key, 0.0)
             ohm_ey = ohm_totals.get(key, 0.0)
             if whm_ey > 0 or ohm_ey > 0:
-                rows.append({
-                    "Region": rname,
-                    "Era": elabel,
-                    "WHM": f"{whm_ey:.6f}",
-                    "OHM": f"{ohm_ey:.6f}",
-                })
+                rows.append(
+                    {
+                        "Region": rname,
+                        "Era": elabel,
+                        "WHM": f"{whm_ey:.6f}",
+                        "OHM": f"{ohm_ey:.6f}",
+                    }
+                )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with open(args.output, "w", newline="") as f:
@@ -214,11 +219,15 @@ def main() -> None:
     # Quick summary: top gaps
     print("\nTop 20 (region, era) gaps (WHM - OHM):")
     print(f"  {'region':<35} {'era':<20} {'WHM':>8} {'OHM':>8} {'gap':>8}")
-    print("  " + "-"*82)
-    gap_rows = sorted(rows, key=lambda r: float(r["WHM"]) - float(r["OHM"]), reverse=True)
+    print("  " + "-" * 82)
+    gap_rows = sorted(
+        rows, key=lambda r: float(r["WHM"]) - float(r["OHM"]), reverse=True
+    )
     for r in gap_rows[:20]:
         gap = float(r["WHM"]) - float(r["OHM"])
-        print(f"  {r['Region']:<35} {r['Era']:<20} {float(r['WHM']):8.4f} {float(r['OHM']):8.4f} {gap:8.4f}")
+        print(
+            f"  {r['Region']:<35} {r['Era']:<20} {float(r['WHM']):8.4f} {float(r['OHM']):8.4f} {gap:8.4f}"
+        )
 
 
 if __name__ == "__main__":

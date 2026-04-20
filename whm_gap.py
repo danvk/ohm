@@ -410,7 +410,9 @@ def compute_gap(
                 "end_date": whm.end[0],
                 "total_ey": total_ey,
                 "uncovered_ey": uncovered_ey,
-                "coverage_pct": 100.0 * (1 - uncovered_ey / total_ey) if total_ey else 0.0,
+                "coverage_pct": 100.0 * (1 - uncovered_ey / total_ey)
+                if total_ey
+                else 0.0,
             }
         )
 
@@ -432,8 +434,13 @@ def _extract_base_name(title: str) -> str:
 def write_by_feature(results: list[dict], out_path: Path) -> None:
     results_sorted = sorted(results, key=lambda r: r["uncovered_ey"], reverse=True)
     fieldnames = [
-        "whmid", "name", "start_date", "end_date",
-        "total_ey", "uncovered_ey", "coverage_pct",
+        "whmid",
+        "name",
+        "start_date",
+        "end_date",
+        "total_ey",
+        "uncovered_ey",
+        "coverage_pct",
     ]
     with open(out_path, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
@@ -475,7 +482,14 @@ def write_by_chronology(results: list[dict], out_path: Path) -> None:
         row["total_ey"] = f"{t:.6f}"
         row["uncovered_ey"] = f"{u:.6f}"
 
-    fieldnames = ["whmid", "base_name", "n_segments", "total_ey", "uncovered_ey", "coverage_pct"]
+    fieldnames = [
+        "whmid",
+        "base_name",
+        "n_segments",
+        "total_ey",
+        "uncovered_ey",
+        "coverage_pct",
+    ]
     with open(out_path, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
@@ -549,7 +563,11 @@ def main() -> None:
     for r in results:
         wid = r["whmid"] or str(r["fid"])
         if wid not in by_whmid:
-            by_whmid[wid] = {"base_name": _extract_base_name(r["name"]), "total": 0.0, "uncov": 0.0}
+            by_whmid[wid] = {
+                "base_name": _extract_base_name(r["name"]),
+                "total": 0.0,
+                "uncov": 0.0,
+            }
         by_whmid[wid]["total"] += r["total_ey"]
         by_whmid[wid]["uncov"] += r["uncovered_ey"]
     top = sorted(by_whmid.values(), key=lambda x: x["uncov"], reverse=True)[:20]

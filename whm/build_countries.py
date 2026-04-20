@@ -31,6 +31,7 @@ Usage:
     python whm/build_countries.py
     python whm/build_countries.py --svg-dir /path/to/svgs
 """
+
 import argparse
 import json
 import re
@@ -53,21 +54,25 @@ def year_from_name(name: str) -> int:
     WA1234.svg  ->  1234  (AD)
     WB1234.svg  ->  1-1234 = -1233  (BC; 1 BC = year 0, 2 BC = year -1, …)
     """
-    m = re.match(r'^W([AB])(\d+)\.svg$', name, re.IGNORECASE)
+    m = re.match(r"^W([AB])(\d+)\.svg$", name, re.IGNORECASE)
     if not m:
         raise ValueError(f"Unexpected filename: {name!r}")
     n = int(m.group(2))
-    return n if m.group(1).upper() == 'A' else 1 - n
+    return n if m.group(1).upper() == "A" else 1 - n
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Build countries.json from WHM SVG files")
     ap.add_argument(
-        "--svg-dir", type=Path, default=DEFAULT_SVG_DIR,
+        "--svg-dir",
+        type=Path,
+        default=DEFAULT_SVG_DIR,
         help=f"Directory containing W[AB]*.svg files (default: {DEFAULT_SVG_DIR})",
     )
     ap.add_argument(
-        "--out", type=Path, default=OUTPUT,
+        "--out",
+        type=Path,
+        default=OUTPUT,
         help=f"Output JSON path (default: {OUTPUT})",
     )
     args = ap.parse_args()
@@ -80,15 +85,17 @@ def main() -> None:
         print(f"No SVG files found in {args.svg_dir}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Processing {len(svg_files)} SVG files "
-          f"(years {year_from_name(svg_files[0].name)} "
-          f"to {year_from_name(svg_files[-1].name)})…")
+    print(
+        f"Processing {len(svg_files)} SVG files "
+        f"(years {year_from_name(svg_files[0].name)} "
+        f"to {year_from_name(svg_files[-1].name)})…"
+    )
 
     # current_values[id] = full current state of all three tracked properties.
     # current_seg[id]    = the open segment dict (only changed props + dates).
     current_values: dict[str, dict] = {}
-    current_seg:    dict[str, dict] = {}
-    segments:       dict[str, list] = defaultdict(list)
+    current_seg: dict[str, dict] = {}
+    segments: dict[str, list] = defaultdict(list)
 
     for i, svg_path in enumerate(svg_files):
         year = year_from_name(svg_path.name)
@@ -110,8 +117,9 @@ def main() -> None:
                 current_values[pid] = new_vals
                 current_seg[pid] = {**new_vals, "start_date": year, "end_date": year}
             else:
-                changed = {k: v for k, v in new_vals.items()
-                           if v != current_values[pid][k]}
+                changed = {
+                    k: v for k, v in new_vals.items() if v != current_values[pid][k]
+                }
                 if changed:
                     # At least one property changed: close old segment, open new one
                     segments[pid].append(current_seg[pid])
@@ -133,7 +141,9 @@ def main() -> None:
 
     total_segs = sum(len(v) for v in result.values())
     size_mb = args.out.stat().st_size / 1024 / 1024
-    print(f"Wrote {len(result):,} IDs, {total_segs:,} segments → {args.out}  ({size_mb:.1f} MB)")
+    print(
+        f"Wrote {len(result):,} IDs, {total_segs:,} segments → {args.out}  ({size_mb:.1f} MB)"
+    )
 
 
 if __name__ == "__main__":

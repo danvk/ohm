@@ -1,4 +1,5 @@
 """Shared SVG parsing utilities for WHM files."""
+
 import re
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -16,7 +17,7 @@ def parse_id(path_id: str) -> tuple[str, str]:
     Split a path id like '30439186-egypt' into (osm_id, name).
     Handles plain names without a numeric prefix.
     """
-    m = re.match(r'^(\d+)-(.+)$', path_id)
+    m = re.match(r"^(\d+)-(.+)$", path_id)
     if m:
         return m.group(1), m.group(2)
     return "", path_id

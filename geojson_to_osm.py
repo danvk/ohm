@@ -309,8 +309,7 @@ def remove_spur_ways(
             for canon_seg, wid in way_map.items()
             if canon_seg[0] != canon_seg[-1]
             and (
-                endpoint_count[canon_seg[0]] == 1
-                or endpoint_count[canon_seg[-1]] == 1
+                endpoint_count[canon_seg[0]] == 1 or endpoint_count[canon_seg[-1]] == 1
             )
         }
 
@@ -456,10 +455,7 @@ def write_osm(
         if chronology_relations:
             for chron_idx, chron in enumerate(chronology_relations):
                 chron_id = len(features) + chron_idx + 1
-                members = [
-                    ("r", fi + 1, "")
-                    for fi in chron["member_feat_indices"]
-                ]
+                members = [("r", fi + 1, "") for fi in chron["member_feat_indices"]]
                 writer.add_relation(
                     mutable.Relation(
                         id=chron_id,
