@@ -21,13 +21,12 @@ from pathlib import Path
 
 import shapely
 from shapely.geometry import shape
-from shapely.ops import unary_union
 from shapely.strtree import STRtree
 from tqdm import tqdm
 
 from dates import to_fractional_year
 from earth_coverage import EARTH_LAND_AREA_KM2, area_km2
-from whm_gap import load_features, Feature
+from whm_gap import Feature, load_features
 
 # ── Era / region helpers ──────────────────────────────────────────────────────
 
@@ -186,7 +185,7 @@ def main() -> None:
     ohm_totals = accumulate(ohm_features, regions, eras, region_tree)
 
     # Collect all (region, era) keys that appear in either dataset
-    all_keys = set(whm_totals) | set(ohm_totals)
+    # all_keys = set(whm_totals) | set(ohm_totals)
 
     # Write CSV in region-major, era-minor order
     region_order = [r.name for r in regions]

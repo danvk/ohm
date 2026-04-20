@@ -23,9 +23,7 @@ import argparse
 import base64
 import csv
 import json
-import sys
-from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import shapely
