@@ -12,6 +12,9 @@ import {
   isValidMonthDay,
   padDate,
   splitDateString,
+  toDecimalEarliest,
+  toDecimalExclusiveEnd,
+  toDecimalLatest,
   yday,
 } from './date';
 
@@ -263,5 +266,107 @@ describe('isoDateToDecimalDate / decimalDateToIsoDate round-trip', () => {
     expect(decimalDateToIsoDate(isoDateToDecimalDate('-10191-07-31')!)).toBe(
       '-10191-07-31',
     );
+  });
+});
+
+describe('toDecimalEarliest', () => {
+  it('pads year-only to Jan 1', () => {
+    expect(toDecimalEarliest('1990')).toBe(isoDateToDecimalDate('1990-01-01'));
+    expect(toDecimalEarliest('-0044')).toBe(
+      isoDateToDecimalDate('-0044-01-01'),
+    );
+  });
+
+  it('pads year-month to the 1st', () => {
+    expect(toDecimalEarliest('1990-07')).toBe(
+      isoDateToDecimalDate('1990-07-01'),
+    );
+  });
+
+  it('passes through a full date unchanged', () => {
+    expect(toDecimalEarliest('1990-07-15')).toBe(
+      isoDateToDecimalDate('1990-07-15'),
+    );
+  });
+
+  it('returns null for invalid input', () => {
+    expect(toDecimalEarliest('foo')).toBeNull();
+    expect(toDecimalEarliest('')).toBeNull();
+  });
+});
+
+describe('toDecimalLatest', () => {
+  it('pads year-only to Dec 31', () => {
+    expect(toDecimalLatest('1990')).toBe(isoDateToDecimalDate('1990-12-31'));
+  });
+
+  it('pads year-month to the last day of the month', () => {
+    expect(toDecimalLatest('1990-07')).toBe(isoDateToDecimalDate('1990-07-31'));
+    expect(toDecimalLatest('1990-04')).toBe(isoDateToDecimalDate('1990-04-30'));
+    expect(toDecimalLatest('2000-02')).toBe(isoDateToDecimalDate('2000-02-29'));
+    expect(toDecimalLatest('1900-02')).toBe(isoDateToDecimalDate('1900-02-28'));
+  });
+
+  it('passes through a full date unchanged', () => {
+    expect(toDecimalLatest('1990-07-15')).toBe(
+      isoDateToDecimalDate('1990-07-15'),
+    );
+  });
+
+  it('returns null for invalid input', () => {
+    expect(toDecimalLatest('foo')).toBeNull();
+  });
+});
+
+describe('toDecimalExclusiveEnd', () => {
+  it('year-only: exclusive bound is Jan 1 of the next year', () => {
+    expect(toDecimalExclusiveEnd('1990')).toBe(
+      isoDateToDecimalDate('1991-01-01'),
+    );
+  });
+
+  it('year-month: exclusive bound is the 1st of the next month', () => {
+    expect(toDecimalExclusiveEnd('1990-07')).toBe(
+      isoDateToDecimalDate('1990-08-01'),
+    );
+    // December wraps to next year
+    expect(toDecimalExclusiveEnd('1990-12')).toBe(
+      isoDateToDecimalDate('1991-01-01'),
+    );
+  });
+
+  it('full date: exclusive bound is the next day', () => {
+    expect(toDecimalExclusiveEnd('1990-07-15')).toBe(
+      isoDateToDecimalDate('1990-07-16'),
+    );
+    // Month-end wraps to next month
+    expect(toDecimalExclusiveEnd('1990-07-31')).toBe(
+      isoDateToDecimalDate('1990-08-01'),
+    );
+    // Year-end wraps to next year
+    expect(toDecimalExclusiveEnd('1990-12-31')).toBe(
+      isoDateToDecimalDate('1991-01-01'),
+    );
+    // Leap day wraps to March 1
+    expect(toDecimalExclusiveEnd('2000-02-29')).toBe(
+      isoDateToDecimalDate('2000-03-01'),
+    );
+  });
+
+  it('the exclusive end includes the entire last day', () => {
+    // A slider at 1990-12-31 should be inside a feature with end_date=1990
+    const lastDay = isoDateToDecimalDate('1990-12-31')!;
+    const excEnd = toDecimalExclusiveEnd('1990')!;
+    expect(lastDay < excEnd).toBe(true);
+  });
+
+  it('the exclusive end excludes the first day of the next interval', () => {
+    const firstDayNext = isoDateToDecimalDate('1991-01-01')!;
+    const excEnd = toDecimalExclusiveEnd('1990')!;
+    expect(firstDayNext >= excEnd).toBe(true);
+  });
+
+  it('returns null for invalid input', () => {
+    expect(toDecimalExclusiveEnd('foo')).toBeNull();
   });
 });
