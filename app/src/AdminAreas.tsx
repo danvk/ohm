@@ -12,7 +12,7 @@ import type { FeatureInfo } from './FeaturePanel';
 import type { AppData } from './loader.ts';
 import type { Relation } from './ohm-data.ts';
 import { CIRCLE_STYLE, LINE_STYLE, PAINT_STYLE } from './map-style.ts';
-import { isDateInRange } from './date.ts';
+import { toDecimalEarliest } from './date.ts';
 
 export interface AdminAreasProps {
   data: AppData;
@@ -143,14 +143,19 @@ export function AdminAreas(props: AdminAreasProps) {
   >(() => {
     const features: Feature<MultiPolygon | MultiPoint>[] = [];
     const nextCache = new Map<string, Feature<MultiPolygon | MultiPoint>>();
+    const yearDec = toDecimalEarliest(year);
 
     for (const relation of relations) {
       const { id, tags } = relation;
-      if (
-        !adminLevels.has(tags['admin_level'] ?? '') ||
-        !isDateInRange(year, tags['start_date'], tags['end_date'])
-      ) {
-        continue;
+      if (!adminLevels.has(tags['admin_level'] ?? '')) continue;
+      if (yearDec !== null) {
+        if (
+          relation.startDecDate !== undefined &&
+          yearDec < relation.startDecDate
+        )
+          continue;
+        if (relation.endDecDate !== undefined && yearDec >= relation.endDecDate)
+          continue;
       }
       // Reuse cached feature if available, otherwise build and cache it.
       let feature = featureCache.current.get(id);

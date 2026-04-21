@@ -5,6 +5,48 @@ function toDecimal(d: string) {
   return padded ? isoDateToDecimalDate(padded, false) : null;
 }
 
+/** Earliest possible decimal date for a (possibly truncated) date string. */
+export function toDecimalEarliest(d: string): number | null {
+  return toDecimal(d);
+}
+
+/** Latest possible decimal date for a (possibly truncated) date string. */
+export function toDecimalLatest(d: string): number | null {
+  const padded = padDate(d, 'end');
+  return padded ? isoDateToDecimalDate(padded, false) : null;
+}
+
+function formatIsoYear(year: number): string {
+  if (year < 0) return '-' + String(-year).padStart(4, '0');
+  return String(year).padStart(4, '0');
+}
+
+function nextDayIso(isoFull: string): string {
+  const parts = splitDateString(isoFull);
+  if (!parts) throw new Error(`Cannot parse date: ${isoFull}`);
+  let [year, month, day] = parts;
+  day++;
+  if (day > howManyDaysInMonth(year, month)) {
+    day = 1;
+    month++;
+    if (month > 12) {
+      month = 1;
+      year++;
+    }
+  }
+  return `${formatIsoYear(year)}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/**
+ * Exclusive decimal upper bound for a (possibly truncated) date string.
+ * The bound includes all dates up to and including the last day of the interval.
+ */
+export function toDecimalExclusiveEnd(d: string): number | null {
+  const paddedEnd = padDate(d, 'end');
+  if (!paddedEnd || !splitDateString(paddedEnd)) return null;
+  return isoDateToDecimalDate(nextDayIso(paddedEnd), false);
+}
+
 export function isDateInRange(
   date: string,
   startDate: string | undefined | null,
