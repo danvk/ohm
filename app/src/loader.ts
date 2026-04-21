@@ -79,7 +79,7 @@ function loadLevel(level: string): Promise<LevelData> {
   return levelCache.get(level)!;
 }
 
-function computeEffectiveDates(relations: Relation[]): void {
+export function computeEffectiveDates(relations: Relation[]): void {
   const byId = new Map(relations.map((r) => [String(r.id), r]));
 
   for (const r of relations) {
