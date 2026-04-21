@@ -174,13 +174,9 @@
 
 /*
  * Responsive label hiding for the historical slider (ScaledTimeSlider + TimeRange).
- * makeHistoricalMarks() produces 12 marks in this order:
- *   1: -6000 (0%)   2: -3000 (10%)   3: -1000 (20%)   4:    0 (30%)
- *   5:   500 (39%)  6:  1000 (50%)   7:  1500 (64%)   8: 1700 (72%)
- *   9:  1800 (77%) 10:  1900 (83%)  11:  2000 (92%)  12: 2026 (100%)
- *
- * Container width ≈ rail width + 5em margins. At each breakpoint we hide
- * the marks that would otherwise overlap their neighbours.
+ * Labelled marks carry CSS classes like .year-1700 / .year-neg3000 via makeHistoricalMarks().
+ * Each breakpoint hides marks whose gap to their neighbour would otherwise fall below ~5px.
+ * Thresholds derived from measured gaps at container=1684px (see evaluate_script in git log).
  */
 .time-slider-sqrt,
 .time-slider-range {
@@ -188,39 +184,36 @@
   container-name: historical-slider;
 }
 
-/* ≤ 680px: 1700/1800 gap (4.7%) < 28px label width */
-@container historical-slider (max-width: 680px) {
-  .rc-slider-mark-text:nth-child(9) {
+/* 1700/1800 gap ≈ 50px at 1684px → falls below 10px around 700px */
+@container historical-slider (max-width: 800px) {
+  .rc-slider-mark-text:has(.year-1800) {
     visibility: hidden;
   }
 }
 
-/* ≤ 450px: 1500/1700 gap (7.6%) < 28px */
-@container historical-slider (max-width: 450px) {
-  .rc-slider-mark-text:nth-child(8) {
+/*
+ * At ~550px: 1500/1700 gap falls to ~8px; -6000/-3000 and 2000/2026 gaps also
+ * get uncomfortably tight (~13px and ~8px at 488px). Hide all three together.
+ */
+@container historical-slider (max-width: 550px) {
+  .rc-slider-mark-text:has(.year-1700),
+  .rc-slider-mark-text:has(.year-neg3000),
+  .rc-slider-mark-text:has(.year-2026) {
     visibility: hidden;
   }
 }
 
-/* ≤ 430px: -6000/-3000 and 2000/2026 gaps (~10%, 7.9%) < 35px */
-@container historical-slider (max-width: 430px) {
-  .rc-slider-mark-text:nth-child(2),
-  .rc-slider-mark-text:nth-child(12) {
+/* 1900/2000 gap falls below 10px around 435px */
+@container historical-slider (max-width: 420px) {
+  .rc-slider-mark-text:has(.year-1900) {
     visibility: hidden;
   }
 }
 
-/* ≤ 380px: 1900/2000 gap (9.5%) < 28px */
-@container historical-slider (max-width: 380px) {
-  .rc-slider-mark-text:nth-child(10) {
-    visibility: hidden;
-  }
-}
-
-/* ≤ 305px: -1000/0 (10%) and 500/1000 (10.9%) < label widths */
-@container historical-slider (max-width: 305px) {
-  .rc-slider-mark-text:nth-child(3),
-  .rc-slider-mark-text:nth-child(6) {
+/* -1000/0 and 500/1000 gaps fall below 10px around 300–320px */
+@container historical-slider (max-width: 340px) {
+  .rc-slider-mark-text:has(.year-neg1000),
+  .rc-slider-mark-text:has(.year-1000) {
     visibility: hidden;
   }
 }
