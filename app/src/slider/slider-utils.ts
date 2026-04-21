@@ -99,18 +99,41 @@ export function snapYearByPixels(year: number, sliderWidthPx: number): number {
 /** Marks for the piecewise historical range. */
 export function makeHistoricalMarks(): Record<number, number> {
   const years = [
-    MIN_YEAR,
-    -3000,
-    -1000,
-    0,
-    500,
-    1000,
-    1500,
-    1700,
-    1800,
-    1900,
-    2000,
-    MAX_YEAR,
+    { label: MIN_YEAR },
+    -5000,
+    -4000,
+    { label: -3000 },
+    -2000,
+    { label: -1000 },
+    -500,
+    { label: 0 },
+    100,
+    200,
+    300,
+    400,
+    { label: 500 },
+    600,
+    700,
+    800,
+    900,
+    { label: 1000 },
+    1100,
+    1200,
+    1300,
+    1400,
+    { label: 1500 },
+    1600,
+    { label: 1700 },
+    { label: 1800 },
+    { label: 1900 },
+    { label: 2000 },
+    { label: MAX_YEAR },
   ];
-  return Object.fromEntries(years.map((y) => [yearToSlider(y), y]));
+  return Object.fromEntries(
+    years.map((v) =>
+      typeof v === 'number'
+        ? [yearToSlider(v), ' ']
+        : [yearToSlider(v.label), v.label],
+    ),
+  );
 }
