@@ -172,6 +172,59 @@
   position: relative;
 }
 
+/*
+ * Responsive label hiding for the historical slider (ScaledTimeSlider + TimeRange).
+ * makeHistoricalMarks() produces 12 marks in this order:
+ *   1: -6000 (0%)   2: -3000 (10%)   3: -1000 (20%)   4:    0 (30%)
+ *   5:   500 (39%)  6:  1000 (50%)   7:  1500 (64%)   8: 1700 (72%)
+ *   9:  1800 (77%) 10:  1900 (83%)  11:  2000 (92%)  12: 2026 (100%)
+ *
+ * Container width ≈ rail width + 5em margins. At each breakpoint we hide
+ * the marks that would otherwise overlap their neighbours.
+ */
+.time-slider-sqrt,
+.time-slider-range {
+  container-type: inline-size;
+  container-name: historical-slider;
+}
+
+/* ≤ 680px: 1700/1800 gap (4.7%) < 28px label width */
+@container historical-slider (max-width: 680px) {
+  .rc-slider-mark-text:nth-child(9) {
+    visibility: hidden;
+  }
+}
+
+/* ≤ 450px: 1500/1700 gap (7.6%) < 28px */
+@container historical-slider (max-width: 450px) {
+  .rc-slider-mark-text:nth-child(8) {
+    visibility: hidden;
+  }
+}
+
+/* ≤ 430px: -6000/-3000 and 2000/2026 gaps (~10%, 7.9%) < 35px */
+@container historical-slider (max-width: 430px) {
+  .rc-slider-mark-text:nth-child(2),
+  .rc-slider-mark-text:nth-child(12) {
+    visibility: hidden;
+  }
+}
+
+/* ≤ 380px: 1900/2000 gap (9.5%) < 28px */
+@container historical-slider (max-width: 380px) {
+  .rc-slider-mark-text:nth-child(10) {
+    visibility: hidden;
+  }
+}
+
+/* ≤ 305px: -1000/0 (10%) and 500/1000 (10.9%) < label widths */
+@container historical-slider (max-width: 305px) {
+  .rc-slider-mark-text:nth-child(3),
+  .rc-slider-mark-text:nth-child(6) {
+    visibility: hidden;
+  }
+}
+
 .time-slider-linear .rc-slider-wrap {
   /* Match the range slider's horizontal margins so both rails are identical width */
   margin: 1.5em 2.5em 1.5em;
