@@ -1,3 +1,5 @@
+import React from 'react';
+
 // The slider's internal range is 0..SLIDER_MAX (integers).
 export const SLIDER_MAX = 10000;
 
@@ -96,21 +98,52 @@ export function snapYearByPixels(year: number, sliderWidthPx: number): number {
   return Math.round(year / 100) * 100;
 }
 
+// CSS class name for a labelled year mark (e.g. 1700 → "year-1700", -3000 → "year-neg3000").
+function yearMarkClass(year: number): string {
+  return `year-label year-${year < 0 ? 'neg' + -year : year}`;
+}
+
 /** Marks for the piecewise historical range. */
-export function makeHistoricalMarks(): Record<number, number> {
+export function makeHistoricalMarks(): Record<number, React.ReactNode> {
   const years = [
-    MIN_YEAR,
-    -3000,
-    -1000,
-    0,
-    500,
-    1000,
-    1500,
-    1700,
-    1800,
-    1900,
-    2000,
-    MAX_YEAR,
+    { label: MIN_YEAR },
+    -5000,
+    -4000,
+    { label: -3000 },
+    -2000,
+    { label: -1000 },
+    -500,
+    { label: 0 },
+    100,
+    200,
+    300,
+    400,
+    { label: 500 },
+    600,
+    700,
+    800,
+    900,
+    { label: 1000 },
+    1100,
+    1200,
+    1300,
+    1400,
+    { label: 1500 },
+    1600,
+    { label: 1700 },
+    { label: 1800 },
+    { label: 1900 },
+    { label: 2000 },
+    { label: MAX_YEAR },
   ];
-  return Object.fromEntries(years.map((y) => [yearToSlider(y), y]));
+  return Object.fromEntries(
+    years.map((v) => {
+      if (typeof v === 'number') return [yearToSlider(v), ' '];
+      const y = v.label;
+      return [
+        yearToSlider(y),
+        React.createElement('span', { className: yearMarkClass(y) }, y),
+      ];
+    }),
+  );
 }
