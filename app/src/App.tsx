@@ -146,7 +146,7 @@ export default function App() {
           {
             id: relation.id,
             tags: relation.tags,
-            chronology: relation.chronology,
+            ...(relation.chronology && { chronology: relation.chronology }),
           },
         ];
       });

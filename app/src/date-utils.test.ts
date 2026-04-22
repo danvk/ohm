@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { yearFromDateStr, yearToDateStr, DATE_STR_REGEX } from './date-utils';
+import {
+  yearFromDateStr,
+  yearToDateStr,
+  monthFromDateStr,
+  dateStrToMonths,
+  monthsToDateStr,
+  DATE_STR_REGEX,
+} from './date-utils';
 
 describe('yearFromDateStr', () => {
   it('parses year-only strings', () => {
@@ -55,6 +62,43 @@ describe('yearFromDateStr / yearToDateStr round-trip', () => {
     for (const year of [-1, -44, -3000, -6000]) {
       expect(yearFromDateStr(yearToDateStr(year))).toBe(year);
     }
+  });
+});
+
+describe('monthFromDateStr', () => {
+  it('returns 0 for year-only strings', () => {
+    expect(monthFromDateStr('1984')).toBe(0);
+    expect(monthFromDateStr('-0044')).toBe(0);
+  });
+
+  it('extracts month from year-month strings', () => {
+    expect(monthFromDateStr('1984-07')).toBe(7);
+    expect(monthFromDateStr('0044-03')).toBe(3);
+    expect(monthFromDateStr('-0044-03')).toBe(3);
+  });
+
+  it('extracts month from year-month-day strings', () => {
+    expect(monthFromDateStr('2000-12-31')).toBe(12);
+    expect(monthFromDateStr('-0044-03-15')).toBe(3);
+  });
+});
+
+describe('dateStrToMonths / monthsToDateStr round-trip', () => {
+  it('round-trips positive year-month strings', () => {
+    for (const s of ['1984-07', '2000-01', '2000-12', '0044-03']) {
+      expect(monthsToDateStr(dateStrToMonths(s))).toBe(s);
+    }
+  });
+
+  it('round-trips negative year-month strings', () => {
+    for (const s of ['-0044-03', '-0001-12', '-0001-01']) {
+      expect(monthsToDateStr(dateStrToMonths(s))).toBe(s);
+    }
+  });
+
+  it('maps year-only strings to their first month', () => {
+    expect(monthsToDateStr(dateStrToMonths('1984'))).toBe('1984-01');
+    expect(monthsToDateStr(dateStrToMonths('-0044'))).toBe('-0044-01');
   });
 });
 

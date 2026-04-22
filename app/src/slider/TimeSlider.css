@@ -172,6 +172,52 @@
   position: relative;
 }
 
+/*
+ * Responsive label hiding for the historical slider (ScaledTimeSlider + TimeRange).
+ * Labelled marks carry CSS classes like .year-1700 / .year-neg3000 via makeHistoricalMarks().
+ * Each breakpoint hides marks whose gap to their neighbour would otherwise fall below ~5px.
+ * Thresholds derived from measured gaps at container=1684px (see evaluate_script in git log).
+ */
+.time-slider-sqrt,
+.time-slider-range {
+  container-type: inline-size;
+  container-name: historical-slider;
+}
+
+/* 1700/1800 gap ≈ 50px at 1684px → falls below 10px around 700px */
+@container historical-slider (max-width: 800px) {
+  .rc-slider-mark-text:has(.year-1800) {
+    visibility: hidden;
+  }
+}
+
+/*
+ * At ~550px: 1500/1700 gap falls to ~8px; -6000/-3000 and 2000/2026 gaps also
+ * get uncomfortably tight (~13px and ~8px at 488px). Hide all three together.
+ */
+@container historical-slider (max-width: 550px) {
+  .rc-slider-mark-text:has(.year-1700),
+  .rc-slider-mark-text:has(.year-neg3000),
+  .rc-slider-mark-text:has(.year-2026) {
+    visibility: hidden;
+  }
+}
+
+/* 1900/2000 gap falls below 10px around 435px */
+@container historical-slider (max-width: 420px) {
+  .rc-slider-mark-text:has(.year-1900) {
+    visibility: hidden;
+  }
+}
+
+/* -1000/0 and 500/1000 gaps fall below 10px around 300–320px */
+@container historical-slider (max-width: 340px) {
+  .rc-slider-mark-text:has(.year-neg1000),
+  .rc-slider-mark-text:has(.year-1000) {
+    visibility: hidden;
+  }
+}
+
 .time-slider-linear .rc-slider-wrap {
   /* Match the range slider's horizontal margins so both rails are identical width */
   margin: 1.5em 2.5em 1.5em;

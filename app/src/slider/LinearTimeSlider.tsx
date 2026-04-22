@@ -2,7 +2,13 @@ import React from 'react';
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 import { ticks } from 'd3-array';
-import { yearFromDateStr, yearToDateStr, DATE_STR_REGEX } from '../date-utils';
+import {
+  yearFromDateStr,
+  yearToDateStr,
+  dateStrToMonths,
+  monthsToDateStr,
+  DATE_STR_REGEX,
+} from '../date-utils';
 
 import './TimeSlider.css';
 
@@ -17,6 +23,9 @@ export interface TimeSliderProps {
 
 type EditingField = 'min' | 'max' | 'year' | null;
 
+// Threshold below which month-level precision is used on the linear slider.
+const MONTH_PRECISION_THRESHOLD = 20;
+
 export function LinearTimeSlider({
   year,
   minYear,
@@ -25,12 +34,17 @@ export function LinearTimeSlider({
   onChangeMinYear,
   onChangeMaxYear,
 }: TimeSliderProps) {
-  const numericYear = yearFromDateStr(year);
-  const range = maxYear - minYear || 1; // guard against division by zero
-  const sliderValue = (numericYear - minYear) / range;
-  const pct = sliderValue * 100;
+  const yearRange = maxYear - minYear || 1;
+  const useMonths = yearRange <= MONTH_PRECISION_THRESHOLD;
+
+  const sliderMin = useMonths ? minYear * 12 : minYear;
+  const sliderMax = useMonths ? maxYear * 12 : maxYear;
+  const sliderValue = useMonths ? dateStrToMonths(year) : yearFromDateStr(year);
+  const sliderRange = sliderMax - sliderMin || 1;
+  const pct = ((sliderValue - sliderMin) / sliderRange) * 100;
+
   const tickMarks = Object.fromEntries(
-    ticks(minYear, maxYear, 5).map((y) => [y, ' ']),
+    ticks(minYear, maxYear, 5).map((y) => [useMonths ? y * 12 : y, ' ']),
   );
 
   const [editing, setEditing] = React.useState<EditingField>(null);
@@ -117,15 +131,18 @@ export function LinearTimeSlider({
       <div className="rc-slider-wrap">
         {renderYearLabel()}
         <Slider
-          min={minYear}
-          max={maxYear}
-          value={numericYear}
+          min={sliderMin}
+          max={sliderMax}
+          value={sliderValue}
           styles={{
             track: { height: 8 },
             rail: { height: 8 },
           }}
           marks={tickMarks}
-          onChange={(v) => onChange(yearToDateStr(v as number))}
+          onChange={(v) => {
+            const val = v as number;
+            onChange(useMonths ? monthsToDateStr(val) : yearToDateStr(val));
+          }}
         />
       </div>
       {renderBoundLabel('max', maxYear)}

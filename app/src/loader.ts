@@ -1,4 +1,9 @@
 import type { Relation, RawRelation, RelationsFile, Node } from './ohm-data';
+import {
+  toDecimalEarliest,
+  toDecimalLatest,
+  toDecimalExclusiveEnd,
+} from './date.ts';
 
 // const BASE_URL = '//ohmdash.pages.dev/boundary/';
 // const BASE_URL = 'http://localhost:8081/whm-boundary/';
@@ -76,6 +81,36 @@ function loadLevel(level: string): Promise<LevelData> {
   return levelCache.get(level)!;
 }
 
+export function computeEffectiveDates(relations: Relation[]): void {
+  const byId = new Map(relations.map((r) => [String(r.id), r]));
+
+  for (const r of relations) {
+    const sd = r.tags['start_date'];
+    const ed = r.tags['end_date'];
+    r.startDecDate = sd ? (toDecimalEarliest(sd) ?? undefined) : undefined;
+    r.endDecDate = ed ? (toDecimalExclusiveEnd(ed) ?? undefined) : undefined;
+  }
+
+  // Chronology-informed adjustment: when a feature's end_date matches the
+  // start_date of the next feature in a chronology, split the interval at
+  // the midpoint so neither feature overlaps the other.
+  for (const r of relations) {
+    const endDate = r.tags['end_date'];
+    if (!endDate) continue;
+    for (const chrono of r.chronology ?? []) {
+      if (chrono.next === undefined) continue;
+      const next = byId.get(String(chrono.next));
+      if (!next || next.tags['start_date'] !== endDate) continue;
+      const earliest = toDecimalEarliest(endDate);
+      const latest = toDecimalLatest(endDate);
+      if (earliest === null || latest === null) continue;
+      const midpoint = (earliest + latest) / 2;
+      r.endDecDate = midpoint;
+      next.startDecDate = midpoint;
+    }
+  }
+}
+
 export async function loadDataForLevels(
   adminLevels: Set<string>,
 ): Promise<AppData> {
@@ -94,6 +129,8 @@ export async function loadDataForLevels(
     Object.assign(ways, levelData.ways);
     Object.assign(nodes, levelData.nodes);
   }
+
+  computeEffectiveDates(relations);
 
   console.log(
     'Loaded',

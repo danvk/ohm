@@ -16,7 +16,11 @@ export interface Relation {
   ways: string[][];
   /** Nodes that are direct members of this relation */
   nodes: number[];
-  chronology: Chronology[];
+  chronology?: Chronology[];
+  /** Precomputed inclusive decimal lower bound (earliest start_date). */
+  startDecDate?: number | undefined;
+  /** Precomputed exclusive decimal upper bound (latest end_date + 1 day, or chronology midpoint). */
+  endDecDate?: number | undefined;
 }
 
 /** A relation as stored in the JSON file before tag decoding. */
