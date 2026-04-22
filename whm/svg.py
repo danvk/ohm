@@ -23,21 +23,16 @@ def parse_id(path_id: str) -> tuple[str, str]:
     return "", path_id
 
 
-def extract_paths(
-    svg_path: Path,
-    groups: tuple[str, ...] = ("area", "terr", "ctry"),
-) -> list[dict]:
-    """
-    Extract raw path data from a WHM SVG file.
+def extract_paths(svg_path: Path) -> list[dict]:
+    """Extract raw path data from a WHM SVG file.
 
-    Returns a list of dicts with keys:
-      'id'    – the path element's id attribute
-      'path'  – the raw SVG d= string (unprojected pixel coordinates)
-      'fill'  – the fill attribute (may be absent)
-      'title' – from the matching <text id="…"><title> element (may be absent)
-
-    Only <path> elements inside the named group elements are returned.
-    Groups that don't exist in a given file are silently skipped.
+    Returns one dict per <path> element that has a non-'none' fill color,
+    drawn from any named <g> group in the file.  Each dict has keys:
+      'id'    - the path element's id attribute
+      'path'  - the raw SVG d= string (unprojected pixel coordinates)
+      'fill'  - the fill color (always present and not 'none')
+      'type'  - the id of the enclosing <g> group (e.g. 'ctry', 'area', 'polis')
+      'title' - from the matching <text id="…"><title> element (may be absent)
     """
     tree = ET.parse(svg_path)
     root = tree.getroot()
@@ -53,19 +48,17 @@ def extract_paths(
             titles[tid] = title_el.text
 
     results: list[dict] = []
-    for group_id in groups:
-        group = root.find(f'.//{svg_tag("g")}[@id="{group_id}"]')
-        if group is None:
+    for group_el in root.iter(svg_tag("g")):
+        group_id = group_el.get("id", "")
+        if not group_id:
             continue
-        for path_el in group.iter(svg_tag("path")):
+        for path_el in group_el.findall(svg_tag("path")):
             pid = path_el.get("id", "")
             d = path_el.get("d", "")
-            if not (pid and d):
+            fill = path_el.get("fill", "")
+            if not (pid and d and fill and fill != "none"):
                 continue
-            entry: dict = {"id": pid, "path": d}
-            fill = path_el.get("fill")
-            if fill:
-                entry["fill"] = fill
+            entry: dict = {"id": pid, "path": d, "fill": fill, "type": group_id}
             if pid in titles:
                 entry["title"] = titles[pid]
             results.append(entry)

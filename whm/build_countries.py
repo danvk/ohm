@@ -44,7 +44,7 @@ from tqdm import tqdm
 
 OUTPUT = Path(__file__).parent / "countries.json"
 
-PROPS = ("fill", "path", "title")
+PROPS = ("fill", "path", "title", "type")
 
 
 def year_from_name(name: str) -> int:

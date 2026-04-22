@@ -116,7 +116,9 @@ export const PAINT_STYLE: FillPaintStyle = {
       ? ['coalesce', ['get', 'fill'], DEFAULT_COLOR]
       : ['match', ['get', 'color'], ...ID_PALETTE, DEFAULT_COLOR],
   ],
-  'fill-opacity': IS_WHM ? 0.75 : 0.5,
+  'fill-opacity': IS_WHM
+    ? ['match', ['get', 'group'], 'fntr', 0.25, 0.75]
+    : 0.5,
 };
 
 type LinePaintStyle = Exclude<
@@ -137,7 +139,7 @@ export const LINE_STYLE: LinePaintStyle = {
     ['boolean', ['feature-state', 'selected'], false],
     2,
     IS_WHM
-      ? 1
+      ? ['match', ['get', 'group'], 'fntr', 0, 1]
       : ['match', ['get', 'admin_level'], '2', 1.5, '1', 2, '3', 1.25, 1],
   ],
 };

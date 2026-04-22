@@ -210,6 +210,7 @@ def main() -> None:
             "whmid": pid,
             "start_date": _fmt_year(state["start_date"]),
             "end_date": _fmt_year(state["end_date"]),
+            "group": state.get("type"),
         }
         if state.get("fill"):
             props["fill"] = state["fill"]

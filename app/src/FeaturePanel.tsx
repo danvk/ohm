@@ -20,6 +20,7 @@ const EXACT_TAGS = [
   'color',
   'color:id',
   'whmid',
+  'group',
 ];
 const PREFIX_TAGS = [
   'start_date',

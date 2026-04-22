@@ -34,7 +34,7 @@ To import into osm.pbf format, we need to fix both of these issues. The projecti
 To get coastlines, we intersection each feature with the earth's land (`land.geojson`). This comes from Natural Earth Data's [Land polygons].
 
 ```sh
-uv run whm_to_osm.py -o whm/whm_all.osm.pbf
+uv run whm/whm_to_osm.py -o whm/whm_all.osm.pbf
 ```
 
 The feature are then run through `geojson_to_osm.py` to produce an osm.pbf file with common ways shared across relations. This also generates chronologies to track changes to features over time.
