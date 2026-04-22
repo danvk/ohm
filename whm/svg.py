@@ -25,7 +25,7 @@ def parse_id(path_id: str) -> tuple[str, str]:
 
 def extract_paths(
     svg_path: Path,
-    groups: tuple[str, ...] = ("terr", "ctry"),
+    groups: tuple[str, ...] = ("area", "terr", "ctry"),
 ) -> list[dict]:
     """
     Extract raw path data from a WHM SVG file.
