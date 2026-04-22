@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { computeEffectiveDates } from './decoder';
-import type { Relation } from './ohm-data';
+import { computeEffectiveDates, decodeRelation } from './decoder';
+import type { Relation, RelationsFile } from './ohm-data';
 import {
   isoDateToDecimalDate,
   toDecimalEarliest,
@@ -15,6 +15,51 @@ function makeRelation(
 ): Relation {
   return { id, tags, ways: [], nodes: [], chronology };
 }
+
+describe('decodeRelation', () => {
+  const relFile: RelationsFile = {
+    tagPairs: [
+      ['boundary', 'administrative'],
+      ['admin_level', '2'],
+    ],
+    tagKeys: ['name', 'start_date'],
+    tagVals: ['Germany', 'France'],
+    relations: [],
+  };
+
+  it('decodes a tag pair (negative index)', () => {
+    const raw = { id: '1', tags: [-1, -2], ways: [], nodes: [] };
+    const rel = decodeRelation(raw, relFile);
+    expect(rel.tags).toEqual({ boundary: 'administrative', admin_level: '2' });
+  });
+
+  it('decodes a tag with string value', () => {
+    const raw = { id: '1', tags: [0, 'Egypt'], ways: [], nodes: [] };
+    const rel = decodeRelation(raw, relFile);
+    expect(rel.tags).toEqual({ name: 'Egypt' });
+  });
+
+  it('decodes a tag with indexed value', () => {
+    const raw = { id: '1', tags: [0, 0], ways: [], nodes: [] };
+    const rel = decodeRelation(raw, relFile);
+    expect(rel.tags).toEqual({ name: 'Germany' });
+  });
+
+  it('decodes mixed tag encoding', () => {
+    const raw = { id: '42', tags: [-1, 0, 'Berlin'], ways: [], nodes: [] };
+    const rel = decodeRelation(raw, relFile);
+    expect(rel.tags).toEqual({ boundary: 'administrative', name: 'Berlin' });
+  });
+
+  it('preserves non-tag fields unchanged', () => {
+    const raw = { id: '7', tags: [], ways: [['abc']], nodes: [99] };
+    const rel = decodeRelation(raw, relFile);
+    expect(rel.id).toBe('7');
+    expect(rel.ways).toEqual([['abc']]);
+    expect(rel.nodes).toEqual([99]);
+    expect(rel.tags).toEqual({});
+  });
+});
 
 describe('computeEffectiveDates', () => {
   it('sets no dates when tags are absent', () => {

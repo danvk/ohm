@@ -276,7 +276,7 @@ export default function App() {
     if (IS_WHM) {
       document.title = 'WorldHistoryMaps boundary viewer';
     }
-  });
+  }, []);
 
   return (
     <>
