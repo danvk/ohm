@@ -4,6 +4,8 @@
 
 This repo includes tools for converting this into OSM format, so that it can be compared with OHM. The idea is to see where OHM has gaps in coverage that could plausibly be filled with more mapping work.
 
+![Boundary viewer showing WHM data](/whm/whm-boundary.png)
+
 ## Import
 
 The global maps portion of WHM is no longer being updated as of 2014, so this import process only needs to be run once. The output is in `whm/whm_all.osm.pbf`.
@@ -14,7 +16,7 @@ Download all the SVG files from http://www.worldhistorymaps.com/World/index.htm 
 
 Then run:
 
-```
+```sh
 uv run whm/build_countries.py --svg-dir path/to/whm/dir
 ```
 
@@ -31,7 +33,7 @@ To import into osm.pbf format, we need to fix both of these issues. The projecti
 
 To get coastlines, we intersection each feature with the earth's land (`land.geojson`). This comes from Natural Earth Data's [Land polygons].
 
-```
+```sh
 uv run whm_to_osm.py -o whm/whm_all.osm.pbf
 ```
 
@@ -72,6 +74,8 @@ Then run the vite dev server with appropriate flags:
 WHM=1 VITE_BOUNDARY_SERVER=//localhost:8081 npm run dev
 ```
 
+The deployed WHM boundary viewer uses the same JS as the OHM version, so it doesn't need to be deployed separately.
+
 [usual process]: https://github.com/danvk/ohm/#boundary-viewer
 
 ### Compare with OHM data
@@ -82,7 +86,7 @@ You can generate the OHM boundary viewer data from a planet file yourself, or gr
 
 First, a high-level comparison by region and era (takes ~30s):
 
-```
+```sh
 uv run whm/region_era_coverage.py \
     --ohm-dir ~/code/ohmdash/boundary \
     --whm-dir ~/code/ohmdash/whm-boundary
@@ -99,7 +103,7 @@ uv run whm/whm_gap.py \
 
 To produce decade coverage data (~30s):
 
-```
+```sh
 uv run decade_coverage.py whm/whm_all.osm.pbf > whm-decades.txt
 ```
 
@@ -109,7 +113,7 @@ The corresponding stats for OHM planet take much longer (~10 minutes).
 
 Something like this works:
 
-```bash
+```sh
 TIMESTAMP=2026-04-22 ./extract-stats.sh whm/whm_all.osm.pbf whm/stats
 ```
 

@@ -1,4 +1,5 @@
 import type maplibregl from 'maplibre-gl';
+import { IS_WHM } from './config';
 
 export const MINIMAL_STYLE: maplibregl.StyleSpecification = {
   version: 8,
@@ -110,9 +111,12 @@ export const PAINT_STYLE: FillPaintStyle = {
     'case',
     ['boolean', ['feature-state', 'selected'], false],
     HIGHLIGHT_COLOR,
-    ['coalesce', ['get', 'fill'], DEFAULT_COLOR],
+    // WHM has hand-selected fill colors, but OHM uses an indexed palette
+    IS_WHM
+      ? ['coalesce', ['get', 'fill'], DEFAULT_COLOR]
+      : ['match', ['get', 'color'], ...ID_PALETTE, DEFAULT_COLOR],
   ],
-  'fill-opacity': 0.75,
+  'fill-opacity': IS_WHM ? 0.75 : 0.5,
 };
 
 type LinePaintStyle = Exclude<
@@ -124,14 +128,17 @@ export const LINE_STYLE: LinePaintStyle = {
     'case',
     ['boolean', ['feature-state', 'selected'], false],
     HIGHLIGHT_COLOR,
-    // ['coalesce', ['get', 'fill'], DEFAULT_COLOR],
-    DEFAULT_COLOR,
+    IS_WHM
+      ? DEFAULT_COLOR
+      : ['match', ['get', 'color'], ...ID_PALETTE, DEFAULT_COLOR],
   ],
   'line-width': [
     'case',
     ['boolean', ['feature-state', 'selected'], false],
     2,
-    1,
+    IS_WHM
+      ? 1
+      : ['match', ['get', 'admin_level'], '2', 1.5, '1', 2, '3', 1.25, 1],
   ],
 };
 

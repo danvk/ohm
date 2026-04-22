@@ -15,13 +15,13 @@ import {
   levelsParser,
   rangeParser,
 } from './useUrlState';
-import Logo from './ohm_logo.svg';
 import { yearFromDateStr, yearToDateStr } from './date-utils';
 import type { AppData } from './loader.ts';
 import { loadDataForLevels } from './loader.ts';
 import { MAX_YEAR, MIN_YEAR } from './slider/slider-utils.ts';
 import { IS_WHM } from './config.ts';
 import { OhmLink } from './OhmLink.tsx';
+import { Title } from './Title.tsx';
 
 export default function App() {
   // Map viewport — 500ms throttle (can fire 60fps during pan/zoom)
@@ -281,18 +281,7 @@ export default function App() {
   return (
     <>
       {isLoading && <div className="loading">Loading…</div>}
-      <div className="title">
-        <h3>WHM Boundary Viewer</h3>
-        <div className="about">
-          Source:{' '}
-          <a
-            href="http://www.worldhistorymaps.com/timeline.html"
-            target="_blank"
-          >
-            WorldHistoryMaps.com
-          </a>
-        </div>
-      </div>
+      <Title isWhm={IS_WHM} />
       <TimeControl
         year={date}
         minYear={minYear}
