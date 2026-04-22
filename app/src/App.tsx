@@ -15,11 +15,13 @@ import {
   levelsParser,
   rangeParser,
 } from './useUrlState';
-import Logo from './ohm_logo.svg';
 import { yearFromDateStr, yearToDateStr } from './date-utils';
 import type { AppData } from './loader.ts';
 import { loadDataForLevels } from './loader.ts';
 import { MAX_YEAR, MIN_YEAR } from './slider/slider-utils.ts';
+import { IS_WHM } from './config.ts';
+import { OhmLink } from './OhmLink.tsx';
+import { Title } from './Title.tsx';
 
 export default function App() {
   // Map viewport — 500ms throttle (can fire 60fps during pan/zoom)
@@ -269,16 +271,17 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [date, isRange, minYear, maxYear, handleYearChange, setUrlRange]);
 
+  React.useEffect(() => {
+    document.body.classList.add(IS_WHM ? 'whm' : 'ohm');
+    if (IS_WHM) {
+      document.title = 'WorldHistoryMaps boundary viewer';
+    }
+  }, []);
+
   return (
     <>
       {isLoading && <div className="loading">Loading…</div>}
-      <div className="title">
-        <img src={Logo} width={30} height={30} className="logo" />
-        <h3>Boundary Viewer</h3>
-        <a href="https://github.com/danvk/ohm/tree/main/app" target="_blank">
-          About
-        </a>
-      </div>
+      <Title isWhm={IS_WHM} />
       <TimeControl
         year={date}
         minYear={minYear}
@@ -327,6 +330,7 @@ export default function App() {
           onClickFeature={handleClickFeature}
         />
       </MapLibreMap>
+      {IS_WHM ? <OhmLink /> : null}
       <FeaturePanel
         features={selectedFeatures}
         onClose={() => {

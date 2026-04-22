@@ -1,0 +1,6 @@
+{
+    // WHM only has country-level data for the world.
+    "admin_levels": [2],
+    "simplify_tolerance_m": 10,
+    "vw-tolerance-m2": 1000
+}

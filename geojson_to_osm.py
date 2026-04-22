@@ -113,7 +113,16 @@ def build_node_index(
                 if qpt not in node_map:
                     node_map[qpt] = len(node_map) + 1  # 1-based
                 ring_ids.append(node_map[qpt])
-            feat_ring_ids.append(ring_ids)
+            # Deduplicate consecutive identical nodes (can arise from shapely
+            # needle rings where two vertices quantize to the same grid cell).
+            deduped: list[int] = [ring_ids[0]] if ring_ids else []
+            for nid in ring_ids[1:]:
+                if nid != deduped[-1]:
+                    deduped.append(nid)
+            # Discard degenerate rings: fewer than 3 nodes, or a node appears
+            # more than once (spike/self-intersecting ring, e.g. [A, B, A]).
+            if len(deduped) >= 3 and len(set(deduped)) == len(deduped):
+                feat_ring_ids.append(deduped)
         feature_rings.append(feat_ring_ids)
 
     return node_map, feature_rings
@@ -184,8 +193,13 @@ def split_ring_at_junctions(
     junction_indices = [i for i, nid in enumerate(ring) if nid in junctions]
 
     if not junction_indices:
-        # no junctions – entire ring is one segment; close it
-        return [tuple(ring) + (ring[0],)]
+        # No junctions – entire ring is one segment.  Rotate to the minimum
+        # node ID so that two traversals of the same closed ring (starting at
+        # different positions) produce the same canonical segment and are
+        # deduplicated correctly (e.g. an island shared between two features).
+        min_idx = ring.index(min(ring))
+        rotated = ring[min_idx:] + ring[:min_idx]
+        return [tuple(rotated) + (rotated[0],)]
 
     segments: list[tuple[int, ...]] = []
     num_j = len(junction_indices)
@@ -258,6 +272,67 @@ def build_ways(
 
 
 # ---------------------------------------------------------------------------
+# Step 5b – Remove spur ways
+# ---------------------------------------------------------------------------
+
+
+def remove_spur_ways(
+    way_map: dict[SegKey, int],
+    feature_way_refs: list[list[list[tuple[int, bool]]]],
+) -> tuple[dict[SegKey, int], list[list[list[tuple[int, bool]]]]]:
+    """Remove spur way segments — those with a dead-end (degree-1) endpoint.
+
+    A spur arises when a polygon ring has a spike: the boundary goes out to a
+    tip node and returns along the same path.  Because edges are stored as
+    unordered pairs, both traversals collapse to one edge, leaving the tip
+    with degree 1 in the edge graph.  The segment from the last junction to
+    the tip is then a dangling way that has no topological role.
+
+    Removal is iterated until no more spurs exist (pruning one spur can expose
+    the next node in the chain as a new dead-end).
+
+    Closed segments (first node == last node, i.e. a ring with no junctions)
+    are never considered spurs.
+    """
+    n_removed = 0
+    while True:
+        # Count how many (open) ways use each endpoint node
+        endpoint_count: dict[int, int] = defaultdict(int)
+        for canon_seg in way_map:
+            if canon_seg[0] == canon_seg[-1]:
+                continue  # closed loop – not a spur candidate
+            endpoint_count[canon_seg[0]] += 1
+            endpoint_count[canon_seg[-1]] += 1
+
+        spur_ids = {
+            wid
+            for canon_seg, wid in way_map.items()
+            if canon_seg[0] != canon_seg[-1]
+            and (
+                endpoint_count[canon_seg[0]] == 1 or endpoint_count[canon_seg[-1]] == 1
+            )
+        }
+
+        if not spur_ids:
+            break
+
+        n_removed += len(spur_ids)
+        way_map = {seg: wid for seg, wid in way_map.items() if wid not in spur_ids}
+        feature_way_refs = [
+            [
+                [(wid, rev) for wid, rev in ring if wid not in spur_ids]
+                for ring in feat_rings
+            ]
+            for feat_rings in feature_way_refs
+        ]
+
+    if n_removed:
+        print(f"  Removed {n_removed} spur way(s)", file=sys.stderr)
+
+    return way_map, feature_way_refs
+
+
+# ---------------------------------------------------------------------------
 # Step 6 – Write OSM PBF
 # ---------------------------------------------------------------------------
 
@@ -269,8 +344,17 @@ def write_osm(
     way_map: dict[SegKey, int],
     feature_way_refs: list[list[list[tuple[int, bool]]]],
     tag_filter: tuple[str, set[str]] | None = None,
+    chronology_relations: list[dict] | None = None,
 ) -> None:
-    """Write nodes, ways and relations to an OSM PBF file."""
+    """Write nodes, ways and relations to an OSM PBF file.
+
+    Optional ``chronology_relations`` is a list of dicts, each with:
+      ``tags``               – tag dict for the chronology relation
+      ``member_feat_indices`` – ordered list of indices into ``features``
+                               whose relations will become members (role "")
+    Chronology relations are written after all feature relations and reference
+    them by their OSM relation IDs (``-(feat_idx + 1)``).
+    """
 
     # Reverse lookups needed for filtering
     # canonical_seg -> way_id is way_map; we need way_id -> canonical_seg
@@ -300,12 +384,13 @@ def write_osm(
         seg = way_id_to_seg[wid]
         used_node_ids.update(seg)
 
-    # Use negative IDs — the OSM convention for temporary/unsaved objects.
-    # Each type gets its own negative ID space; no offsets needed since
-    # nodes, ways and relations occupy separate namespaces in OSM.
-    # node internal ID n  →  OSM node ID  -n
-    # way  internal ID w  →  OSM way  ID  -w
-    # relation index  r   →  OSM rel  ID  -(r+1)
+    # Use positive IDs — osmium tools (IdFilter, etc.) require non-negative IDs.
+    # Each type gets its own ID space; nodes, ways and relations occupy separate
+    # namespaces in OSM so there is no collision.
+    # node internal ID n  →  OSM node ID   n
+    # way  internal ID w  →  OSM way  ID   w
+    # relation index  r   →  OSM rel  ID   r+1
+    # chronology rel  c   →  OSM rel  ID   len(features) + c + 1
 
     n_node, n_way, n_rel = 0, 0, 0
 
@@ -318,7 +403,7 @@ def write_osm(
             lon, lat = _dequantize(qlon, qlat)
             writer.add_node(
                 mutable.Node(
-                    id=-nid,
+                    id=nid,
                     location=(lon, lat),
                     tags={},
                     version=1,
@@ -331,10 +416,10 @@ def write_osm(
         for canon_seg, wid in way_map.items():
             if wid not in used_way_ids:
                 continue
-            node_refs = [-nid for nid in canon_seg]
+            node_refs = [nid for nid in canon_seg]
             writer.add_way(
                 mutable.Way(
-                    id=-wid,
+                    id=wid,
                     nodes=node_refs,
                     tags={"source": "ned"},
                     version=1,
@@ -343,22 +428,21 @@ def write_osm(
             )
             n_way += 1
 
-        # --- Relations ---
+        # --- Feature relations ---
         for feat_idx in kept_feat_indices:
             feat = features[feat_idx]
             props = feat.get("properties") or {}
             tags = {str(k): str(v) for k, v in props.items() if v is not None}
-            # tags["type"] = "multipolygon"
 
             members: list[tuple[str, int, str]] = []
             for ring_way_refs in feature_way_refs[feat_idx]:
                 for way_id, is_reversed in ring_way_refs:
                     role = "outer"  # all rings are outer (holes ignored)
-                    members.append(("w", -way_id, role))
+                    members.append(("w", way_id, role))
 
             writer.add_relation(
                 mutable.Relation(
-                    id=-(feat_idx + 1),
+                    id=feat_idx + 1,
                     members=members,
                     tags=tags,
                     version=1,
@@ -366,6 +450,22 @@ def write_osm(
                 )
             )
             n_rel += 1
+
+        # --- Chronology relations ---
+        if chronology_relations:
+            for chron_idx, chron in enumerate(chronology_relations):
+                chron_id = len(features) + chron_idx + 1
+                members = [("r", fi + 1, "") for fi in chron["member_feat_indices"]]
+                writer.add_relation(
+                    mutable.Relation(
+                        id=chron_id,
+                        members=members,
+                        tags={str(k): str(v) for k, v in chron["tags"].items()},
+                        version=1,
+                        visible=True,
+                    )
+                )
+                n_rel += 1
 
     # Summary
     print(

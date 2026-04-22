@@ -47,25 +47,6 @@ export function toDecimalExclusiveEnd(d: string): number | null {
   return isoDateToDecimalDate(nextDayIso(paddedEnd), false);
 }
 
-export function isDateInRange(
-  date: string,
-  startDate: string | undefined | null,
-  endDate: string | undefined | null,
-): boolean {
-  const decDate = toDecimal(date);
-  if (decDate === null) return true;
-
-  if (startDate) {
-    const decStart = toDecimal(startDate);
-    if (decStart !== null && decDate < decStart) return false;
-  }
-  if (endDate) {
-    const decEnd = toDecimal(endDate);
-    if (decEnd !== null && decDate >= decEnd) return false;
-  }
-  return true;
-}
-
 export function isLeapYear(year: number): boolean {
   let y = year;
   if (y <= 0) y += 1;
@@ -163,56 +144,6 @@ export function isoDateToDecimalDate(
   }
 
   return Math.round(decimaldate * 100000) / 100000;
-}
-
-// Convert a decimal year back to an ISO-8601-shaped date string.
-export function decimalDateToIsoDate(decimaldate: number): string {
-  const truedecdate = decimaldate - 1;
-  const ispositive = truedecdate > 0;
-
-  let yearint: number;
-  if (ispositive) {
-    yearint = Math.floor(truedecdate) + 1;
-  } else {
-    yearint = -Math.abs(Math.floor(truedecdate));
-  }
-
-  const dty = howManyDaysInYear(yearint);
-  const fracpart = Math.abs(truedecdate) % 1;
-  let targetday: number;
-  if (ispositive) {
-    targetday = Math.ceil(dty * fracpart);
-  } else {
-    targetday = dty - Math.floor(dty * fracpart);
-  }
-
-  let dayspassed = 0;
-  let monthint = 1;
-  for (let mi = 1; mi <= 12; mi++) {
-    const dtm = howManyDaysInMonth(yearint, mi);
-    if (dayspassed + dtm < targetday) {
-      dayspassed += dtm;
-    } else {
-      monthint = mi;
-      break;
-    }
-  }
-  const dayint = targetday - dayspassed;
-
-  const monthstring = String(monthint).padStart(2, '0');
-  const daystring = String(dayint).padStart(2, '0');
-  let yearstring: string;
-  if (yearint > 0) {
-    yearstring = String(yearint).padStart(4, '0');
-  } else if (yearint === -1) {
-    // ISO 8601: year 0 = 1 BCE, no minus sign
-    yearstring = String(0).padStart(4, '0');
-  } else {
-    // ISO 8601: shift by 1 and add minus
-    yearstring = '-' + String(Math.abs(yearint + 1)).padStart(4, '0');
-  }
-
-  return `${yearstring}-${monthstring}-${daystring}`;
 }
 
 // Pad a truncated date (year-only or year-month) to a full year-month-day string.

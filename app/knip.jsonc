@@ -1,4 +1,5 @@
 {
   // Generally err on the side of exporting props types.
   "ignoreExportsUsedInFile": true,
+  "entry": ["src/main.tsx!"],
 }

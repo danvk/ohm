@@ -100,5 +100,5 @@ To deploy to https://danvk.org/ohm/
 
 ```
 npm run build
-rm -rf ../../danvk.github.io/ohm && cp -r dist ../../danvk.github.io/ohm
+rm -rf ../../danvk.github.io/ohm && cp -r dist ../../danvk.github.io/ohm && cp dist/index.html ../../danvk.github.io/whm3/
 ```

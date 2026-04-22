@@ -32,7 +32,9 @@ body {
     -1px 1px 0 rgba(255, 255, 255, 0.5),
     1px 1px 0 rgba(255, 255, 255, 0.5);
 }
-.title a {
+
+.ohm .title a,
+.title .about {
   position: absolute;
   right: 1em;
   font-size: small;
@@ -41,6 +43,13 @@ body {
     1px -1px 0 rgba(255, 255, 255, 0.5),
     -1px 1px 0 rgba(255, 255, 255, 0.5),
     1px 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.title .about {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 4px 8px;
 }
 
 a {
@@ -71,8 +80,8 @@ a:hover {
 }
 
 /* ── Admin level filter ───────────────────────────────────── */
-
-.admin-level-filter {
+.admin-level-filter,
+.ohm-link {
   position: absolute;
   top: calc(3em + 7px);
   left: 46px;
@@ -87,8 +96,14 @@ a:hover {
   font-family: sans-serif;
   font-size: 13px;
   user-select: none;
+}
+
+.admin-level-filter {
   width: 220px;
   flex-wrap: wrap;
+}
+.whm .admin-level-filter {
+  display: none;
 }
 
 .admin-level-filter-label {
