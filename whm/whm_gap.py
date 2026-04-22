@@ -25,6 +25,7 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 import shapely
 from shapely.geometry import MultiPolygon, Polygon
@@ -229,8 +230,10 @@ def load_features(
         relations: list[dict] = raw["relations"]
         use_b64 = True
     else:
-        relations = raw  # legacy: plain list
-        pair_table = key_table = val_table = []
+        relations: list[dict] = cast(list[dict], raw)  # legacy: plain list
+        pair_table: list[tuple[str, str]] = []
+        key_table: list[str] = []
+        val_table: list[str] = []
         use_b64 = False
 
     features: list[Feature] = []

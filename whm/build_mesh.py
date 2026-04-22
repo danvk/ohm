@@ -15,11 +15,11 @@ Usage:
     python whm/build_mesh.py --plot                    # also plots the offset field
 """
 
+import argparse
 import json
 import math
-import argparse
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
 
 # ── Name-matching table (WHM name → admin0 NAME, lower-cased) ─────────────────
 ALIASES: dict[str, str] = {
@@ -314,8 +314,8 @@ def main():
 
     if args.plot:
         try:
+            import matplotlib.pyplot as plt  # type: ignore
             import numpy as np
-            import matplotlib.pyplot as plt
 
             dlon_arr = np.array(grid["dlon"])
             dlat_arr = np.array(grid["dlat"])

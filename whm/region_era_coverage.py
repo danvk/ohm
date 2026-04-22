@@ -60,7 +60,7 @@ def load_eras(path: Path) -> list[Era]:
 @dataclass
 class Region:
     name: str
-    geom: object  # Shapely geometry
+    geom: shapely.geometry.base.BaseGeometry
 
 
 def load_regions(path: Path) -> list[Region]:

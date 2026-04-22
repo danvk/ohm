@@ -51,13 +51,20 @@ Takes ~3 minutes. The output `whm_all.osm.pbf` is ~3 MB. The whole history of th
 
 This follows the [usual process] for extracting JSON for visualization. WHM only contains country-level data and provides its own coloring, which we respect.
 
-```
+```sh
 uv run extract_for_web.py whm/whm_all.osm.pbf \
     --config whm/boundary-viewer.config.jsonc \
     --output-dir /path/to/whm-boundary
 ```
 
-This writes `relations2.b64.json` and `ways2.json` to the output directory. Modify `vite.config.ts` to serve out of a directory containing "whm" to view this.
+This writes `relations2.b64.json` and `ways2.json` to the output directory.
+
+To view the data in the boundary viewer locally, serve it on port 8081 with CORS:
+
+```sh
+cd path/to/whm-boundary
+npx http-server --cors -p 8081
+```
 
 [usual process]: https://github.com/danvk/ohm/#boundary-viewer
 
