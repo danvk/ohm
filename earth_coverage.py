@@ -7,6 +7,7 @@ start_date/end_date tags.
 
 import argparse
 import heapq
+import os
 import re
 import sys
 from collections import defaultdict
@@ -273,6 +274,9 @@ def main() -> None:
         if m:
             (yy, mm, dd) = m.groups()
             timestamp = f"20{yy}-{mm}-{dd}"
+    if not timestamp:
+        # this can be used to hard-code a timestamp for WHM.
+        timestamp = os.getenv("TIMESTAMP")
 
     assert timestamp, "Unable to get timestamp from PBF header or file name."
     print(f"{timestamp=}", file=sys.stderr)

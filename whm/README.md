@@ -57,8 +57,55 @@ uv run extract_for_web.py whm/whm_all.osm.pbf \
     --output-dir /path/to/whm-boundary
 ```
 
-This writes `relations2.b64.json` and `ways2.json` to the output directory. Point the boundary viewer at this directory by setting `BASE_URL` in `app/src/loader.ts`.
+This writes `relations2.b64.json` and `ways2.json` to the output directory. Modify `vite.config.ts` to serve out of a directory containing "whm" to view this.
 
-[usual process]
+[usual process]: https://github.com/danvk/ohm/#boundary-viewer
 
 ### Compare with OHM data
+
+This produces an analysis of the coverage of OHM and WHM by region and era.
+
+You can generate the OHM boundary viewer data from a planet file yourself, or grab it from the boundary viewer. (You need `relations2.json` and `ways.json`.)
+
+First, a high-level comparison by region and era (takes ~30s):
+
+```
+uv run whm/region_era_coverage.py \
+    --ohm-dir ~/code/ohmdash/boundary \
+    --whm-dir ~/code/ohmdash/whm-boundary
+```
+
+If you want to drill down into specific chronologies, you can run this (~15 minutes):
+
+```sh
+uv run whm/whm_gap.py \
+    --ohm-dir .../ohmdash/boundary \
+    --whm-dir .../whm-boundary \
+    --output-dir whm/gap
+```
+
+To produce decade coverage data (~30s):
+
+```
+uv run decade_coverage.py whm/whm_all.osm.pbf > whm-decades.txt
+```
+
+The corresponding stats for OHM planet take much longer (~10 minutes).
+
+### Run stats pipeline
+
+Something like this works:
+
+```bash
+TIMESTAMP=2026-04-22 ./extract-stats.sh whm/whm_all.osm.pbf whm/stats
+```
+
+Not all of these stats make sense in the context of WHM, but some highlights do:
+
+```text
+earth-years-admin-2,484.963135
+double-covered-admin-2,11.841592
+nested-shells,13
+nonclosed-ring,15
+self-intersect,43
+```

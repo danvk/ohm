@@ -26,7 +26,7 @@ from tqdm import tqdm
 
 from dates import to_fractional_year
 from earth_coverage import EARTH_LAND_AREA_KM2, area_km2
-from whm_gap import Feature, load_features
+from whm.whm_gap import Feature, load_features
 
 # ── Era / region helpers ──────────────────────────────────────────────────────
 
@@ -134,31 +134,25 @@ def accumulate(
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="Compute WHM and OHM earth-year coverage by region × era."
     )
-    ap.add_argument(
-        "--ohm-dir",
-        type=Path,
-        default=Path("/Users/danvk/code/ohmdash/boundary"),
-    )
-    ap.add_argument(
-        "--whm-dir",
-        type=Path,
-        default=Path("/Users/danvk/code/ohmdash/whm-boundary"),
-    )
-    ap.add_argument(
+    parser.add_argument("--ohm-dir", type=Path, required=True)
+    parser.add_argument("--whm-dir", type=Path, required=True)
+    parser.add_argument(
         "--world",
         type=Path,
-        default=Path(__file__).parent / "whm/world.geojson",
+        default=Path(__file__).parent / "world.geojson",
     )
-    ap.add_argument(
+    parser.add_argument(
         "--eras",
         type=Path,
-        default=Path(__file__).parent / "whm/eras.txt",
+        default=Path(__file__).parent / "eras.txt",
     )
-    ap.add_argument("-o", "--output", type=Path, default=Path("/tmp/region_era.csv"))
-    args = ap.parse_args()
+    parser.add_argument(
+        "-o", "--output", type=Path, default=Path("whm") / "gap" / "by-region.csv"
+    )
+    args = parser.parse_args()
 
     eras = load_eras(args.eras)
     print(f"Loaded {len(eras)} eras")

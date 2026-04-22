@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """Compute WHM vs OHM coverage gap in earth-years.
 
-For each WHM boundary feature, calculates how much of its (area × time) is
+For each WHM boundary feature, calculates how much of its (area * time) is
 NOT covered by any OHM admin_level=2 feature.  Features are read from the
 pre-extracted JSON files produced by extract_for_web.py, so the 1 GB OHM
 planet PBF is not re-read.
 
 Outputs two CSVs sorted by uncovered earth-years (descending):
-  whm_gap_by_feature.csv    – one row per WHM relation
-  whm_gap_by_chronology.csv – aggregated by whmid across all time-slices
+  whm_gap_by_feature.csv    - one row per WHM relation
+  whm_gap_by_chronology.csv - aggregated by whmid across all time-slices
 
 Usage:
-    uv run whm_gap.py \\
-        --ohm-dir /Users/danvk/code/ohmdash/boundary \\
-        --whm-dir /Users/danvk/code/ohmdash/whm-boundary \\
+    uv run whm/whm_gap.py \
+        --ohm-dir .../ohmdash/boundary \
+        --whm-dir .../ohmdash/whm-boundary \
         --output-dir /tmp/whm_gap
 """
 
@@ -197,7 +197,6 @@ def load_features(
     rel_path: Path,
     way_path: Path,
     *,
-    require_whmid: bool = False,
     desc: str = "",
 ) -> list[Feature]:
     """Load features from extract_for_web.py JSON files.
@@ -540,7 +539,6 @@ def main() -> None:
     whm_features = load_features(
         args.whm_dir / "relations2.json",
         args.whm_dir / "ways2.json",
-        require_whmid=True,
         desc="WHM",
     )
 
