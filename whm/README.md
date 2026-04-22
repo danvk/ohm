@@ -66,6 +66,12 @@ cd path/to/whm-boundary
 npx http-server --cors -p 8081
 ```
 
+Then run the vite dev server with appropriate flags:
+
+```sh
+WHM=1 VITE_BOUNDARY_SERVER=//localhost:8081 npm run dev
+```
+
 [usual process]: https://github.com/danvk/ohm/#boundary-viewer
 
 ### Compare with OHM data
