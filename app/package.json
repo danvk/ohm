@@ -9,7 +9,7 @@
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "knip": "knip"
+    "knip": "knip --production"
   },
   "keywords": [],
   "author": "",

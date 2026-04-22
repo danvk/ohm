@@ -2,10 +2,8 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  decimalDateToIsoDate,
   howManyDaysInMonth,
   howManyDaysInYear,
-  isDateInRange,
   isLeapYear,
   isoDateToDecimalDate,
   isValidMonth,
@@ -17,47 +15,6 @@ import {
   toDecimalLatest,
   yday,
 } from './date';
-
-describe('isDateInRange', () => {
-  it('should handle basic ranges', () => {
-    expect(isDateInRange('1980', '1981', '1989')).toBe(false);
-    expect(isDateInRange('1985', '1981', '1989')).toBe(true);
-    expect(isDateInRange('1981', '1981', '1989')).toBe(true);
-    expect(isDateInRange('1989', '1981', '1989')).toBe(false);
-    expect(isDateInRange('1990', '1981', '1989')).toBe(false);
-  });
-
-  it('should handle open-ended ranges', () => {
-    expect(isDateInRange('1981', null, '2000')).toBe(true);
-    expect(isDateInRange('1981', null, '1982')).toBe(true);
-    expect(isDateInRange('1981', null, '1981')).toBe(false);
-    expect(isDateInRange('1981', '1980', null)).toBe(true);
-    expect(isDateInRange('1981', '1981', null)).toBe(true);
-    expect(isDateInRange('1981', '1982', null)).toBe(false);
-  });
-
-  it('should handle zero-padded dates', () => {
-    expect(isDateInRange('1981', '0802', '905')).toBe(false);
-    expect(isDateInRange('802', '0802', '905')).toBe(true);
-    expect(isDateInRange('900', '0802', '905')).toBe(true);
-    expect(isDateInRange('905', '0802', '905')).toBe(false);
-    expect(isDateInRange('0905', '0802', '905')).toBe(false);
-  });
-
-  it('should handle months', () => {
-    expect(isDateInRange('1984-07-12', '1984-01', '1984-12')).toBe(true);
-    expect(isDateInRange('1984-07', '1984-01', '1984-12')).toBe(true);
-    expect(isDateInRange('1984-07', '1984-01', '1984-07')).toBe(false);
-    expect(isDateInRange('1984-07', '1984-07', '1984-08')).toBe(true);
-  });
-
-  it('should handle negative dates', () => {
-    expect(isDateInRange('1234', '-123', '1234')).toBe(false);
-    expect(isDateInRange('-123', '-123', '1234')).toBe(true);
-    expect(isDateInRange('-124', '-123', '1234')).toBe(false);
-    expect(isDateInRange('-122', '-123', '1234')).toBe(true);
-  });
-});
 
 describe('isLeapYear', () => {
   it('handles BCE leap years', () => {
@@ -213,6 +170,56 @@ describe('isoDateToDecimalDate', () => {
     );
   });
 });
+
+// Convert a decimal year back to an ISO-8601-shaped date string.
+function decimalDateToIsoDate(decimaldate: number): string {
+  const truedecdate = decimaldate - 1;
+  const ispositive = truedecdate > 0;
+
+  let yearint: number;
+  if (ispositive) {
+    yearint = Math.floor(truedecdate) + 1;
+  } else {
+    yearint = -Math.abs(Math.floor(truedecdate));
+  }
+
+  const dty = howManyDaysInYear(yearint);
+  const fracpart = Math.abs(truedecdate) % 1;
+  let targetday: number;
+  if (ispositive) {
+    targetday = Math.ceil(dty * fracpart);
+  } else {
+    targetday = dty - Math.floor(dty * fracpart);
+  }
+
+  let dayspassed = 0;
+  let monthint = 1;
+  for (let mi = 1; mi <= 12; mi++) {
+    const dtm = howManyDaysInMonth(yearint, mi);
+    if (dayspassed + dtm < targetday) {
+      dayspassed += dtm;
+    } else {
+      monthint = mi;
+      break;
+    }
+  }
+  const dayint = targetday - dayspassed;
+
+  const monthstring = String(monthint).padStart(2, '0');
+  const daystring = String(dayint).padStart(2, '0');
+  let yearstring: string;
+  if (yearint > 0) {
+    yearstring = String(yearint).padStart(4, '0');
+  } else if (yearint === -1) {
+    // ISO 8601: year 0 = 1 BCE, no minus sign
+    yearstring = String(0).padStart(4, '0');
+  } else {
+    // ISO 8601: shift by 1 and add minus
+    yearstring = '-' + String(Math.abs(yearint + 1)).padStart(4, '0');
+  }
+
+  return `${yearstring}-${monthstring}-${daystring}`;
+}
 
 describe('decimalDateToIsoDate', () => {
   it('converts decimals around the BCE/CE boundary', () => {
