@@ -94,6 +94,9 @@ a:hover {
   width: 220px;
   flex-wrap: wrap;
 }
+.whm .admin-level-filter {
+  display: none;
+}
 
 .admin-level-filter-label {
   color: #333;

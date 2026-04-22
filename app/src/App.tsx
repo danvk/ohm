@@ -20,6 +20,7 @@ import { yearFromDateStr, yearToDateStr } from './date-utils';
 import type { AppData } from './loader.ts';
 import { loadDataForLevels } from './loader.ts';
 import { MAX_YEAR, MIN_YEAR } from './slider/slider-utils.ts';
+import { IS_WHM } from './config.ts';
 
 export default function App() {
   // Map viewport — 500ms throttle (can fire 60fps during pan/zoom)
@@ -268,6 +269,10 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [date, isRange, minYear, maxYear, handleYearChange, setUrlRange]);
+
+  React.useEffect(() => {
+    document.body.classList.add(IS_WHM ? 'whm' : 'ohm');
+  });
 
   return (
     <>

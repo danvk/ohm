@@ -4,11 +4,7 @@ import {
   toDecimalLatest,
   toDecimalExclusiveEnd,
 } from './date.ts';
-
-// const BASE_URL = '//ohmdash.pages.dev/boundary/';
-// const BASE_URL = 'http://localhost:8081/whm-boundary/';
-// const BASE_URL = '//localhost:8081/boundary/';
-const BASE_URL = '//ohmdash.pages.dev/whm-boundary/';
+import { BASE_URL } from './config.ts';
 
 export interface AppData {
   relations: Relation[];

@@ -6,6 +6,8 @@ This repo includes tools for converting this into OSM format, so that it can be 
 
 ## Import
 
+The global maps portion of WHM is no longer being updated as of 2014, so this import process only needs to be run once. The output is in `whm/whm_all.osm.pbf`.
+
 ### Download and Extract
 
 Download all the SVG files from http://www.worldhistorymaps.com/World/index.htm and place them in a directory. This is around 850MB.
@@ -41,9 +43,13 @@ Takes ~3 minutes. The output `whm_all.osm.pbf` is ~3 MB. The whole history of th
 [IDW interpolation]: https://en.wikipedia.org/wiki/Inverse_distance_weighting
 [Land polygons]: https://www.naturalearthdata.com/downloads/10m-physical-vectors/10m-land/
 
+## Analysis and Visualization
+
 ### Load into the boundary viewer
 
-**Step 2:** Extract the OSM PBF into the web format. Use a WHM-specific config that skips graph coloring (WHM features carry their own `fill` color) and restricts to `admin_level=2`:
+🌎 [Live Site](https://danvk.org/whm3/)
+
+This follows the [usual process] for extracting JSON for visualization. WHM only contains country-level data and provides its own coloring, which we respect.
 
 ```
 uv run extract_for_web.py whm/whm_all.osm.pbf \
@@ -52,5 +58,7 @@ uv run extract_for_web.py whm/whm_all.osm.pbf \
 ```
 
 This writes `relations2.b64.json` and `ways2.json` to the output directory. Point the boundary viewer at this directory by setting `BASE_URL` in `app/src/loader.ts`.
+
+[usual process]
 
 ### Compare with OHM data
