@@ -273,6 +273,9 @@ export default function App() {
 
   React.useEffect(() => {
     document.body.classList.add(IS_WHM ? 'whm' : 'ohm');
+    if (IS_WHM) {
+      document.title = 'WorldHistoryMaps boundary viewer';
+    }
   });
 
   return (
