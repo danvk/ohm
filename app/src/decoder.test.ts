@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeEffectiveDates } from './loader';
+import { computeEffectiveDates } from './decoder';
 import type { Relation } from './ohm-data';
 import {
   isoDateToDecimalDate,
