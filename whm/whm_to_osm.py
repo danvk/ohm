@@ -28,11 +28,13 @@ import json
 import sys
 from pathlib import Path
 
+from tqdm import tqdm
+
 import geojson_to_osm as g2o
 from whm.unproject import _clip_to_land, _load_land, parse_svg_path, rings_to_geometry
 
-COUNTRIES_JSON = Path(__file__).parent / "whm/countries.json"
-LAND_GEOJSON = Path(__file__).parent / "whm/land.geojson"
+COUNTRIES_JSON = Path(__file__).parent / "countries.json"
+LAND_GEOJSON = Path(__file__).parent / "land.geojson"
 
 
 # ── Temporal helpers ───────────────────────────────────────────────────────────
@@ -73,8 +75,7 @@ def extract_base_name(title: str) -> str:
 
 
 def state_at_year(segments: list[dict], year: int) -> dict | None:
-    """
-    Reconstruct the full property state for an entity at the given year.
+    """Reconstruct the full property state for an entity at the given year.
 
     Segments carry only *changed* properties (fill, path, title), so we
     accumulate them in chronological order until we hit the one whose range
@@ -126,47 +127,47 @@ def drop_holes(geom: dict) -> dict:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="Convert a WHM year-slice to OSM PBF via shared-topology extraction"
     )
-    ap.add_argument(
+    parser.add_argument(
         "--year",
         type=int,
         default=None,
         help="Astronomical year to export (omit to export all years; use 0 for 1 BC, -1 for 2 BC, …)",
     )
-    ap.add_argument(
+    parser.add_argument(
         "--ids",
         nargs="+",
         metavar="ID",
         help="Only process these path IDs (e.g. 30439612-germany); default: all active",
     )
-    ap.add_argument(
+    parser.add_argument(
         "--clip-land",
         type=Path,
         default=LAND_GEOJSON,
         metavar="GEOJSON",
         help=f"Land mask for clipping coastlines (default: {LAND_GEOJSON})",
     )
-    ap.add_argument(
+    parser.add_argument(
         "--no-clip",
         action="store_true",
         help="Skip land clipping (faster, but coastlines will be wrong)",
     )
-    ap.add_argument(
+    parser.add_argument(
         "--countries-json",
         type=Path,
         default=COUNTRIES_JSON,
         help=f"Input countries.json (default: {COUNTRIES_JSON})",
     )
-    ap.add_argument(
+    parser.add_argument(
         "-o",
         "--output",
         type=Path,
         default=Path("out.osm.pbf"),
         help="Output OSM PBF file (default: out.osm.pbf)",
     )
-    args = ap.parse_args()
+    args = parser.parse_args()
 
     # ── Load countries ─────────────────────────────────────────────────────────
     print(f"Loading {args.countries_json} …")
@@ -235,7 +236,8 @@ def main() -> None:
     else:
         # ── All-years mode ────────────────────────────────────────────────────
         n_segments = n_with_path = 0
-        for pid, segments in all_entities.items():
+        print("Extracting features…")
+        for pid, segments in tqdm(all_entities.items()):
             pid_feat_indices: list[int] = []
             for state in all_states(segments):
                 if not state.get("path"):
@@ -274,23 +276,23 @@ def main() -> None:
         sys.exit(0)
 
     # ── Build topology and write OSM PBF ──────────────────────────────────────
-    print("Building node index …")
+    print("Building node index…")
     node_map, feature_rings = g2o.build_node_index(features)
     print(f"  {len(node_map):,} unique nodes")
 
-    print("Finding junction nodes …")
+    print("Finding junction nodes…")
     junctions = g2o.find_junctions(feature_rings)
     print(f"  {len(junctions):,} junction nodes")
 
-    print("Building and deduplicating ways …")
+    print("Building and deduplicating ways…")
     way_map, feature_way_refs = g2o.build_ways(feature_rings, junctions)
     print(f"  {len(way_map):,} unique ways")
 
-    print("Removing spur ways …")
+    print("Removing spur ways…")
     way_map, feature_way_refs = g2o.remove_spur_ways(way_map, feature_way_refs)
     print(f"  {len(way_map):,} ways after spur removal")
 
-    print(f"Writing {args.output} …")
+    print(f"Writing {args.output}…")
     g2o.write_osm(
         str(args.output),
         features,

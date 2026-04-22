@@ -28,6 +28,8 @@ uv run build_connectivity_graph.py planet-260322_0301.osm.pbf
 uv run extract_for_web.py --simplify-tolerance-m 1000 --vw-tolerance-m2 100000 planet-260322_0301.osm.pbf --admin-levels 1,2,3,4 --graph graph.json --coloring welsh-powell
 ```
 
+For the WHM (World History Maps) version of the boundary viewer, see [whm/README.md](/whm/README.md).
+
 ## OHM Stats Dashboard
 
 📈 [Live Site](http://ohm-quality.s3-website-us-east-1.amazonaws.com/)

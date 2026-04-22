@@ -40,16 +40,15 @@ from collections import defaultdict
 from pathlib import Path
 
 from svg import extract_paths
+from tqdm import tqdm
 
-DEFAULT_SVG_DIR = Path.home() / "Documents/ohm/whm"
 OUTPUT = Path(__file__).parent / "countries.json"
 
 PROPS = ("fill", "path", "title")
 
 
 def year_from_name(name: str) -> int:
-    """
-    Derive astronomical year from a WHM SVG filename.
+    """Derive astronomical year from a WHM SVG filename.
 
     WA1234.svg  ->  1234  (AD)
     WB1234.svg  ->  1-1234 = -1233  (BC; 1 BC = year 0, 2 BC = year -1, …)
@@ -62,20 +61,22 @@ def year_from_name(name: str) -> int:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Build countries.json from WHM SVG files")
-    ap.add_argument(
+    parser = argparse.ArgumentParser(
+        description="Build countries.json from WHM SVG files"
+    )
+    parser.add_argument(
         "--svg-dir",
         type=Path,
-        default=DEFAULT_SVG_DIR,
-        help=f"Directory containing W[AB]*.svg files (default: {DEFAULT_SVG_DIR})",
+        required=True,
+        help="Directory containing W[AB]*.svg files.",
     )
-    ap.add_argument(
+    parser.add_argument(
         "--out",
         type=Path,
         default=OUTPUT,
         help=f"Output JSON path (default: {OUTPUT})",
     )
-    args = ap.parse_args()
+    args = parser.parse_args()
 
     svg_files = sorted(
         args.svg_dir.glob("W[AB]*.svg"),
@@ -97,7 +98,7 @@ def main() -> None:
     current_seg: dict[str, dict] = {}
     segments: dict[str, list] = defaultdict(list)
 
-    for i, svg_path in enumerate(svg_files):
+    for i, svg_path in enumerate(tqdm(svg_files, smoothing=0)):
         year = year_from_name(svg_path.name)
         paths = extract_paths(svg_path)
         current_ids = {p["id"] for p in paths}
@@ -128,9 +129,6 @@ def main() -> None:
                 else:
                     # Nothing changed: extend the current segment
                     current_seg[pid]["end_date"] = year
-
-        if (i + 1) % 500 == 0:
-            print(f"  {i + 1}/{len(svg_files)}")
 
     # Flush still-open segments
     for pid, seg in current_seg.items():
