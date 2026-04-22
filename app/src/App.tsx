@@ -21,6 +21,7 @@ import type { AppData } from './loader.ts';
 import { loadDataForLevels } from './loader.ts';
 import { MAX_YEAR, MIN_YEAR } from './slider/slider-utils.ts';
 import { IS_WHM } from './config.ts';
+import { OhmLink } from './OhmLink.tsx';
 
 export default function App() {
   // Map viewport — 500ms throttle (can fire 60fps during pan/zoom)
@@ -337,6 +338,7 @@ export default function App() {
           onClickFeature={handleClickFeature}
         />
       </MapLibreMap>
+      {IS_WHM ? <OhmLink /> : null}
       <FeaturePanel
         features={selectedFeatures}
         onClose={() => {

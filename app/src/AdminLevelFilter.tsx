@@ -1,14 +1,11 @@
 import React from 'react';
-import { IS_WHM } from './config';
 
 export interface AdminLevelFilterProps {
   adminLevels: Set<string>;
   onChange: (adminLevels: Set<string>) => void;
 }
 
-const LEVELS = IS_WHM
-  ? ['2']
-  : ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+const LEVELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
 export function AdminLevelFilter({
   adminLevels,
