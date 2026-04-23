@@ -21,6 +21,11 @@ const EXACT_TAGS = [
   'color:id',
   'whmid',
   'group',
+  'title:raw',
+  'leader',
+  'dynasty',
+  'note',
+  'span',
 ];
 const PREFIX_TAGS = [
   'start_date',
