@@ -25,6 +25,7 @@ const EXACT_TAGS = [
   'leader',
   'dynasty',
   'note',
+  'span',
 ];
 const PREFIX_TAGS = [
   'start_date',

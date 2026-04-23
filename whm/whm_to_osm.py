@@ -200,7 +200,6 @@ def main() -> None:
             "boundary": "administrative",
             "admin_level": "2",
             "name": parsed.name or fallback_name,
-            "title": raw_title,
             "whmid": pid,
             "start_date": _fmt_year(state["start_date"]),
             "end_date": _fmt_year(state["end_date"]),
@@ -210,10 +209,13 @@ def main() -> None:
             props["leader"] = parsed.leader
         if parsed.dynasty:
             props["dynasty"] = parsed.dynasty
+        if parsed.span:
+            props["span"] = parsed.span
         if parsed.note:
             props["note"] = parsed.note
         if state.get("fill"):
             props["fill"] = state["fill"]
+        props["title:raw"] = raw_title
         return {"type": "Feature", "geometry": geom, "properties": props}
 
     features: list[dict] = []
