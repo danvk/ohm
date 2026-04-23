@@ -36,6 +36,7 @@ from tqdm import tqdm
 from dates import DateTuple, parse_ohm_date, start_of_date, to_fractional_year
 from earth_coverage import EARTH_LAND_AREA_KM2, area_km2
 from extract_for_web import decode_ring_varint, decode_tags
+from title import extract_base_name
 
 # ── Coordinate helpers ────────────────────────────────────────────────────────
 
@@ -426,11 +427,6 @@ def compute_gap(
 # ── Output ────────────────────────────────────────────────────────────────────
 
 
-def _extract_base_name(title: str) -> str:
-    """'Egypt, Old Kingdom, …' → 'Egypt'"""
-    return title.split(",")[0].strip()
-
-
 def write_by_feature(results: list[dict], out_path: Path) -> None:
     results_sorted = sorted(results, key=lambda r: r["uncovered_ey"], reverse=True)
     fieldnames = [
@@ -465,7 +461,7 @@ def write_by_chronology(results: list[dict], out_path: Path) -> None:
         if wid not in by_whmid:
             by_whmid[wid] = {
                 "whmid": wid,
-                "base_name": _extract_base_name(r["name"]),
+                "base_name": extract_base_name(r["name"]),
                 "n_segments": 0,
                 "total_ey": 0.0,
                 "uncovered_ey": 0.0,
@@ -563,7 +559,7 @@ def main() -> None:
         wid = r["whmid"] or str(r["fid"])
         if wid not in by_whmid:
             by_whmid[wid] = {
-                "base_name": _extract_base_name(r["name"]),
+                "base_name": extract_base_name(r["name"]),
                 "total": 0.0,
                 "uncov": 0.0,
             }

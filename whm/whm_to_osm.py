@@ -31,6 +31,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 import geojson_to_osm as g2o
+from whm.title import extract_base_name, parse_whm_title
 from whm.unproject import _clip_to_land, _load_land, parse_svg_path, rings_to_geometry
 
 COUNTRIES_JSON = Path(__file__).parent / "countries.json"
@@ -62,16 +63,6 @@ def all_states(segments: list[dict]) -> list[dict]:
         state = {**state, **seg}
         result.append(state)
     return result
-
-
-def extract_base_name(title: str) -> str:
-    """Extract the entity name from a WHM title.
-
-    Takes everything before the first comma:
-      'Egypt, Old Kingdom, 2925 - c2150BCE'  →  'Egypt'
-      'Uruk, c2900 - 2335BCE.'               →  'Uruk'
-    """
-    return title.split(",")[0].strip()
 
 
 def state_at_year(segments: list[dict], year: int) -> dict | None:
@@ -201,17 +192,26 @@ def main() -> None:
             if geom is None:
                 return None
         geom = drop_holes(geom)
-        name = pid.split("-", 1)[1] if "-" in pid else pid
+        fallback_name = pid.split("-", 1)[1] if "-" in pid else pid
+        raw_title = state.get("title") or fallback_name
+        parsed = parse_whm_title(raw_title)
         props: dict = {
             "type": "boundary",
             "boundary": "administrative",
             "admin_level": "2",
-            "name": state.get("title") or name,
+            "name": parsed.name or fallback_name,
+            "title": raw_title,
             "whmid": pid,
             "start_date": _fmt_year(state["start_date"]),
             "end_date": _fmt_year(state["end_date"]),
             "group": state.get("type"),
         }
+        if parsed.leader:
+            props["leader"] = parsed.leader
+        if parsed.dynasty:
+            props["dynasty"] = parsed.dynasty
+        if parsed.note:
+            props["note"] = parsed.note
         if state.get("fill"):
             props["fill"] = state["fill"]
         return {"type": "Feature", "geometry": geom, "properties": props}
