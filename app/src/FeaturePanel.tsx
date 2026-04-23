@@ -21,7 +21,7 @@ const EXACT_TAGS = [
   'color:id',
   'whmid',
   'group',
-  'title',
+  'title:raw',
   'leader',
   'dynasty',
   'note',
