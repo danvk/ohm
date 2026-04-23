@@ -117,9 +117,8 @@ def parse_whm_title(title: str) -> TitleParts:
                     # Fused form: "Tailapa Ahavamalla King 973 - 997"
                     leader = part
         elif _has_date_range(part):
-            # Date range but no classifying keyword → treat as leader name buffer
-            if leader is None:
-                leader_buffer = part
+            # Date range with no dynasty/leader keyword (e.g. "gained 1607-1763") → note
+            note_parts.append(part)
         elif leader is not None or dynasty is not None:
             # Free text after structured fields → note
             note_parts.append(part)

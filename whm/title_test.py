@@ -1,6 +1,5 @@
 """Tests for whm/title.py — WHM feature title parsing."""
 
-
 from title import TitleParts, extract_base_name, parse_whm_title
 
 
@@ -111,6 +110,28 @@ def test_family_keyword_as_dynasty_without_span():
     # "Satomi Family 1467 - 1590" — no explicit span; "Family" triggers dynasty
     assert parse_whm_title("Awa, Satomi Family 1467 - 1590.") == T(
         name="Awa", dynasty="Satomi Family 1467 - 1590"
+    )
+
+
+def test_note_before_leader():
+    # Lifestyle description before the leader should go to note; leader is still extracted
+    assert parse_whm_title(
+        "Huns, c300 - c453, nomadic herders, Rugila, King 432 - 437"
+    ) == T(
+        name="Huns",
+        span="c300 - c453",
+        leader="Rugila, King 432 - 437",
+        note="nomadic herders",
+    )
+
+
+def test_gained_lost_format():
+    # Non-standard "gained/lost" colonial entries: date-range parts go to note
+    assert parse_whm_title(
+        "Central Africa, French Colonies, gained 1626-1914, lost 1958-1962"
+    ) == T(
+        name="Central Africa, French Colonies",
+        note="gained 1626-1914, lost 1958-1962",
     )
 
 
