@@ -22,5 +22,8 @@ mkdir -p $dir
 uv run collate_stats.py --start_fresh '' $dashdir/daily/'????-??-??'
 cp $dir/stats.csv $dashdir/dashboard/
 
+# Show the daily diff
+cat $dir/diff.txt
+
 # leave today's download for followup work
 # rm $planet
