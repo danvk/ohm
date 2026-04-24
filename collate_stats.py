@@ -11,24 +11,35 @@ STATS_FILE = "stats.csv"
 
 def write_diff(prev_row: dict, curr_row: dict, fields: list[str], out_dir: Path):
     # Write a sorted diff.txt showing changes between two consecutive stat rows.
-    diff_lines = []
+    diff_lines: list[tuple[float, str]] = []
     for field in fields:
         if field == "date":
             continue
-        old_val = float(prev_row.get(field) or 0)
-        new_val = float(curr_row.get(field) or 0)
+        old_val_raw = prev_row.get(field)
+        new_val_raw = curr_row.get(field)
+        old_val = float(old_val_raw or 0)
+        new_val = float(new_val_raw or 0)
+        is_int = "." not in ((old_val_raw or "") + (new_val_raw or ""))
         delta = new_val - old_val
-        if old_val != 0:
+        delta_str = f"{int(delta):+d}" if is_int else f"{delta:+f}"
+        if old_val == new_val:
+            diff_lines.append((0, f"{field}: no change ({new_val_raw})"))
+        elif old_val != 0:
             pct = delta / old_val * 100
             diff_lines.append(
-                f"{field}: {delta:+f} ({pct:+.1f}%, {old_val} -> {new_val})"
+                (
+                    abs(pct),
+                    f"{field}: {delta_str} ({pct:+.1f}%, {old_val_raw} -> {new_val_raw})",
+                )
             )
         else:
-            diff_lines.append(f"{field}: {delta:+f} (N/A, {old_val} -> {new_val})")
+            diff_lines.append(
+                (100, f"{field}: {delta_str} (N/A, {old_val_raw} -> {new_val_raw})")
+            )
     diff_lines.sort()
     diff_path = out_dir / "diff.txt"
     with open(diff_path, "w") as f:
-        f.write("\n".join(diff_lines) + "\n")
+        f.write("\n".join(line for _, line in diff_lines) + "\n")
     sys.stderr.write(f"Wrote diff to {diff_path}\n")
 
 
