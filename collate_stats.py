@@ -9,6 +9,29 @@ from pathlib import Path
 STATS_FILE = "stats.csv"
 
 
+def write_diff(prev_row: dict, curr_row: dict, fields: list[str], out_dir: Path):
+    # Write a sorted diff.txt showing changes between two consecutive stat rows.
+    diff_lines = []
+    for field in fields:
+        if field == "date":
+            continue
+        old_val = float(prev_row.get(field) or 0)
+        new_val = float(curr_row.get(field) or 0)
+        delta = new_val - old_val
+        if old_val != 0:
+            pct = delta / old_val * 100
+            diff_lines.append(
+                f"{field}: {delta:+f} ({pct:+.1f}%, {old_val} -> {new_val})"
+            )
+        else:
+            diff_lines.append(f"{field}: {delta:+f} (N/A, {old_val} -> {new_val})")
+    diff_lines.sort()
+    diff_path = out_dir / "diff.txt"
+    with open(diff_path, "w") as f:
+        f.write("\n".join(diff_lines) + "\n")
+    sys.stderr.write(f"Wrote diff to {diff_path}\n")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="Stats collator",
@@ -60,6 +83,9 @@ def main():
         out.writerows(rows)
 
     sys.stderr.write(f"Wrote {len(rows)} days of stats to {out_path}\n")
+
+    if len(rows) >= 2:
+        write_diff(rows[-2], rows[-1], fields, todays[-1])
 
 
 if __name__ == "__main__":
