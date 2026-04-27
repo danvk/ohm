@@ -24,6 +24,7 @@ Usage:
 """
 
 import argparse
+import html as html_lib
 import json
 import sys
 from pathlib import Path
@@ -204,6 +205,86 @@ def make_feature(pid: str, state: dict, land_tree, land_geoms) -> dict | None:
     return {"type": "Feature", "geometry": geom, "properties": props}
 
 
+_WHM_VIEWER = "https://www.danvk.org/whm3/"
+
+
+def write_chronology_html(
+    output_path: Path,
+    chronology_relations: list[dict],
+    features: list[dict],
+) -> None:
+    """Write an HTML file listing every chronology with its member features.
+
+    Each chronology entry shows its name, overall date range, relation count,
+    and distinct WHM ID count.  Its sublist links each member feature to the
+    deployed WHM boundary viewer at the feature's start date.
+    """
+
+    def esc(s: object) -> str:
+        return html_lib.escape(str(s))
+
+    def parse_date_tag(s: str) -> int:
+        # "-0023" → -23, "0100" → 100
+        return -int(s[1:]) if s.startswith("-") else int(s)
+
+    # Pair each chronology with its OSM relation ID before sorting.
+    # Chronology at index chron_idx gets OSM ID len(features) + chron_idx + 1.
+    indexed = [
+        (len(features) + chron_idx + 1, chron)
+        for chron_idx, chron in enumerate(chronology_relations)
+    ]
+    indexed.sort(
+        key=lambda x: parse_date_tag(
+            features[x[1]["member_feat_indices"][0]]["properties"]["start_date"]
+        )
+    )
+
+    lines: list[str] = [
+        "<!doctype html>",
+        '<html lang="en">',
+        "<head>",
+        '<meta charset="utf-8">',
+        "<title>WHM Chronologies</title>",
+        "</head>",
+        "<body>",
+        "<h1>WHM Chronologies</h1>",
+        f"<p>{len(chronology_relations):,} chronologies</p>",
+        "<ol>",
+    ]
+
+    for chron_osm_id, chron in indexed:
+        name = chron["tags"]["name"]
+        feat_indices = chron["member_feat_indices"]
+        chron_start = features[feat_indices[0]]["properties"]["start_date"]
+        chron_end = features[feat_indices[-1]]["properties"]["end_date"]
+        n_relations = len(feat_indices)
+        n_pids = len({features[i]["properties"]["whmid"] for i in feat_indices})
+
+        lines.append(
+            f'<li id="{chron_osm_id}"><b>{esc(name)}</b>'
+            f" ({esc(chron_start)}–{esc(chron_end)},"
+            f" {n_relations} relations, {n_pids} WHM IDs)"
+        )
+        lines.append("<ol>")
+        for feat_idx in feat_indices:
+            props = features[feat_idx]["properties"]
+            osm_id = feat_idx + 1
+            start_date = props["start_date"]
+            end_date = props["end_date"]
+            raw_title = props.get("title:raw", "")
+            url = f"{_WHM_VIEWER}?ids={osm_id}&date={start_date}"
+            lines.append(
+                f'<li><a href="{esc(url)}" target="_blank">'
+                f"{esc(start_date)}–{esc(end_date)}</a>"
+                f" {esc(raw_title)}</li>"
+            )
+        lines.append("</ol></li>")
+
+    lines += ["</ol>", "</body>", "</html>"]
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+    print(f"Wrote {output_path}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Convert a WHM year-slice to OSM PBF via shared-topology extraction"
@@ -345,6 +426,12 @@ def main() -> None:
         feature_way_refs,
         chronology_relations=chronology_relations or None,
     )
+
+    if chronology_relations:
+        stem = args.output.name.split(".")[0]
+        html_path = args.output.with_name(stem + ".html")
+        write_chronology_html(html_path, chronology_relations, features)
+
     print("Done.")
 
 
