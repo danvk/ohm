@@ -114,7 +114,94 @@ def drop_holes(geom: dict) -> dict:
     return geom
 
 
-# ── Main ───────────────────────────────────────────────────────────────────────
+def build_chronologies(
+    name_to_entries: dict[str, list[tuple[int, int, str]]],
+    features: list[dict],
+) -> list[dict]:
+    """Build chronology relations grouped by parsed feature name.
+
+    Features sharing the same name (even across different WHM IDs) are linked
+    in chronological order, producing more complete historical sequences than
+    per-ID grouping alone. Returns a list of relation dicts ready for g2o.write_osm.
+    """
+    relations: list[dict] = []
+    n_single_pid = n_multi_pid = 0
+    for name, entries in sorted(name_to_entries.items()):
+        if len(entries) < 2:
+            continue
+        entries.sort(key=lambda e: e[0])  # sort by start_date
+        feat_indices = [e[1] for e in entries]
+        unique_pids = {e[2] for e in entries}
+        tags: dict[str, str] = {"type": "chronology", "name": name}
+        if len(unique_pids) == 1:
+            tags["whmid"] = next(iter(unique_pids))
+            n_single_pid += 1
+        else:
+            n_multi_pid += 1
+        relations.append({"tags": tags, "member_feat_indices": feat_indices})
+
+    print(
+        f"  {len(relations)} chronology relations"
+        f" ({n_single_pid} single-ID, {n_multi_pid} cross-ID)"
+    )
+
+    if n_multi_pid > 0:
+        multi_pid_chrons = [
+            c
+            for c in relations
+            if len(
+                {features[i]["properties"]["whmid"] for i in c["member_feat_indices"]}
+            )
+            > 1
+        ]
+        multi_pid_chrons.sort(key=lambda c: -len(c["member_feat_indices"]))
+        print("\nTop cross-ID chronologies (by feature count):")
+        for c in multi_pid_chrons[:10]:
+            feat_count = len(c["member_feat_indices"])
+            pid_count = len(
+                {features[i]["properties"]["whmid"] for i in c["member_feat_indices"]}
+            )
+            print(f"  {c['tags']['name']!r}: {feat_count} features, {pid_count} IDs")
+        print()
+
+    return relations
+
+
+def make_feature(pid: str, state: dict, land_tree, land_geoms) -> dict | None:
+    """Project, clip, and wrap one entity state as a GeoJSON Feature."""
+    geom = project_path(state["path"])
+    if geom is None:
+        return None
+    if land_tree is not None:
+        geom = _clip_to_land(geom, land_tree, land_geoms)
+        if geom is None:
+            return None
+    geom = drop_holes(geom)
+    fallback_name = pid.split("-", 1)[1] if "-" in pid else pid
+    raw_title = state.get("title") or fallback_name
+    parsed = parse_whm_title(raw_title)
+    props: dict = {
+        "type": "boundary",
+        "boundary": "administrative",
+        "admin_level": "2",
+        "name": parsed.name or fallback_name,
+        "whmid": pid,
+        "start_date": _fmt_year(state["start_date"]),
+        "end_date": _fmt_year(state["end_date"]),
+        "group": state.get("type"),
+    }
+    if parsed.leader:
+        props["leader"] = parsed.leader
+    if parsed.dynasty:
+        props["dynasty"] = parsed.dynasty
+    if parsed.span:
+        props["span"] = parsed.span
+    if parsed.note:
+        props["note"] = parsed.note
+    if state.get("fill"):
+        props["fill"] = state["fill"]
+    props["title:raw"] = raw_title
+    return {"type": "Feature", "geometry": geom, "properties": props}
 
 
 def main() -> None:
@@ -182,42 +269,6 @@ def main() -> None:
 
     # ── Project and clip entities ─────────────────────────────────────────────
 
-    def _make_feature(pid: str, state: dict) -> dict | None:
-        """Project, clip, and wrap one entity state as a GeoJSON Feature."""
-        geom = project_path(state["path"])
-        if geom is None:
-            return None
-        if land_tree is not None:
-            geom = _clip_to_land(geom, land_tree, land_geoms)
-            if geom is None:
-                return None
-        geom = drop_holes(geom)
-        fallback_name = pid.split("-", 1)[1] if "-" in pid else pid
-        raw_title = state.get("title") or fallback_name
-        parsed = parse_whm_title(raw_title)
-        props: dict = {
-            "type": "boundary",
-            "boundary": "administrative",
-            "admin_level": "2",
-            "name": parsed.name or fallback_name,
-            "whmid": pid,
-            "start_date": _fmt_year(state["start_date"]),
-            "end_date": _fmt_year(state["end_date"]),
-            "group": state.get("type"),
-        }
-        if parsed.leader:
-            props["leader"] = parsed.leader
-        if parsed.dynasty:
-            props["dynasty"] = parsed.dynasty
-        if parsed.span:
-            props["span"] = parsed.span
-        if parsed.note:
-            props["note"] = parsed.note
-        if state.get("fill"):
-            props["fill"] = state["fill"]
-        props["title:raw"] = raw_title
-        return {"type": "Feature", "geometry": geom, "properties": props}
-
     features: list[dict] = []
     chronology_relations: list[dict] = []
 
@@ -229,7 +280,7 @@ def main() -> None:
             if state is None or not state.get("path"):
                 continue
             n_active += 1
-            feat = _make_feature(pid, state)
+            feat = make_feature(pid, state, land_tree, land_geoms)
             if feat is None:
                 continue
             features.append(feat)
@@ -249,7 +300,7 @@ def main() -> None:
                 if not state.get("path"):
                     continue
                 n_segments += 1
-                feat = _make_feature(pid, state)
+                feat = make_feature(pid, state, land_tree, land_geoms)
                 if feat is None:
                     continue
                 n_with_path += 1
@@ -261,60 +312,8 @@ def main() -> None:
                         (state["start_date"], feat_idx, pid)
                     )
 
-        # Build chronology relations grouped by parsed name.
-        # Features sharing the same name (even across different WHM IDs) are linked
-        # in chronological order, producing more complete historical sequences.
-        n_single_pid = n_multi_pid = 0
-        for name, entries in sorted(name_to_entries.items()):
-            if len(entries) < 2:
-                continue
-            entries.sort(key=lambda e: e[0])  # sort by start_date
-            feat_indices = [e[1] for e in entries]
-            unique_pids = {e[2] for e in entries}
-            tags: dict[str, str] = {"type": "chronology", "name": name}
-            if len(unique_pids) == 1:
-                tags["whmid"] = next(iter(unique_pids))
-                n_single_pid += 1
-            else:
-                n_multi_pid += 1
-            chronology_relations.append(
-                {"tags": tags, "member_feat_indices": feat_indices}
-            )
-
-        print(
-            f"All years: {n_segments} segments with path"
-            f" → {len(features)} features"
-            f", {len(chronology_relations)} chronology relations"
-            f" ({n_single_pid} single-ID, {n_multi_pid} cross-ID)"
-        )
-
-        if n_multi_pid > 0:
-            # Print a sample of the largest cross-ID chronologies
-            multi_pid_chrons = [
-                c
-                for c in chronology_relations
-                if len(
-                    {
-                        features[i]["properties"]["whmid"]
-                        for i in c["member_feat_indices"]
-                    }
-                )
-                > 1
-            ]
-            multi_pid_chrons.sort(key=lambda c: -len(c["member_feat_indices"]))
-            print("\nTop cross-ID chronologies (by feature count):")
-            for c in multi_pid_chrons[:10]:
-                feat_count = len(c["member_feat_indices"])
-                pid_count = len(
-                    {
-                        features[i]["properties"]["whmid"]
-                        for i in c["member_feat_indices"]
-                    }
-                )
-                print(
-                    f"  {c['tags']['name']!r}: {feat_count} features, {pid_count} IDs"
-                )
-            print()
+        print(f"All years: {n_segments} segments with path → {len(features)} features")
+        chronology_relations = build_chronologies(name_to_entries, features)
 
     if not features:
         print("No features to write; exiting.")
