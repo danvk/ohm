@@ -133,7 +133,7 @@ def build_chronologies(
         entries.sort(key=lambda e: e[0])  # sort by start_date
         feat_indices = [e[1] for e in entries]
         unique_pids = {e[2] for e in entries}
-        tags: dict[str, str] = {"type": "chronology", "name": name}
+        tags = {"type": "chronology", "name": name}
         if len(unique_pids) == 1:
             tags["whmid"] = next(iter(unique_pids))
             n_single_pid += 1
@@ -181,7 +181,7 @@ def make_feature(pid: str, state: dict, land_tree, land_geoms) -> dict | None:
     fallback_name = pid.split("-", 1)[1] if "-" in pid else pid
     raw_title = state.get("title") or fallback_name
     parsed = parse_whm_title(raw_title)
-    props: dict = {
+    props = {
         "type": "boundary",
         "boundary": "administrative",
         "admin_level": "2",
@@ -239,7 +239,7 @@ def write_chronology_html(
         )
     )
 
-    lines: list[str] = [
+    lines = [
         "<!doctype html>",
         '<html lang="en">',
         "<head>",
