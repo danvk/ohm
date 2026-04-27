@@ -14,6 +14,15 @@ Write type hints for all function parameters, and local variables where pyright 
 
 Provide generic type parameters where types take them: don't use plain `dict`, use `dict[str, str]` if that's what the type is.
 
+Don't include explicit type annotations where they would exactly match what pyright infers. For example:
+
+```diff
+- lines: list[str] = ["a", "b", "c"]
++ lines = ["a", "b", "c"]
+- tags: dict[str, str] = {"key1": "value1", "key2": val2}
++ tags = {"key1": "value1", "key2": val2}
+```
+
 ### TypeScript
 
 Use the following format for JSDoc comments:
