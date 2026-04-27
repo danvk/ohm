@@ -31,7 +31,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 import geojson_to_osm as g2o
-from whm.title import extract_base_name, parse_whm_title
+from whm.title import parse_whm_title
 from whm.unproject import _clip_to_land, _load_land, parse_svg_path, rings_to_geometry
 
 COUNTRIES_JSON = Path(__file__).parent / "countries.json"
@@ -240,8 +240,11 @@ def main() -> None:
         # ── All-years mode ────────────────────────────────────────────────────
         n_segments = n_with_path = 0
         print("Extracting features…")
+
+        # name → list of (start_date, feature_index, pid)
+        name_to_entries: dict[str, list[tuple[int, int, str]]] = {}
+
         for pid, segments in tqdm(all_entities.items()):
-            pid_feat_indices: list[int] = []
             for state in all_states(segments):
                 if not state.get("path"):
                     continue
@@ -250,29 +253,68 @@ def main() -> None:
                 if feat is None:
                     continue
                 n_with_path += 1
-                pid_feat_indices.append(len(features))
+                feat_idx = len(features)
                 features.append(feat)
+                feat_name = feat["properties"].get("name") or ""
+                if feat_name:
+                    name_to_entries.setdefault(feat_name, []).append(
+                        (state["start_date"], feat_idx, pid)
+                    )
 
-            if len(pid_feat_indices) > 1:
-                first_title = features[pid_feat_indices[0]]["properties"].get(
-                    "name", ""
-                )
-                chronology_relations.append(
-                    {
-                        "tags": {
-                            "type": "chronology",
-                            "whmid": pid,
-                            "name": extract_base_name(first_title),
-                        },
-                        "member_feat_indices": pid_feat_indices,
-                    }
-                )
+        # Build chronology relations grouped by parsed name.
+        # Features sharing the same name (even across different WHM IDs) are linked
+        # in chronological order, producing more complete historical sequences.
+        n_single_pid = n_multi_pid = 0
+        for name, entries in sorted(name_to_entries.items()):
+            if len(entries) < 2:
+                continue
+            entries.sort(key=lambda e: e[0])  # sort by start_date
+            feat_indices = [e[1] for e in entries]
+            unique_pids = {e[2] for e in entries}
+            tags: dict[str, str] = {"type": "chronology", "name": name}
+            if len(unique_pids) == 1:
+                tags["whmid"] = next(iter(unique_pids))
+                n_single_pid += 1
+            else:
+                n_multi_pid += 1
+            chronology_relations.append(
+                {"tags": tags, "member_feat_indices": feat_indices}
+            )
 
         print(
             f"All years: {n_segments} segments with path"
             f" → {len(features)} features"
             f", {len(chronology_relations)} chronology relations"
+            f" ({n_single_pid} single-ID, {n_multi_pid} cross-ID)"
         )
+
+        if n_multi_pid > 0:
+            # Print a sample of the largest cross-ID chronologies
+            multi_pid_chrons = [
+                c
+                for c in chronology_relations
+                if len(
+                    {
+                        features[i]["properties"]["whmid"]
+                        for i in c["member_feat_indices"]
+                    }
+                )
+                > 1
+            ]
+            multi_pid_chrons.sort(key=lambda c: -len(c["member_feat_indices"]))
+            print("\nTop cross-ID chronologies (by feature count):")
+            for c in multi_pid_chrons[:10]:
+                feat_count = len(c["member_feat_indices"])
+                pid_count = len(
+                    {
+                        features[i]["properties"]["whmid"]
+                        for i in c["member_feat_indices"]
+                    }
+                )
+                print(
+                    f"  {c['tags']['name']!r}: {feat_count} features, {pid_count} IDs"
+                )
+            print()
 
     if not features:
         print("No features to write; exiting.")
