@@ -68,7 +68,7 @@ Aitken Place,Clinton Street
 
 
 response = client.responses.create(
-    model="gpt-5.4",
+    model="gpt-5.5",
     input=[
         {
             "role": "user",
