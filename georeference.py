@@ -1,4 +1,5 @@
 import base64
+import sys
 
 from dotenv import find_dotenv, load_dotenv
 from openai import OpenAI
@@ -15,7 +16,9 @@ def encode_image(image_path):
 
 
 # Path to your image
-image_path = "brooklyn-sanborn.958x1395-fs8.png"
+# image_path = "brooklyn-sanborn.958x1395-fs8.png"
+# image_path = "/Users/danvk/Documents/ohm/brooklyn-sanborn-11s-fs8.png"
+(image_path,) = sys.argv[1:]
 
 # Getting the Base64 string
 base64_image = encode_image(image_path)
@@ -29,8 +32,8 @@ PROMPT = """Your task is to find the (x, y) coordinates and street names of the 
 Your output should be a JSON object matching the following TypeScript interface:
 
 interface Response {
-  width: number;  // image width, in pixels
-  height: number;  // image height, in pixels
+  width: number;  // input image width, in pixels
+  height: number;  // input image height, in pixels
   points: Array<{
     x: number;  // x-coordinate of the center of the intersection
     y: number;  // y-coordinate of the center of the intersection
@@ -40,31 +43,10 @@ interface Response {
   }>;
 }
 
-The list of known intersections follows:
-
-----
-street1,street2
-Atlantic Avenue,Columbia Street
-Atlantic Avenue,Hicks Street
-Atlantic Avenue,Henry Street
-Atlantic Avenue,Clinton Street
-State Street,Columbia Place
-State Street,Willow Place
-State Street,Hicks Street
-State Street,Garden Place
-State Street,Henry Street
-State Street,Sidney Place
-State Street,Clinton Street
-Joralemon Street,Columbia Place
-Joralemon Street,Willow Place
-Joralemon Street,Hicks Street
-Joralemon Street,Garden Place
-Joralemon Street,Henry Street
-Joralemon Street,Sidney Place
-Joralemon Street,Clinton Street
-Aitken Place,Sidney Place
-Aitken Place,Clinton Street
+The list of known intersections is provided as a separate CSV input.
 """
+
+INTERSECTIONS_CSV = open("streets-rag.csv").read()
 
 
 response = client.responses.create(
@@ -74,6 +56,7 @@ response = client.responses.create(
             "role": "user",
             "content": [
                 {"type": "input_text", "text": PROMPT},
+                {"type": "input_text", "text": INTERSECTIONS_CSV},
                 {
                     "type": "input_image",
                     "image_url": f"data:image/jpeg;base64,{base64_image}",
