@@ -28,6 +28,7 @@ PROMPT = """Your task is to find the (x, y) coordinates and street names of the 
 - You'll be given an image of a street map. The street names are labeled and the edges of the streets are delineated with black lines. The street names may be rotated. Streets may be vertical, horizontal, or diagonal, and they may bend. There will be other text on the map that is unrelated to streets.
 - You'll also be given a list of known intersections that might appear in the image. Only look for these intersections. The street names may not match exactly due to abbreviations, e.g. "St" vs. "Street", "Ave" vs. "Avenue" and "Pl" vs. "Place". Not all intersections in the list will appear in the image. Not all intersections in the image will appear in the list. Only include intersections that are in both.
 - Only include intersections that you can identify with high confidence. It is better to include fewer intersections that you're more confident of than more intersections that you're less sure about.
+- Do not resize, pad or crop the image. Give (x, y) coordinates for the input image.
 
 Your output should be a JSON object matching the following TypeScript interface:
 
@@ -51,6 +52,7 @@ INTERSECTIONS_CSV = open("streets-rag.csv").read()
 
 response = client.responses.create(
     model="gpt-5.5",
+    # model="gpt-5.4",
     input=[
         {
             "role": "user",
