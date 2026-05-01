@@ -40,6 +40,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     min_lon, min_lat, max_lon, max_lat = (float(v) for v in bbox_parts)
-    assert min_lon < max_lon
-    assert min_lat < max_lat
+    min_lat, max_lat = min(min_lat, max_lat), max(min_lat, max_lat)
+    min_lon, max_lon = min(min_lon, max_lon), max(min_lon, max_lon)
     filter_intersections(csv_path, min_lon, min_lat, max_lon, max_lat)
