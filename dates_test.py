@@ -497,6 +497,23 @@ class TestEdtfWikiExamples:
         assert edtf_interval("2011-10-04T05:00") is None
 
 
+class TestEdtfSetRepresentation:
+    def test_years(self):
+        lo, hi = safe_edtf_interval("[2018..2019]")
+        assert lo == (2018, 1, 1)
+        assert hi == (2019, 12, 31)
+
+    def test_months(self):
+        lo, hi = safe_edtf_interval("[2018-07..2019-02]")
+        assert lo == (2018, 7, 1)
+        assert hi == (2019, 2, 28)
+
+    def test_days(self):
+        lo, hi = safe_edtf_interval("[1628-06-23..1628-09-03]")
+        assert lo == (1628, 6, 23)
+        assert hi == (1628, 9, 3)
+
+
 class TestIsOneDayOff:
     """_is_one_day_off(plain_lo, plain_hi, lo, hi) — all args are DateTuples."""
 
