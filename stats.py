@@ -32,6 +32,8 @@ def write_stats(
     examples: dict[str, list[tuple[str, int, str]]],
     other_stats: dict[str, int | float],
     preserve_sort_order=False,
+    max_examples=5000,
+    sample_size=1000,
 ):
     out_dir = Path(out_dir)
     with open(out_dir / f"{name}.summary.csv", "w") as f:
@@ -51,13 +53,13 @@ def write_stats(
     for typ, rs in sorted(examples.items()):
         with open(out_dir / f"{typ}.examples.txt", "w") as f:
             if preserve_sort_order:
-                to_out = rs if len(rs) < 5_000 else rs[:2_500]
+                to_out = rs if len(rs) < max_examples else rs[:2_500]
             else:
                 rs_sorted = sorted(rs)
                 to_out = (
                     rs_sorted
-                    if len(rs_sorted) < 5_000
-                    else rng.sample(rs_sorted, 1_000)
+                    if len(rs_sorted) < max_examples
+                    else rng.sample(rs_sorted, sample_size)
                 )
             f.writelines(
                 f"{ftype}/{fid}: {problems}\n" for ftype, fid, problems in to_out
