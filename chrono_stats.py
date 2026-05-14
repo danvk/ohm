@@ -32,6 +32,9 @@ DOT_DOT_EDTF_PAT = re.compile(r"^(-?\d[\d-]*)?\.\.(-?\d[\d-]*)?$")
 SET_CONSECUTIVE_PAT = re.compile(
     r"^\[(-?\d{4})(-\d{2})?(-\d{2})?\.\.(-?\d{4})(-\d{2})?(-\d{2})?\]$"
 )
+# Matches datetime strings missing seconds: "2007-11-04T02:00-05:00"
+# The edtf library requires seconds in datetime strings.
+DATETIME_NO_SECONDS_PAT = re.compile(r"^(-?\d{4}-\d{2}-\d{2}T\d{2}:\d{2})([-+Z].*)$")
 
 
 def _parse_set_consecutive(edtf_str: str) -> tuple[DateTuple, DateTuple] | None:
@@ -65,7 +68,12 @@ def edtf_interval(edtf_str: str) -> tuple[DateTuple, DateTuple] | None:
         lo = parsed.lower_fuzzy()  # type: ignore[attr-defined]
         hi = parsed.upper_fuzzy()  # type: ignore[attr-defined]
     except Exception:
-        return _parse_set_consecutive(edtf_str)
+        if result := _parse_set_consecutive(edtf_str):
+            return result
+        m = DATETIME_NO_SECONDS_PAT.match(edtf_str)
+        if m:
+            return edtf_interval(m.group(1) + ":00" + m.group(2))
+        return None
     # "1752/" and "/1818" use an empty UnspecifiedIntervalSection for the open
     # end.  The library resolves this to a computed fuzzy date (~10 years out)
     # instead of infinity.  Detect and override to the correct infinite bound.
