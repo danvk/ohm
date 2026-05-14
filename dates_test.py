@@ -513,6 +513,11 @@ class TestEdtfSetRepresentation:
         assert lo == (1628, 6, 23)
         assert hi == (1628, 9, 3)
 
+    def test_mix(self):
+        lo, hi = safe_edtf_interval("[2011-09..2012]")
+        assert lo == (2011, 9, 1)
+        assert hi == (2012, 12, 31)
+
 
 class TestIsOneDayOff:
     """_is_one_day_off(plain_lo, plain_hi, lo, hi) — all args are DateTuples."""
