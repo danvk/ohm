@@ -26,6 +26,31 @@ NAME_RANGE_PAT = r"\(-?\d{3,}--?\d{3,}\)"
 # Matches OHM-style ranges written with ".." instead of the EDTF separator "/":
 # "1970..1977", "..1970", "1970.."
 DOT_DOT_EDTF_PAT = re.compile(r"^(-?\d[\d-]*)?\.\.(-?\d[\d-]*)?$")
+# Matches EDTF set-consecutive notation with month or day components:
+# "[2018-07..2019-02]", "[1628-06-23..1628-09-03]"
+# The edtf library handles "[YYYY..YYYY]" but fails on month/day variants.
+SET_CONSECUTIVE_PAT = re.compile(
+    r"^\[(-?\d{4})(-\d{2})?(-\d{2})?\.\.(-?\d{4})(-\d{2})?(-\d{2})?\]$"
+)
+
+
+def _parse_set_consecutive(edtf_str: str) -> tuple[DateTuple, DateTuple] | None:
+    """Parse EDTF set-consecutive notation like [2018-07..2019-02] that the library rejects."""
+    m = SET_CONSECUTIVE_PAT.match(edtf_str)
+    if not m:
+        return None
+    lo_year, lo_month_s, lo_day_s, hi_year, hi_month_s, hi_day_s = m.groups()
+    lo_parsed = (
+        int(lo_year),
+        int(lo_month_s[1:]) if lo_month_s else None,
+        int(lo_day_s[1:]) if lo_day_s else None,
+    )
+    hi_parsed = (
+        int(hi_year),
+        int(hi_month_s[1:]) if hi_month_s else None,
+        int(hi_day_s[1:]) if hi_day_s else None,
+    )
+    return start_of_date(lo_parsed), end_of_date(hi_parsed)
 
 
 @functools.lru_cache(maxsize=None)
@@ -40,7 +65,7 @@ def edtf_interval(edtf_str: str) -> tuple[DateTuple, DateTuple] | None:
         lo = parsed.lower_fuzzy()  # type: ignore[attr-defined]
         hi = parsed.upper_fuzzy()  # type: ignore[attr-defined]
     except Exception:
-        return None
+        return _parse_set_consecutive(edtf_str)
     # "1752/" and "/1818" use an empty UnspecifiedIntervalSection for the open
     # end.  The library resolves this to a computed fuzzy date (~10 years out)
     # instead of infinity.  Detect and override to the correct infinite bound.
