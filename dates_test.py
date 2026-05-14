@@ -519,6 +519,12 @@ class TestEdtfSetRepresentation:
         assert hi == (2012, 12, 31)
 
 
+class TestTimeZone:
+    def test_timezone(self):
+        lo, hi = safe_edtf_interval("2007-11-04T02:00-05:00")
+        lo, hi = safe_edtf_interval("2007-11-04T02:00:00-05:00")
+
+
 class TestIsOneDayOff:
     """_is_one_day_off(plain_lo, plain_hi, lo, hi) — all args are DateTuples."""
 
