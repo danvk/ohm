@@ -391,6 +391,12 @@ def main() -> None:
     )
     parser.add_argument("osm_file", help="Path to the .osm.pbf file")
     parser.add_argument("--output_dir", default=".")
+    parser.add_argument(
+        "--max_examples",
+        default=5000,
+        type=int,
+        help="Truncate example files to a random sample after this many.",
+    )
 
     args = parser.parse_args()
     log_start("chronology")
@@ -441,6 +447,7 @@ def main() -> None:
             "date-edtf-invalid-dot-dot": handler.n_dot_dot_edtf,
             "date-edtf-mismatch-off-by-one-day": handler.n_edtf_off_by_one,
         },
+        max_examples=args.max_examples,
     )
 
 
