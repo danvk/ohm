@@ -32,7 +32,7 @@ For the WHM (World History Maps) version of the boundary viewer, see [whm/README
 
 ## OHM Stats Dashboard
 
-📈 [Live Site](http://ohm-quality.s3-website-us-east-1.amazonaws.com/)
+📈 [Live Site](https://ohmdash.pages.dev/)
 
 This repo contains code to collect the data for the OHM Coverage/Quality dashboard, as well as the HTML/JS/CSS for rendering it.
 
@@ -45,6 +45,12 @@ To download a planet file and produce stats for a day, run:
 This will eventually produce output in `daily/2026-03-31`.
 
 The convention is that the dated directories contain `*.summary.csv` files with counts for different metrics. These get collated with previous days' data to produce an ongoing CSV file for visualization on the dashboard. Examples of each metric go in `metricname.examples.txt` files. The dashboard fetches these files to help you drill down on individual metrics.
+
+To deploy changes to the dashboard JS/CSS:
+
+```bash
+cp index.html ~/code/ohmdash && cp -r dashboard/* ~/code/ohmdash/dashboard
+```
 
 ## Tools
 

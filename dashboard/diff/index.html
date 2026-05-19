@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>OHM Stats — Diff</title>
+    <link rel="stylesheet" type="text/css" href="/dashboard/chart.css" />
+    <link rel="stylesheet" type="text/css" href="diff.css" />
+  </head>
+  <body>
+    <h1><a href="/">OpenHistoricalMap Quality Stats</a> — Diff</h1>
+    <p>Compare example items for a metric between two dates.</p>
+
+    <div class="controls">
+      <label>Metric: <select id="metric-select"></select></label>
+      <label>Day 1: <select id="day1-select"></select></label>
+      <label>vs. Day 2: <select id="day2-select"></select></label>
+    </div>
+
+    <div id="diff-status"></div>
+    <div id="diff-output"></div>
+
+    <script type="module" src="diff.js"></script>
+  </body>
+</html>
