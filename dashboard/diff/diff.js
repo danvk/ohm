@@ -1,93 +1,4 @@
-const SERVER = 'http://localhost:8081';
-
-// Metric labels and groupings, mirroring the categories in chart.js
-const METRIC_GROUPS = [
-  {
-    label: "Geometry Errors",
-    metrics: [
-      "nonclosed-ring",
-      "ring-self-intersect",
-      "self-intersect",
-      "uncontained-inner-ring",
-      "nested-shells",
-      "no-shapely",
-      "other",
-      "invalid-way-reference",
-    ],
-  },
-  {
-    label: "Chronology Errors",
-    metrics: [
-      "chronology-member-outside-range",
-      "chronology-overlapping-members",
-      "chronology-undated-member",
-    ],
-  },
-  {
-    label: "Tag Errors",
-    metrics: [
-      "date-in-name",
-      "date-invalid",
-      "date-end-no-start",
-      "date-far-future",
-      "date-start-after-end",
-      "date-edtf-invalid",
-      "date-edtf-mismatch",
-    ],
-  },
-  {
-    label: "Coverage",
-    metrics: [
-      "earth-years-admin-1",
-      "earth-years-admin-2",
-      "earth-years-admin-3",
-      "earth-years-admin-4",
-    ],
-  },
-  {
-    label: "Double Coverage",
-    metrics: [
-      "double-covered-admin-1",
-      "double-covered-admin-2",
-      "double-covered-admin-3",
-      "double-covered-admin-4",
-    ],
-  },
-  {
-    label: "Duplicates",
-    metrics: ["dupes"],
-  },
-];
-
-const METRIC_LABELS = {
-  "nonclosed-ring": "Non-closed Rings",
-  "ring-self-intersect": "Ring Self-intersects",
-  "self-intersect": "Self-intersects",
-  "uncontained-inner-ring": "Uncontained inner",
-  "nested-shells": "Nested Rings",
-  "no-shapely": "Shapely Error",
-  other: "Other",
-  "invalid-way-reference": "Invalid Way Reference",
-  "chronology-member-outside-range": "Member Outside Parent Range",
-  "chronology-overlapping-members": "Overlapping Members",
-  "chronology-undated-member": "Undated Members",
-  "date-in-name": "Date Ranges in name",
-  "date-invalid": "Invalid Dates",
-  "date-end-no-start": "end_date w/o start_date",
-  "date-far-future": "Far future",
-  "date-start-after-end": "start_date > end_date",
-  "date-edtf-invalid": "Invalid EDTF date",
-  "date-edtf-mismatch": "Mismatched EDTF date",
-  "earth-years-admin-1": "admin1 Earth Years",
-  "earth-years-admin-2": "admin2 Earth Years",
-  "earth-years-admin-3": "admin3 Earth Years",
-  "earth-years-admin-4": "admin4 Earth Years",
-  "double-covered-admin-1": "admin1 Double Coverage",
-  "double-covered-admin-2": "admin2 Double Coverage",
-  "double-covered-admin-3": "admin3 Double Coverage",
-  "double-covered-admin-4": "admin4 Double Coverage",
-  dupes: "Duplicate Relations",
-};
+import { SERVER, METRIC_GROUPS, METRIC_LABELS, formatExample } from "../metrics.js";
 
 // Build a flat set of all metrics that appear in METRIC_GROUPS
 const ALL_GROUPED_METRICS = new Set(METRIC_GROUPS.flatMap((g) => g.metrics));
@@ -103,23 +14,6 @@ async function loadStats() {
   // or are present in stats.csv but not in our groups — shown ungrouped).
   const statsMetrics = new Set(allColumns.filter((c) => c !== "date"));
   return { dates, statsMetrics };
-}
-
-/** Replace r/NNNNN, w/NNNNN, n/NNNNN with OHM links. */
-function formatExample(txt) {
-  return txt
-    .replaceAll(
-      /\br\/(\d+)/g,
-      '<a href="https://www.openhistoricalmap.org/relation/$1" target="_blank">r/$1</a>',
-    )
-    .replaceAll(
-      /\bw\/(\d+)/g,
-      '<a href="https://www.openhistoricalmap.org/way/$1" target="_blank">w/$1</a>',
-    )
-    .replaceAll(
-      /\bn\/(\d+)/g,
-      '<a href="https://www.openhistoricalmap.org/node/$1" target="_blank">n/$1</a>',
-    );
 }
 
 /** Extract the OSM-style ID prefix (r/123, w/456, n/789) from an example line. */
