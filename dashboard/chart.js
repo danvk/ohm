@@ -1,6 +1,6 @@
-const DFEAULT_COLOR = "#6080C0";  // — blue
+const DEFAULT_COLOR = "#6080C0";  // — blue
 const PALETTE = [
-  DFEAULT_COLOR,
+  DEFAULT_COLOR,
   "#E15759",  // — red
   "#4E9F3D",  // — green
   "#F28E2B",  // — orange
@@ -101,7 +101,9 @@ const METRIC_DOCS = {
   }
 };
 
-const response = await fetch("/dashboard/stats.csv");
+const SERVER = 'http://localhost:8081';
+
+const response = await fetch(`${SERVER}/dashboard/stats.csv`);
 const data = await response.text();
 const [headerRow, ...rowStrs] = data.split("\r\n").slice(0, -1);
 const header = headerRow.split(",");
@@ -199,7 +201,7 @@ function makeChart(container, series, options) {
       e.stopPropagation();
       const value = a.textContent;
       const { label, help } = METRIC_DOCS[metric];
-      const examplesUrl = `/daily/${date}/${metric}.examples.txt`;
+      const examplesUrl = `${SERVER}/daily/${date}/${metric}.examples.txt`;
       const r = await fetch(examplesUrl);
       const text = await r.text();
       const examples = text.split("\n");
