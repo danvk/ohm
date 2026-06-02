@@ -29,8 +29,8 @@ mkdir -p $dir
 uv run collate_stats.py --start_fresh '' $dashdir/daily/'????-??-??'
 cp $dir/stats.csv $dashdir/dashboard/
 
-# Show the daily diff
-cat $dir/diff.txt
+# Show the daily diff (only exists once there are 2+ days)
+cat "$dir/diff.txt" 2>/dev/null || echo "no diff yet (need 2+ days of stats)"
 
 # leave today's download for followup work
 # rm $planet
