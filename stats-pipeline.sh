@@ -22,7 +22,8 @@ last_modified=$(curl -fsIL "$planet_url" | grep -i '^last-modified:' | tail -1 |
 date=$(date -u -d "$last_modified" +%Y-%m-%d)
 
 dir=$dashdir/daily/$date
-mkdir -p $dir
+# Create the output dirs up front: on a fresh run none of them exist yet.
+mkdir -p "$dir" "$dashdir/boundary" "$dashdir/dashboard"
 ./extract-stats.sh $planet $dir
 ./update-boundary.sh $planet $dashdir/boundary
 
