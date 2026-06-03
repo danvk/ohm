@@ -3,23 +3,20 @@ set -o errexit
 set -o pipefail
 set -x
 
-dashdir=$1
+date=$1  # 2026-03-01
+dashdir=$2
 
 # remove any previous download (no error on a fresh run)
 rm -f planet-*.osm.pbf
 
-# Get the latest planet from state.txt instead of guessing by date.
-# state.txt holds the public URL of the latest planet, so download it directly
-# (no S3 credentials needed for the planet bucket).
-state_url=${PLANET_STATE_TXT_URL:-https://s3.amazonaws.com/planet.openhistoricalmap.org/planet/state.txt}
-planet_url=$(curl -fsSL "$state_url")            # http://planet.openhistoricalmap.org.s3.amazonaws.com/planet/planet-260601_0301.osm.pbf
-planet=$(basename "$planet_url")                 # planet-260601_0301.osm.pbf
-curl -fL -o "$planet" "$planet_url"
+yymmdd=${date//-/}
+yymmdd=${yymmdd/#20/}  # 260301
 
-# Derive the date from the planet's Last-Modified header (works for any filename,
-# e.g. a future planet-latest.osm.pbf).
-last_modified=$(curl -fsIL "$planet_url" | grep -i '^last-modified:' | tail -1 | sed 's/^[Ll]ast-[Mm]odified:[ ]*//; s/\r$//')
-date=$(date -u -d "$last_modified" +%Y-%m-%d)
+# Fetch the planet for this specific date. The wildcard resolves the time suffix
+# (planet-260301_0301.osm.pbf). If it isn't there yet, the run fails instead of
+# falling back to an older planet, so we never run twice on the same planet file.
+s3cmd get --force s3://planet.openhistoricalmap.org/planet/planet-${yymmdd}*
+planet=planet-${yymmdd}_*.osm.pbf
 
 dir=$dashdir/daily/$date
 # Create the output dirs up front: on a fresh run none of them exist yet.
