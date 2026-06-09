@@ -1,5 +1,7 @@
 /** Base URL for the dashboard data server. */
-export const SERVER = "";  // "http://localhost:8081";
+export const SERVER = "https://s3.amazonaws.com/planet.openhistoricalmap.org/planet-stats";
+
+// "http://localhost:8081";
 
 /**
  * Per-metric documentation used in chart legends.
