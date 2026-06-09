@@ -5,7 +5,8 @@ export const IS_WHM = window.location.href.includes('whm');
 
 // TODO: expose this as an environment variable.
 const OHM_SERVER: string =
-  import.meta.env['VITE_BOUNDARY_SERVER'] ?? '//s3.amazonaws.com/planet.openhistoricalmap.org/planet-stats'; // '//localhost:8081';
+  import.meta.env['VITE_BOUNDARY_SERVER'] ??
+  '//s3.amazonaws.com/planet.openhistoricalmap.org/planet-stats'; // '//localhost:8081';
 const WHM_SERVER: string =
   import.meta.env['VITE_BOUNDARY_SERVER'] ?? '//ohmdash.pages.dev'; // '//localhost:8081';
 
